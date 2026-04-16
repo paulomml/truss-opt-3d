@@ -101,6 +101,17 @@ const resetParameters = () => {
   store.form.footing_l = 0.6;
   store.optimize();
 };
+
+/**
+ * Sanitização automática de inputs no evento de blur.
+ * Garante que valores críticos nunca sejam nulos ou fora dos limites físicos de segurança.
+ */
+const sanitizeInput = (field: keyof typeof store.form, min: number) => {
+  const value = store.form[field];
+  if (typeof value === "number") {
+    store.form[field] = Math.max(min, value) as any;
+  }
+};
 </script>
 
 <template>
@@ -168,6 +179,7 @@ const resetParameters = () => {
             </label>
             <input
               v-model.number="store.form.length"
+              @blur="sanitizeInput('length', 0.1)"
               :disabled="!isSpanActive"
               type="number"
               step="0.5"
@@ -182,6 +194,7 @@ const resetParameters = () => {
             >
             <input
               v-model.number="store.form.height"
+              @blur="sanitizeInput('height', 0.1)"
               type="number"
               step="0.1"
               class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500"
@@ -198,6 +211,7 @@ const resetParameters = () => {
             >
             <input
               v-model.number="store.form.width"
+              @blur="sanitizeInput('width', 0)"
               type="number"
               step="0.1"
               class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500"
@@ -211,6 +225,7 @@ const resetParameters = () => {
             >
             <input
               v-model.number="store.form.topWidth"
+              @blur="sanitizeInput('topWidth', 0.01)"
               :disabled="!isTopWidthActive"
               type="number"
               step="0.1"
@@ -225,6 +240,7 @@ const resetParameters = () => {
             >
             <input
               v-model.number="store.form.divisions"
+              @blur="sanitizeInput('divisions', 2)"
               :disabled="!isPanelsActive"
               type="number"
               min="2"
@@ -239,6 +255,7 @@ const resetParameters = () => {
             >
             <input
               v-model.number="store.form.sections"
+              @blur="sanitizeInput('sections', 1)"
               :disabled="!isSectionsActive"
               type="number"
               min="1"
@@ -254,6 +271,7 @@ const resetParameters = () => {
             >
             <input
               v-model.number="store.form.total_load"
+              @blur="sanitizeInput('total_load', 1)"
               type="number"
               step="100"
               class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500"
@@ -289,6 +307,7 @@ const resetParameters = () => {
               >
               <input
                 v-model.number="store.form.custom_ks"
+                @blur="sanitizeInput('custom_ks', 1000)"
                 type="number"
                 class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white"
               />
@@ -301,6 +320,7 @@ const resetParameters = () => {
                 >
                 <input
                   v-model.number="store.form.footing_b"
+                  @blur="sanitizeInput('footing_b', 0.3)"
                   type="number"
                   step="0.1"
                   min="0.3"
@@ -313,6 +333,7 @@ const resetParameters = () => {
                 >
                 <input
                   v-model.number="store.form.footing_l"
+                  @blur="sanitizeInput('footing_l', 0.3)"
                   type="number"
                   step="0.1"
                   min="0.3"

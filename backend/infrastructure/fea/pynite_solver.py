@@ -121,6 +121,10 @@ def build_and_solve_truss(
                 (n1[0] - n2[0]) ** 2 + (n1[1] - n2[1]) ** 2 + (n1[2] - n2[2]) ** 2
             )
 
+            # Filtro de segurança: ignorar barras com comprimento nulo (colapso de nós) para evitar erros no solver.
+            if dist < 0.001:
+                continue
+
             p_idx = profile_indices.get(m.group, profile_indices.get("Default", 0))
             profile = profiles_catalog[p_idx]
 
@@ -161,6 +165,11 @@ def build_and_solve_truss(
             dist = math.sqrt(
                 (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 + (p1[2] - p2[2]) ** 2
             )
+
+            # Validação geométrica para assegurar que a barra possua rigidez axial calculável.
+            if dist < 0.001:
+                return
+
             mid = len(members_to_analyze)
             p_idx = profile_indices.get(group, profile_indices.get("Default", 0))
             profile = profiles_catalog[p_idx]

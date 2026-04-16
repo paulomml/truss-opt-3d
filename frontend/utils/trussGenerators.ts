@@ -402,7 +402,7 @@ export function generateSquareTower(
   // Geração de torre de seção quadrada: ideal para suportar carregamentos verticais e momentos fletores.
   height = Math.max(0.1, height);
   width = Math.max(0, width);
-  topWidth = Math.max(0, topWidth);
+  topWidth = Math.max(0.01, topWidth);
   sections = Math.max(1, Math.floor(sections));
 
   const nodes: Record<string, RawNode> = {};
@@ -518,7 +518,7 @@ export function generateTriangularTower(
   // Torre de seção triangular: configuração isostática estável com menor número de elementos.
   height = Math.max(0.1, height);
   width = Math.max(0, width);
-  topWidth = Math.max(0, topWidth);
+  topWidth = Math.max(0.01, topWidth);
   sections = Math.max(1, Math.floor(sections));
 
   const nodes: Record<string, RawNode> = {};
