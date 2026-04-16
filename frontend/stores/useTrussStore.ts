@@ -31,7 +31,19 @@ export const useTrussStore = defineStore("truss", () => {
   const selectedMember = ref<MemberResult | null>(null);
   const showMobileMenu = ref(false);
 
+  // Controle de cancelamento e feedback de tempo de espera.
+  const abortController = ref<AbortController | null>(null);
+  const showTimeoutWarning = ref(false);
+
   const { addToast } = useToast();
+
+  const cancelOptimization = () => {
+    // Interrompe a requisição HTTP e reseta o estado de carregamento.
+    if (abortController.value) {
+      abortController.value.abort();
+      addToast("Processamento cancelado pelo usuário.", "info");
+    }
+  };
 
   const generateRawTruss = () => {
     // Geração da topologia estrutural baseada em templates clássicos (Howe, Pratt, Warren).
@@ -119,6 +131,17 @@ export const useTrussStore = defineStore("truss", () => {
     // Gatilho para execução da análise de elementos finitos e otimização de custo.
     // O processo é assíncrono devido à complexidade computacional da resolução do sistema matricial.
     loading.value = true;
+    showTimeoutWarning.value = false;
+    abortController.value = new AbortController();
+
+    // Configura um aviso caso o processamento demore mais que 1 minuto.
+    const timeoutId = setTimeout(
+      () => {
+        showTimeoutWarning.value = true;
+      },
+      60 * 1000,
+    );
+
     try {
       let generated;
       try {
@@ -150,6 +173,7 @@ export const useTrussStore = defineStore("truss", () => {
       const data = await $fetch<OptimizationResponse>(backendUrl, {
         method: "POST",
         body: payload,
+        signal: abortController.value.signal,
       });
 
       const validatedData: OptimizationResponse = {
@@ -175,6 +199,14 @@ export const useTrussStore = defineStore("truss", () => {
         );
       }
     } catch (err: any) {
+      // Tratamento específico para o cancelamento voluntário do usuário.
+      // Sendo assim, evita-se a exibição de toasts de erro e reseta o estado da visualização.
+      if (err.name === "AbortError" || err.message?.includes("aborted")) {
+        console.log("Otimização interrompida pelo usuário.");
+        rawTruss.value = null;
+        result.value = null;
+        return;
+      }
       result.value = null;
       console.error("Optimization error:", err);
       const msg =
@@ -183,7 +215,10 @@ export const useTrussStore = defineStore("truss", () => {
         "Erro interno no servidor de cálculo";
       addToast("Erro ao otimizar: " + msg, "error");
     } finally {
+      clearTimeout(timeoutId);
       loading.value = false;
+      showTimeoutWarning.value = false;
+      abortController.value = null;
     }
   };
 
@@ -198,6 +233,8 @@ export const useTrussStore = defineStore("truss", () => {
     loading,
     selectedMember,
     showMobileMenu,
+    showTimeoutWarning,
+    cancelOptimization,
     setRawTruss,
     optimize,
     selectMember,
