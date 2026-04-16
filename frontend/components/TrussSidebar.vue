@@ -133,6 +133,9 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
           >
             Otimizador Estrutural Paramétrico
           </p>
+          <p class="text-[10px] text-blue-400/80 mt-1 font-medium">
+            Desenvolvido por Paulo Raí Lopes de Melo
+          </p>
         </div>
         <button
           v-if="isMobile"

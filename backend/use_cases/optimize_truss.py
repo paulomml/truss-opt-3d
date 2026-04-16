@@ -1,5 +1,7 @@
 import pandas as pd
 import os
+import asyncio
+from fastapi import Request
 from domain.models import TrussRequest, OptimizationResponse
 from infrastructure.fea.pynite_solver import build_and_solve_truss
 
@@ -40,7 +42,9 @@ def load_profiles():
     return df.to_dict("records")
 
 
-def optimize_truss_use_case(params: TrussRequest) -> OptimizationResponse:
+async def optimize_truss_use_case(
+    params: TrussRequest, request: Request = None
+) -> OptimizationResponse:
     """
     Implementação da rotina de otimização de custo global via busca exaustiva no espaço de soluções discretas.
     O solver busca minimizar a função objetivo de custo, garantindo que a taxa de utilização (U) não exceda a unidade.
@@ -80,7 +84,20 @@ def optimize_truss_use_case(params: TrussRequest) -> OptimizationResponse:
 
             # Algoritmo de busca local para definição das seções transversais mínimas necessárias por grupo de barras.
             while iteration < max_iterations:
+                # Verifica se o cliente ainda está conectado antes de iniciar uma nova iteração custosa.
+                if request and await request.is_disconnected():
+                    return OptimizationResponse(
+                        is_structurally_stable=False,
+                        status_message="Processamento interrompido: cliente desconectado.",
+                        total_weight=0,
+                        members=[],
+                        nodes={},
+                    )
+
                 iteration += 1
+
+                # Cede o controle ao event loop para não bloquear outras tarefas.
+                await asyncio.sleep(0)
 
                 # Resolução do equilíbrio estático considerando o acoplamento solo-estrutura.
                 # Portanto, as deformações do apoio elástico influenciam a redistribuição dos esforços internos.

@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from domain.models import TrussRequest, OptimizationResponse
@@ -19,13 +19,13 @@ app.add_middleware(
 
 
 @app.post("/api/optimize", response_model=OptimizationResponse)
-async def optimize(request: TrussRequest):
+async def optimize(request: TrussRequest, fastapi_req: Request):
     """
     Ponto de entrada para o processamento do design estrutural e otimização.
     Logo, a requisição é encaminhada para o caso de uso de otimização de custo e estabilidade.
     """
     try:
-        result = optimize_truss_use_case(request)
+        result = await optimize_truss_use_case(request, fastapi_req)
         return result
     except Exception as e:
         # Tratamento de exceções críticas para garantir a integridade do serviço de cálculo.
