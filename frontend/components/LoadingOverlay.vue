@@ -29,7 +29,7 @@ const store = useTrussStore();
         </p>
       </transition>
 
-      <!-- Botão de interrupção imediata: Estilo sóbrio e unificado com o restante da UI. -->
+      <!-- Botão de interrupção imediata -->
       <button
         @click="store.cancelOptimization"
         class="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-sm"

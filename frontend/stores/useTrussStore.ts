@@ -134,12 +134,12 @@ export const useTrussStore = defineStore("truss", () => {
     showTimeoutWarning.value = false;
     abortController.value = new AbortController();
 
-    // Configura um aviso caso o processamento demore mais que 3 minutos.
+    // Configura um aviso caso o processamento demore mais que 1 minuto.
     const timeoutId = setTimeout(
       () => {
         showTimeoutWarning.value = true;
       },
-      3 * 60 * 1000,
+      60 * 1000,
     );
 
     try {
