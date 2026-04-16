@@ -1,0 +1,43 @@
+version: "3.8"
+
+# Orquestração dos serviços que compõem a solução TRUSS-OPT 3D.
+# O ambiente garante o isolamento entre o solver estrutural, a interface e o proxy de rede.
+
+services:
+  backend:
+    # Serviço responsável pelo processamento do MEF e otimização heurística.
+    build: ./backend
+    container_name: truss-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  frontend:
+    # Interface do usuário e renderização em tempo real via WebGL/TresJS.
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: truss-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - backend
+
+  nginx:
+    # Servidor proxy reverso para centralização do tráfego e balanceamento de carga.
+    image: nginx:stable-alpine
+    container_name: truss-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - backend
+      - frontend
+
+networks:
+  default:
+    name: truss-network

@@ -1,0 +1,5 @@
+Material,fy_MPa,fu_MPa,E_GPa,density_kgm3,cost_BRL_kg
+Aço A36,250,400,200,7850,8.45
+Aço A572 G50,345,450,200,7850,12.95
+Aço Corten,300,400,200,7850,10.00
+Alumínio 6061-T6,240,290,70,2800,65.00

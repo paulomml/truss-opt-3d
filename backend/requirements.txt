@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+PyniteFEA
+pandas
+pydantic
+numpy
