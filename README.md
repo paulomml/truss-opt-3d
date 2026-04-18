@@ -1,10 +1,15 @@
 # TRUSS-OPT 3D: Sistema Computacional para Dimensionamento e Otimização Paramétrica de Treliças Espaciais
 
 > **Instituição:** Universidade Estadual Vale do Acaraú (UVA)
+> 
 > **Curso:** Bacharelado em Engenharia Civil
+> 
 > **Disciplina:** Métodos Numéricos
+> 
 > **Autor:** Paulo Raí Lopes de Melo
+> 
 > **Professor:** Prof. Audelis Marcelo
+> 
 > **Período:** 2026.1
 
 ## 1. Visão Geral do Software
