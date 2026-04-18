@@ -16,7 +16,7 @@ SOIL_DATABASE = {
 def calculate_max_utilization(force, profile, length, material):
     """
     Avaliação do Estado Limite Último (ELU) conforme preceitos da NBR 8800.
-    A função determina o quociente entre a solicitação axial de cálculo e a resistência de projeto da seção.
+    Logo, a função determina o quociente entre a solicitação axial de cálculo e a resistência de projeto da seção.
     """
     fy = (
         material["fy"] * 1e6
@@ -32,9 +32,11 @@ def calculate_max_utilization(force, profile, length, material):
 
     if force >= 0:
         # Verificação da capacidade resistente sob esforço de tração axial simples.
+        # Portanto, a resistência é limitada pela área bruta e a tensão de escoamento.
         capacity = A * fy
     else:
-        # Dimensionamento à compressão: consideração da flambagem elástica de Euler e redução da resistência por instabilidade.
+        # Dimensionamento à compressão: consideração da flambagem elástica de Euler.
+        # Sendo assim, aplica-se o fator de redução por instabilidade baseado na esbeltez.
         f_abs = abs(force)
         lambda0 = math.sqrt((A * fy) / ne)
         if lambda0 <= 1.5:
@@ -69,6 +71,7 @@ def build_and_solve_truss(
     members_to_analyze = []
 
     # Correção do coeficiente de recalque para fundações reais via método de Winkler-Terzaghi.
+    # Portanto, mitiga-se o erro de escala inerente ao ensaio de placa normatizado.
     soil = SOIL_DATABASE.get(params.soil_type, SOIL_DATABASE["Rocha"])
     ks_nominal = (
         params.custom_ks
@@ -80,10 +83,12 @@ def build_and_solve_truss(
     L_footing = params.footing_l
 
     if soil["type"] == "granular":
-        # Ajuste geométrico para solos com comportamento granular para mitigar o efeito de escala.
+        # Ajuste geométrico para solos com comportamento granular.
+        # Logo, a rigidez do subleito é ponderada pelas dimensões reais da sapata.
         ks_real = ks_nominal * ((B + 0.305) / (2 * B)) ** 2
     elif soil["type"] == "coesivo":
         # Redução do coeficiente ks para considerar a influência da largura da base em solos argilosos.
+        # Sendo assim, previnem-se recalques excessivos por adensamento lateral.
         ks_real = ks_nominal * (0.305 / B)
     else:
         ks_real = ks_nominal
@@ -125,7 +130,7 @@ def build_and_solve_truss(
             if dist < 0.001:
                 continue
 
-            p_idx = profile_indices.get(m.group, profile_indices.get("Default", 0))
+            p_idx = profile_indices.get(m.group, profile_indices.get("Padrão", 0))
             profile = profiles_catalog[p_idx]
 
             members_to_analyze.append(
@@ -171,7 +176,7 @@ def build_and_solve_truss(
                 return
 
             mid = len(members_to_analyze)
-            p_idx = profile_indices.get(group, profile_indices.get("Default", 0))
+            p_idx = profile_indices.get(group, profile_indices.get("Padrão", 0))
             profile = profiles_catalog[p_idx]
             members_to_analyze.append(
                 {
@@ -190,12 +195,12 @@ def build_and_solve_truss(
 
         for i in range(n):
             for side in ["F", "B"]:
-                add_truss_member(f"{side}L{i}", f"{side}L{i+1}", "Bottom Chord")
-                add_truss_member(f"{side}U{i}", f"{side}U{i+1}", "Top Chord")
-                add_truss_member(f"{side}L{i}", f"{side}U{i}", "Vertical")
+                add_truss_member(f"{side}L{i}", f"{side}L{i+1}", "Banzo Inferior")
+                add_truss_member(f"{side}U{i}", f"{side}U{i+1}", "Banzo Superior")
+                add_truss_member(f"{side}L{i}", f"{side}U{i}", "Montante")
                 add_truss_member(f"{side}L{i}", f"{side}U{i+1}", "Diagonal")
-            add_truss_member(f"FL{i}", f"BL{i}", "Transverse")
-            add_truss_member(f"FU{i}", f"BU{i}", "Transverse")
+            add_truss_member(f"FL{i}", f"BL{i}", "Transversal")
+            add_truss_member(f"FU{i}", f"BU{i}", "Transversal")
 
         # Configuração das condições de fronteira elástica nos nós extremos da estrutura.
         base_nodes = ["FL0", "BL0", f"FL{n}", f"BL{n}"]
@@ -229,7 +234,8 @@ def build_and_solve_truss(
     for node, weight in node_weights.items():
         model.add_node_load(node, "FY", -weight * 9.81, case="Dead")
 
-    # Superposição de efeitos entre carga permanente (peso próprio) e sobrecarga externa para análise elástica linear.
+    # Superposição de efeitos entre carga permanente (peso próprio) e sobrecarga externa.
+    # Portanto, a análise elástica linear reflete a condição de carregamento mais desfavorável.
     model.add_load_combo("LC1", {"External": 1.0, "Dead": 1.0})
 
     try:
@@ -262,7 +268,7 @@ def build_and_solve_truss(
 
         axial_f = f_max if abs(f_max) > abs(f_min) else f_min
 
-        p_idx = profile_indices.get(m["group"], profile_indices.get("Default", 0))
+        p_idx = profile_indices.get(m["group"], profile_indices.get("Padrão", 0))
         profile = profiles_catalog[p_idx]
         u = calculate_max_utilization(axial_f, profile, m["length"], material)
         group = m["group"]
@@ -278,9 +284,9 @@ def build_and_solve_truss(
                 axial_force=float(axial_f),
                 utilization=float(u),
                 stress_type=(
-                    "Tension"
+                    "Tração"
                     if axial_f > 0.01
-                    else ("Compression" if axial_f < -0.01 else "None")
+                    else ("Compressão" if axial_f < -0.01 else "Nenhum")
                 ),
             )
         )

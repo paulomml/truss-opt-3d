@@ -33,7 +33,7 @@ function addMember(
   members: RawMember[],
   nodeStart: string,
   nodeEnd: string,
-  group: string = "Default",
+  group: string = "Padrão",
 ) {
   members.push({
     id: members.length + 1,
@@ -70,7 +70,7 @@ function extrude3D(planar: RawTruss, width: number): RawTruss {
 
   // Barras transversais que unem os nós homólogos das faces frontal e traseira.
   for (const id of nodeIds) {
-    addMember(members, id + "F", id + "B", "Transverse");
+    addMember(members, id + "F", id + "B", "Transversal");
   }
 
   // Contraventamento em X para mitigar efeitos de torção e cargas laterais.
@@ -78,8 +78,18 @@ function extrude3D(planar: RawTruss, width: number): RawTruss {
     const n1 = planar.nodes[m.node_start];
     const n2 = planar.nodes[m.node_end];
     if (Math.abs(n1.x - n2.x) > 0.01) {
-      addMember(members, m.node_start + "F", m.node_end + "B", "X-Bracing");
-      addMember(members, m.node_start + "B", m.node_end + "F", "X-Bracing");
+      addMember(
+        members,
+        m.node_start + "F",
+        m.node_end + "B",
+        "Contraventamento",
+      );
+      addMember(
+        members,
+        m.node_start + "B",
+        m.node_end + "F",
+        "Contraventamento",
+      );
     }
   }
 
@@ -131,10 +141,10 @@ export function generatePrattRoof(
     const tC = i === 0 ? bC : createNodeId("T", i);
     const tN = i + 1 === panels ? bN : createNodeId("T", i + 1);
 
-    addMember(members, bC, bN, "Bottom Chord");
-    addMember(members, tC, tN, "Top Chord");
+    addMember(members, bC, bN, "Banzo Inferior");
+    addMember(members, tC, tN, "Banzo Superior");
 
-    if (i > 0 && i < panels) addMember(members, bC, tC, "Vertical");
+    if (i > 0 && i < panels) addMember(members, bC, tC, "Montante");
 
     if (i < panels / 2) addMember(members, bC, tN, "Diagonal");
     else addMember(members, tC, bN, "Diagonal");
@@ -144,7 +154,7 @@ export function generatePrattRoof(
       members,
       createNodeId("B", panels / 2),
       createNodeId("T", panels / 2),
-      "Vertical",
+      "Montante",
     );
 
   return extrude3D({ nodes, members }, width);
@@ -190,9 +200,9 @@ export function generateHoweRoof(
     const tC = i === 0 ? bC : createNodeId("T", i);
     const tN = i + 1 === panels ? bN : createNodeId("T", i + 1);
 
-    addMember(members, bC, bN, "Bottom Chord");
-    addMember(members, tC, tN, "Top Chord");
-    if (i > 0 && i < panels) addMember(members, bC, tC, "Vertical");
+    addMember(members, bC, bN, "Banzo Inferior");
+    addMember(members, tC, tN, "Banzo Superior");
+    if (i > 0 && i < panels) addMember(members, bC, tC, "Montante");
     if (i < panels / 2) addMember(members, tC, bN, "Diagonal");
     else addMember(members, bC, tN, "Diagonal");
   }
@@ -201,7 +211,7 @@ export function generateHoweRoof(
       members,
       createNodeId("B", panels / 2),
       createNodeId("T", panels / 2),
-      "Vertical",
+      "Montante",
     );
 
   return extrude3D({ nodes, members }, width);
@@ -244,15 +254,15 @@ export function generateFinkRoof(
       members,
       createNodeId("B", i),
       createNodeId("B", i + 1),
-      "Bottom Chord",
+      "Banzo Inferior",
     );
     const tC = i === 0 ? createNodeId("B", 0) : createNodeId("T", i);
     const tN =
       i + 1 === panels ? createNodeId("B", panels) : createNodeId("T", i + 1);
-    addMember(members, tC, tN, "Top Chord");
+    addMember(members, tC, tN, "Banzo Superior");
   }
 
-  addMember(members, createNodeId("B", 4), createNodeId("T", 4), "Vertical");
+  addMember(members, createNodeId("B", 4), createNodeId("T", 4), "Montante");
   addMember(members, createNodeId("B", 0), createNodeId("T", 2), "Diagonal");
   addMember(members, createNodeId("T", 2), createNodeId("B", 2), "Diagonal");
   addMember(members, createNodeId("B", 2), createNodeId("T", 4), "Diagonal");
@@ -302,14 +312,14 @@ export function generateWarrenBridge(
       members,
       createNodeId("B", i),
       createNodeId("B", i + 1),
-      "Bottom Chord",
+      "Banzo Inferior",
     );
     if (i < panels - 1)
       addMember(
         members,
         createNodeId("T", i),
         createNodeId("T", i + 1),
-        "Top Chord",
+        "Banzo Superior",
       );
     addMember(members, createNodeId("B", i), createNodeId("T", i), "Diagonal");
     addMember(
@@ -356,21 +366,21 @@ export function generatePrattBridge(
       members,
       createNodeId("B", i),
       createNodeId("B", i + 1),
-      "Bottom Chord",
+      "Banzo Inferior",
     );
     addMember(
       members,
       createNodeId("T", i),
       createNodeId("T", i + 1),
-      "Top Chord",
+      "Banzo Superior",
     );
-    addMember(members, createNodeId("B", i), createNodeId("T", i), "Vertical");
+    addMember(members, createNodeId("B", i), createNodeId("T", i), "Montante");
     if (i === panels - 1)
       addMember(
         members,
         createNodeId("B", i + 1),
         createNodeId("T", i + 1),
-        "Vertical",
+        "Montante",
       );
     if (i < panels / 2)
       addMember(
@@ -423,13 +433,13 @@ export function generateSquareTower(
           members,
           createNodeId("N1", i - 1),
           createNodeId("N1", i),
-          "Main",
+          "Principal",
         );
         addMember(
           members,
           createNodeId("N2", i - 1),
           createNodeId("N2", i),
-          "Main",
+          "Principal",
         );
         addMember(
           members,
@@ -448,7 +458,7 @@ export function generateSquareTower(
         members,
         createNodeId("N1", i),
         createNodeId("N2", i),
-        "Transverse",
+        "Transversal",
       );
     } else {
       // Geração espacial 3D com contraventamento em todas as faces.
@@ -464,7 +474,7 @@ export function generateSquareTower(
             members,
             createNodeId("N" + j, i - 1),
             createNodeId("N" + j, i),
-            "Vertical",
+            "Montante",
           );
           addMember(
             members,
@@ -484,25 +494,25 @@ export function generateSquareTower(
         members,
         createNodeId("N1", i),
         createNodeId("N2", i),
-        "Transverse",
+        "Transversal",
       );
       addMember(
         members,
         createNodeId("N2", i),
         createNodeId("N3", i),
-        "Transverse",
+        "Transversal",
       );
       addMember(
         members,
         createNodeId("N3", i),
         createNodeId("N4", i),
-        "Transverse",
+        "Transversal",
       );
       addMember(
         members,
         createNodeId("N4", i),
         createNodeId("N1", i),
-        "Transverse",
+        "Transversal",
       );
     }
   }
@@ -541,13 +551,13 @@ export function generateTriangularTower(
           members,
           createNodeId("N1", i - 1),
           createNodeId("N1", i),
-          "Vertical",
+          "Montante",
         );
         addMember(
           members,
           createNodeId("N2", i - 1),
           createNodeId("N2", i),
-          "Vertical",
+          "Montante",
         );
         addMember(
           members,
@@ -560,7 +570,7 @@ export function generateTriangularTower(
         members,
         createNodeId("N1", i),
         createNodeId("N2", i),
-        "Transverse",
+        "Transversal",
       );
     } else {
       addNode(nodes, createNodeId("N1", i), 0, h, r, support);
@@ -574,7 +584,7 @@ export function generateTriangularTower(
             members,
             createNodeId("N" + j, i - 1),
             createNodeId("N" + j, i),
-            "Vertical",
+            "Montante",
           );
           addMember(
             members,
@@ -594,19 +604,19 @@ export function generateTriangularTower(
         members,
         createNodeId("N1", i),
         createNodeId("N2", i),
-        "Transverse",
+        "Transversal",
       );
       addMember(
         members,
         createNodeId("N2", i),
         createNodeId("N3", i),
-        "Transverse",
+        "Transversal",
       );
       addMember(
         members,
         createNodeId("N3", i),
         createNodeId("N1", i),
-        "Transverse",
+        "Transversal",
       );
     }
   }
@@ -649,19 +659,19 @@ export function generateCantileverPratt(
       members,
       createNodeId("B", i),
       createNodeId("B", i + 1),
-      "Bottom Chord",
+      "Banzo Inferior",
     );
     addMember(
       members,
       createNodeId("T", i),
       createNodeId("T", i + 1),
-      "Top Chord",
+      "Banzo Superior",
     );
     addMember(
       members,
       createNodeId("B", i + 1),
       createNodeId("T", i + 1),
-      "Vertical",
+      "Montante",
     );
     addMember(
       members,
@@ -670,7 +680,7 @@ export function generateCantileverPratt(
       "Diagonal",
     );
   }
-  addMember(members, createNodeId("B", 0), createNodeId("T", 0), "Vertical");
+  addMember(members, createNodeId("B", 0), createNodeId("T", 0), "Montante");
 
   return extrude3D({ nodes, members }, width);
 }
@@ -709,11 +719,11 @@ export function generateCantileverWarren(
       members,
       createNodeId("B", i),
       createNodeId("B", i + 1),
-      "Bottom Chord",
+      "Banzo Inferior",
     );
     const tC = i === 0 ? "T_base" : createNodeId("T", i - 1);
     const tN = createNodeId("T", i);
-    addMember(members, tC, tN, "Top Chord");
+    addMember(members, tC, tN, "Banzo Superior");
     addMember(members, createNodeId("B", i), tN, "Diagonal");
     addMember(members, tN, createNodeId("B", i + 1), "Diagonal");
   }
