@@ -382,7 +382,7 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
           <button
             @click="optimizeAndCloseMobile"
             :disabled="store.loading"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:bg-gray-600 text-base"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-all transform active:translate-y-0 disabled:bg-gray-600 text-base"
           >
             {{ store.loading ? "Processando MEF..." : "Otimizar Estrutura" }}
           </button>

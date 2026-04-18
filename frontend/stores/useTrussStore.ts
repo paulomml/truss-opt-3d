@@ -31,18 +31,38 @@ export const useTrussStore = defineStore("truss", () => {
   const selectedMember = ref<MemberResult | null>(null);
   const showMobileMenu = ref(false);
 
-  // Controle de cancelamento e feedback de tempo de espera.
+  // Feedback de progresso multiprocessado e gerenciamento de conexão WebSocket.
+  const mainProgress = ref(0);
+  const currentLogs = ref<Record<string, string>>({});
+  const ws = ref<WebSocket | null>(null);
+
+  // Controle de cancelamento e integridade do estado da aplicação.
   const abortController = ref<AbortController | null>(null);
   const showTimeoutWarning = ref(false);
 
   const { addToast } = useToast();
 
   const cancelOptimization = () => {
-    // Interrompe a requisição HTTP e reseta o estado de carregamento.
+    // Interrompe a conexão WebSocket e sinaliza para o backend abortar o pool de processos.
+    if (ws.value) {
+      ws.value.close();
+      ws.value = null;
+    }
     if (abortController.value) {
       abortController.value.abort();
-      addToast("Processamento cancelado pelo usuário.", "info");
+      abortController.value = null;
     }
+
+    // Reset rigoroso do estado da aplicação para limpeza de memória e retorno à tela inicial.
+    // Portanto, garantimos que nenhum resíduo de cálculo anterior permaneça ativo.
+    loading.value = false;
+    rawTruss.value = null;
+    result.value = null;
+    selectedMember.value = null;
+    mainProgress.value = 0;
+    currentLogs.value = {};
+
+    addToast("Operação cancelada. Estado da aplicação redefinido.", "info");
   };
 
   const generateRawTruss = () => {
@@ -128,19 +148,11 @@ export const useTrussStore = defineStore("truss", () => {
   };
 
   const optimize = async () => {
-    // Gatilho para execução da análise de elementos finitos e otimização de custo.
-    // O processo é assíncrono devido à complexidade computacional da resolução do sistema matricial.
+    // Inicia o fluxo de otimização via WebSockets para feedback em tempo real.
     loading.value = true;
+    mainProgress.value = 0;
+    currentLogs.value = { Status: "Conectando ao servidor..." };
     showTimeoutWarning.value = false;
-    abortController.value = new AbortController();
-
-    // Configura um aviso caso o processamento demore mais que 1 minuto.
-    const timeoutId = setTimeout(
-      () => {
-        showTimeoutWarning.value = true;
-      },
-      60 * 1000,
-    );
 
     try {
       let generated;
@@ -158,7 +170,6 @@ export const useTrussStore = defineStore("truss", () => {
       form.raw_truss = generated;
       rawTruss.value = generated;
 
-      // Sincronização e sanitização dos dados para envio ao endpoint de cálculo.
       const payload = { ...form };
       if (
         payload.custom_ks === "" ||
@@ -169,56 +180,98 @@ export const useTrussStore = defineStore("truss", () => {
         payload.custom_ks = undefined;
       }
 
-      const backendUrl = "/api/optimize";
-      const data = await $fetch<OptimizationResponse>(backendUrl, {
-        method: "POST",
-        body: payload,
-        signal: abortController.value.signal,
-      });
+      // Definição da URL do WebSocket baseada no ambiente atual (Browser).
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const host = window.location.host;
+      let wsUrl = "";
 
-      const validatedData: OptimizationResponse = {
-        is_structurally_stable: Boolean(data?.is_structurally_stable),
-        status_message: String(data?.status_message || "Resposta desconhecida"),
-        total_weight: Number(data?.total_weight || 0),
-        total_cost: Number(data?.total_cost || 0),
-        winning_material: String(data?.winning_material || "N/A"),
-        members: Array.isArray(data?.members) ? data.members : [],
-        nodes: data?.nodes && typeof data.nodes === "object" ? data.nodes : {},
+      // Tratamento específico para o ambiente de desenvolvimento do GitHub Codespaces.
+      // Logo, se o usuário acessa via porta 3000, redirecionamos para a porta 8000 (Backend) diretamente.
+      if (host.includes("-3000.app.github.dev")) {
+        wsUrl = `${protocol}//${host.replace("-3000.", "-8000.")}/api/ws/optimize`;
+      } else if (host.includes(":3000")) {
+        // Caso local (ex: localhost:3000), tenta atingir o backend em localhost:8000.
+        wsUrl = `${protocol}//${window.location.hostname}:8000/api/ws/optimize`;
+      } else {
+        // Padrão de produção: utiliza o mesmo host/porta (Nginx gerencia o roteamento).
+        // Portanto, a conexão segue pelo proxy reverso unificado na porta 80.
+        wsUrl = `${protocol}//${host}/api/ws/optimize`;
+      }
+
+      // Inicialização da conexão WebSocket para comunicação síncrona com o motor de cálculo.
+      // Sendo assim, elimina-se o overhead de requisições HTTP repetitivas e timeouts de rede.
+      ws.value = new WebSocket(wsUrl);
+
+      ws.value.onopen = () => {
+        // Envio dos parâmetros estruturais assim que o canal de comunicação é estabelecido.
+        ws.value?.send(JSON.stringify(payload));
       };
 
-      result.value = validatedData;
-      if (validatedData.is_structurally_stable) {
-        rawTruss.value = null;
-        addToast("Sucesso! Estrutura otimizada com sucesso.", "success");
-      } else {
-        addToast(
-          "Atenção: " +
-            (validatedData.status_message ||
-              "A estrutura não pôde ser otimizada."),
-          "warning",
-        );
-      }
+      ws.value.onmessage = (event) => {
+        // Processamento de eventos de progresso paralelo e resultados da análise.
+        // Portanto, a interface reflete simultaneamente a atividade em todos os núcleos da CPU.
+        const data = JSON.parse(event.data);
+
+        if (data.type === "progress") {
+          const payload = data.data;
+          mainProgress.value = payload.main_progress || 0;
+          currentLogs.value = payload.current_logs || {};
+        } else if (data.type === "result") {
+          // Processamento do resultado final após a convergência do solver.
+          const resultData = data.data;
+          const validatedData: OptimizationResponse = {
+            is_structurally_stable: Boolean(resultData?.is_structurally_stable),
+            status_message: String(
+              resultData?.status_message || "Resposta desconhecida",
+            ),
+            total_weight: Number(resultData?.total_weight || 0),
+            total_cost: Number(resultData?.total_cost || 0),
+            winning_material: String(resultData?.winning_material || "N/A"),
+            members: Array.isArray(resultData?.members)
+              ? resultData.members
+              : [],
+            nodes:
+              resultData?.nodes && typeof resultData.nodes === "object"
+                ? resultData.nodes
+                : {},
+          };
+
+          result.value = validatedData;
+          if (validatedData.is_structurally_stable) {
+            rawTruss.value = null;
+            addToast("Sucesso! Estrutura otimizada com sucesso.", "success");
+          } else {
+            addToast(
+              validatedData.status_message ||
+                "A estrutura não pôde ser otimizada.",
+              "warning",
+            );
+          }
+          loading.value = false;
+          ws.value?.close();
+        } else if (data.type === "error") {
+          addToast("Erro ao otimizar: " + data.message, "error");
+          loading.value = false;
+          ws.value?.close();
+        }
+      };
+
+      ws.value.onerror = (err) => {
+        console.error("WebSocket error:", err);
+        addToast("Erro na conexão com o servidor de cálculo.", "error");
+        loading.value = false;
+      };
+
+      ws.value.onclose = () => {
+        if (loading.value) loading.value = false;
+        ws.value = null;
+      };
     } catch (err: any) {
-      // Tratamento específico para o cancelamento voluntário do usuário.
-      // Sendo assim, evita-se a exibição de toasts de erro e reseta o estado da visualização.
-      if (err.name === "AbortError" || err.message?.includes("aborted")) {
-        console.log("Otimização interrompida pelo usuário.");
-        rawTruss.value = null;
-        result.value = null;
-        return;
-      }
       result.value = null;
       console.error("Optimization error:", err);
-      const msg =
-        err.data?.detail?.toString() ||
-        err.message ||
-        "Erro interno no servidor de cálculo";
+      const msg = err.message || "Erro interno no servidor de cálculo";
       addToast("Erro ao otimizar: " + msg, "error");
-    } finally {
-      clearTimeout(timeoutId);
       loading.value = false;
-      showTimeoutWarning.value = false;
-      abortController.value = null;
     }
   };
 
@@ -231,6 +284,8 @@ export const useTrussStore = defineStore("truss", () => {
     result,
     rawTruss,
     loading,
+    mainProgress,
+    currentLogs,
     selectedMember,
     showMobileMenu,
     showTimeoutWarning,

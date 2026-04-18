@@ -19,7 +19,7 @@ class RawMember(BaseModel):
     id: int
     node_start: str
     node_end: str
-    group: Optional[str] = "Default"
+    group: Optional[str] = "Padrão"
 
 
 class RawTruss(BaseModel):
