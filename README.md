@@ -1,22 +1,22 @@
 # TRUSS-OPT 3D: Sistema Computacional para Dimensionamento e Otimização Paramétrica de Treliças Espaciais
 
 > **Instituição:** Universidade Estadual Vale do Acaraú (UVA)
-> 
+>
 > **Curso:** Bacharelado em Engenharia Civil
-> 
+>
 > **Disciplina:** Métodos Numéricos
-> 
+>
 > **Autor:** Paulo Raí Lopes de Melo
-> 
+>
 > **Professor:** Prof. Audelis Marcelo
-> 
+>
 > **Período:** 2026.1
 
 ## 1. Visão Geral do Software
 
 O **TRUSS-OPT 3D** (Truss Optimizer 3D, ou Otimizador de Treliças 3D) é um sistema computacional desenvolvido para calcular, dimensionar e otimizar estruturas metálicas do tipo treliça espacial. A partir da definição geométrica e dos carregamentos pelo usuário, o software executa análises estruturais sucessivas para encontrar a combinação de perfis metálicos que atenda aos requisitos normativos de segurança (NBR 8800) com o menor peso e custo de fabricação possível.
 
-O dimensionamento tradicional de estruturas reticuladas frequentemente envolve um processo manual e iterativo de verificação de perfis comerciais, o que demanda tempo e pode resultar em estruturas superdimensionadas. Para solucionar esse problema, o TRUSS-OPT 3D automatiza o ciclo de dimensionamento, mesclando fundamentos de cálculo estrutural, métodos numéricos avançados e desenvolvimento de software.
+O dimensionamento tradicional de estruturas reticuladas frequentemente envolve um processo manual e iterativo de verificação de perfis comerciais, o que demanda tempo e pode resultar em estruturas superdimensionadas. Para solucionar esse problema, o TRUSS-OPT 3D automatiza o ciclo de dimensionamento, mesclando fundamentos de cálculo estrutural, métodos numéricos avançados e engenharia de software.
 
 A plataforma utiliza algoritmos de busca e multiprocessamento para analisar catálogos reais de materiais, como aço e alumínio. A cada iteração, o sistema examina os esforços axiais por meio do Método dos Elementos Finitos (MEF) e verifica a instabilidade elástica. O resultado final entregue ao usuário é um projeto estrutural tecnicamente viável, que garante uma excelente relação de custo-benefício, respeitando as exigências técnicas vigentes.
 
@@ -42,20 +42,18 @@ A interface da plataforma foi projetada para oferecer controle preciso sobre a m
 
 ### 2.2. Condições de Contorno e Interação Geotécnica
 
-- **Carregamento Externo:** O sistema permite a inserção da carga total de projeto em quilogramas-força (kgf). Essa carga é rateada e aplicada automaticamente de forma nodal ao longo do banzo superior da estrutura.
-- **Cálculo de Peso Próprio:** Durante a otimização, o software contabiliza automaticamente o peso dinâmico de cada peça metálica e o converte em cargas gravitacionais nos nós correspondentes.
+- **Carregamento Externo:** O sistema permite a inserção da carga total de projeto em quilogramas-força (kgf). Internamente, o valor é convertido para Newtons ($F_N = F_{kgf} \times 9,81$) e rateado como carga nodal ao longo do banzo superior da estrutura. Os esforços resultantes são reportados ao usuário em quilonewtons (kN).
+- **Cálculo de Peso Próprio:** Durante a otimização, o software contabiliza automaticamente o peso dinâmico de cada peça metálica e o converte em cargas gravitacionais nos nós correspondentes. Esse peso é calculado como o produto da área transversal do perfil ($A$), da densidade do material ($\rho$) e do comprimento do elemento.
 - **Interação Solo-Estrutura (ISE):**
   - **Seleção de Perfil de Solo:** O usuário pode selecionar o tipo de fundação a partir de um catálogo integrado (Rocha, Areia Fofa, Areia Compacta, Argila Mole e Argila Rija).
   - **Coeficiente Personalizado:** Permite a entrada manual do coeficiente de reação do subleito ($k_{s1}$), caso dados específicos de sondagem de solo estejam disponíveis.
-  - **Geometria da Sapata:** É possível informar as dimensões da base ($B$) e do comprimento ($L$) da fundação isolada. O sistema utiliza essas medidas para corrigir os recalques previstos e calcular as constantes das molas elásticas verticais e rotacionais.
+  - **Geometria da Sapata:** É possível informar as dimensões da base ($B$) e do comprimento ($L$) da fundação isolada. O sistema utiliza essas medidas para corrigir os recalques previstos e calcular as constantes das molas elásticas verticais e rotacionais, conforme detalhado na Seção 4.3.
 
 ### 2.3. Visualização 3D e Inspeção de Dados
 
 - **Renderização Espacial Interativa:** O modelo calculado é exibido em um ambiente 3D interativo, no qual o usuário pode rotacionar, aproximar e investigar os detalhes geométricos, incluindo os contraventamentos transversais.
-- **Mapa de Cores para Tensões:**
-  - Barras na cor **Vermelha** indicam membros submetidos à compressão axial.
-  - Barras na cor **Azul** indicam membros sob tração axial.
-  - Barras **Cinzas** representam elementos inativos ou com esforços irrelevantes.
+- **Mapa de Cores para Taxa de Utilização:** A estrutura renderizada emprega um espectro cromático contínuo para representar graficamente o nível de solicitação de cada peça.
+  - A coloração das barras varia progressivamente do **Azul** ao **Vermelho**, indicando desde os membros com baixa porcentagem de utilização até aqueles que operam próximos ao limite de sua capacidade resistente (Taxa de Utilização $U \approx 1.0$).
 - **Inspeção Detalhada por Peça:** Ao clicar em qualquer barra do modelo renderizado, um painel lateral exibe dados específicos daquele elemento:
   - Força axial atuante (em kN).
   - Perfil comercial atribuído pelo algoritmo (ex.: tubo quadrado 100x100x5.0).
@@ -75,8 +73,8 @@ A plataforma adota uma arquitetura orientada a serviços, separando o gerenciame
 ### 3.1. Servidor de Cálculo Numérico (Backend)
 
 - **Linguagem e Framework:** O backend é desenvolvido em Python 3.11+, operando sobre o framework web assíncrono FastAPI. A validação estruturada das requisições e a modelagem de dados são asseguradas pela biblioteca Pydantic.
-- **Solver Estrutural:** O cálculo dos deslocamentos nodais e reações de apoio é executado por meio da biblioteca PyNite FEA, especializada na formulação matricial de pórticos e treliças 3D.
-- **Otimização Concorrente:** Para reduzir significativamente o tempo de processamento, a arquitetura emprega o módulo `multiprocessing` do Python. Isso permite que diferentes ligas metálicas (como aço padrão e alumínio) sejam testadas simultaneamente em núcleos físicos distintos do processador do servidor.
+- **Solver Estrutural:** O cálculo dos deslocamentos nodais e reações de apoio é executado por meio da biblioteca PyNite FEA, uma implementação matricial de pórticos e treliças 3D que emprega elementos de viga-coluna com seis graus de liberdade por nó. Mais detalhes sobre a formulação adotada constam na Seção 4.1.
+- **Otimização Concorrente:** Para reduzir significativamente o tempo de processamento, a arquitetura emprega o módulo `multiprocessing` do Python. Isso permite que as quatro ligas metálicas disponíveis sejam testadas simultaneamente em núcleos físicos distintos do processador do servidor.
 - **Comunicação Assíncrona:** A transmissão dos logs de progresso do servidor para o cliente ocorre através de conexões WebSocket.
 - **Gerenciamento de Recursos:** O código possui rotinas internas (via biblioteca `psutil`) que encerram precocemente o processamento caso a matriz gerada demande mais de 90% da memória RAM disponível, evitando falhas críticas no sistema operacional.
 
@@ -105,14 +103,15 @@ graph TD
     Endpoint[API REST] --> Orquestrador[Módulo de Otimização]
     Orquestrador --> Pool[Processamento Paralelo]
 
-    subgraph Processos_Workers [Workers por Material]
-      Pool --> W_Aco[Aço Estrutural]
-      Pool --> W_Alu[Alumínio]
-      Pool --> W_Cor[Aço Alta Resistência]
+    subgraph Processos_Workers [Workers por Material — 4 processos simultâneos]
+      Pool --> W_A36[Aço A36]
+      Pool --> W_A572[Aço A572 G50]
+      Pool --> W_Corten[Aço Corten]
+      Pool --> W_Alu[Alumínio 6061-T6]
     end
 
-    W_Aco & W_Alu & W_Cor --> Solver[Motor de Elementos Finitos: PyNite]
-    W_Aco & W_Alu & W_Cor --> Data[(Bancos de Dados CSV)]
+    W_A36 & W_A572 & W_Corten & W_Alu --> Solver[Motor de Elementos Finitos: PyNite]
+    W_A36 & W_A572 & W_Corten & W_Alu --> Data[(Bancos de Dados CSV)]
   end
 
   UI <-->|JSON Payload| Nginx
@@ -126,46 +125,62 @@ O núcleo analítico do software é balizado pelos preceitos da mecânica dos s�
 
 ### 4.1. Método dos Elementos Finitos (MEF)
 
-A análise trata a estrutura como um sistema reticulado elástico linear. As hipóteses fundamentais incluem ligações perfeitamente rotuladas, de forma que os membros suportam exclusivamente cargas axiais e não transmitem momentos fletores.
-Cada nó dispõe de três graus de liberdade operacionais ($D_x, D_y, D_z$). A rigidez de uma barra é função direta de sua seção transversal ($A$), módulo de elasticidade longitudinal ($E$) e comprimento ($L$).
-A contribuição das rigidezes locais de todas as barras compõe a matriz de rigidez global da estrutura $[K]$. O problema é solucionado resolvendo-se o sistema linear:
+O solver PyNite FEA emprega elementos de viga-coluna tridimensionais com **seis graus de liberdade por nó**: três translações ($D_x, D_y, D_z$) e três rotações ($R_x, R_y, R_z$). Esta formulação de pórtico espacial é necessária para que o modelo de interação solo-estrutura, descrito na Seção 4.3, possa representar corretamente a rigidez rotacional das sapatas de fundação por meio de molas de apoio acopladas aos graus de liberdade $R_x$ e $R_z$ dos nós apoiados.
+
+Na superestrutura, o comportamento mecânico é essencialmente de treliça: toda a carga externa é aplicada como força nodal, nenhum momento externo é imposto, e a triangulação das barras garante que os esforços internos sejam predominantemente axiais. As hipóteses fundamentais incluem ligações suficientemente flexíveis para não transmitirem momentos fletores significativos entre os membros.
+
+A rigidez axial de cada barra é função direta de sua seção transversal ($A$), módulo de elasticidade longitudinal ($E$) e comprimento ($L$). A contribuição das rigidezes locais de todas as barras compõe a matriz de rigidez global da estrutura $[K]$. O problema é solucionado resolvendo-se o sistema linear:
+
 $$\{F\} = [K] \cdot \{D\}$$
-Onde $\{F\}$ é o vetor das forças aplicadas e $\{D\}$ é o vetor de deslocamentos nodais resultantes.
+
+onde $\{F\}$ é o vetor das forças aplicadas e $\{D\}$ é o vetor de deslocamentos nodais resultantes.
 
 ### 4.2. Verificações Normativas (NBR 8800)
 
-Para dimensionar os perfis e assegurar estabilidade, o sistema avalia o Estado Limite Último (ELU). A variável principal é a Taxa de Utilização ($U$), correspondente à razão entre a solicitação de cálculo ($N_{Ed}$) e a capacidade resistente ($N_{Rd}$). A aprovação estrutural exige que $U \le 1.0$ para todas as barras.
+Para dimensionar os perfis e assegurar estabilidade, o sistema avalia o Estado Limite Último (ELU). A variável principal é a Taxa de Utilização ($U$), correspondente à razão entre a solicitação de cálculo ($N_{Ed}$) e a resistência nominal ($N_n$) da seção. A aprovação estrutural exige que $U \le 1,0$ para todas as barras.
+
+> **Nota sobre simplificação:** A implementação compara diretamente a solicitação com a resistência nominal, sem aplicar explicitamente o coeficiente de minoração da resistência ($\gamma_{a1} = 1,10$) previsto na NBR 8800 para escoamento da seção bruta. Trata-se de uma simplificação conservadora do espaço de busca, adequada ao contexto de otimização paramétrica, mas que deve ser considerada em projetos executivos sujeitos à auditoria normativa completa.
 
 #### Esforço de Tração Axial
 
-Em elementos tracionados ($N_t > 0$), a capacidade é determinada pelo escoamento da seção transversal bruta:
-$$N_{t,Rd} = A \cdot f_y$$
-Onde $f_y$ é a tensão de escoamento característica da liga metálica.
+Em elementos tracionados ($N_t > 0$), a resistência nominal é determinada pelo escoamento da seção transversal bruta:
+
+$$N_{t,n} = A \cdot f_y$$
+
+onde $f_y$ é a tensão de escoamento característica da liga metálica.
 
 #### Esforço de Compressão e Instabilidade
 
-Em membros sob compressão ($N_c < 0$), a resistência é frequentemente governada pela flambagem elástica global. A capacidade resistente é calculada com a adoção de um fator de redução normativo $\chi$:
-$$N_{c,Rd} = \chi \cdot A \cdot f_y$$
+Em membros sob compressão ($N_c < 0$), a resistência é frequentemente governada pela flambagem elástica global. A resistência nominal é calculada com a adoção de um fator de redução normativo $\chi$:
+
+$$N_{c,n} = \chi \cdot A \cdot f_y$$
+
 Para o cálculo de $\chi$, determina-se inicialmente a carga crítica de Euler ($N_e$) e o respectivo índice de esbeltez reduzida ($\lambda_0$):
+
 $$N_e = \frac{\pi^2 \cdot E \cdot I}{L^2}$$
+
 $$\lambda_0 = \sqrt{\frac{A \cdot f_y}{N_e}}$$
+
 As expressões normativas definem o fator de redução como se segue:
 
-- Se $\lambda_0 \le 1.5$: $\chi = 0.658^{\lambda_0^2}$
-- Se $\lambda_0 > 1.5$: $\chi = \frac{0.877}{\lambda_0^2}$
+- Se $\lambda_0 \le 1,5$: $\chi = 0,658^{\lambda_0^2}$
+- Se $\lambda_0 > 1,5$: $\chi = \dfrac{0,877}{\lambda_0^2}$
 
 ### 4.3. Interação Solo-Estrutura (Apoios Elásticos)
 
 A abordagem computacional tradicional considera apoios indeslocáveis, o que mascara os efeitos dos recalques. O software implementa o Modelo de Winkler para simular bases deformáveis.
+
 O coeficiente de reação do subleito extraído de testes padronizados ($k_{s1}$) é devidamente corrigido para refletir as dimensões físicas da sapata de fundação ($B$), embasado nas proposições de Terzaghi:
 
-- **Para solos granulares (areias):** $k_s = k_{s1} \cdot \left( \frac{B + 0.305}{2B} \right)^2$
-- **Para solos coesivos (argilas):** $k_s = k_{s1} \cdot \left( \frac{0.305}{B} \right)$
+- **Para solos granulares (areias):** $k_s = k_{s1} \cdot \left( \dfrac{B + 0,305}{2B} \right)^2$
+- **Para solos coesivos (argilas):** $k_s = k_{s1} \cdot \left( \dfrac{0,305}{B} \right)$
 
-Com o coeficiente corrigido, são atribuídas molas computacionais aos nós apoiados, possuindo as seguintes rigidezes:
+Com o coeficiente corrigido, são atribuídas molas computacionais aos nós apoiados, explorado a formulação de seis graus de liberdade do solver para acoplar rigidezes tanto translacionais quanto rotacionais:
 
 - **Translação Vertical:** $K_z = k_s \cdot B \cdot L_{sapata} \quad \text{[kN/m]}$
 - **Rigidez Rotacional:** $K_{\theta} = k_s \cdot I_{base} \quad \text{[kN}\cdot\text{m/rad]}$
+
+onde $I_{base}$ é o momento de inércia da base da sapata em relação ao eixo de rotação considerado.
 
 ## 5. Algoritmo de Otimização e Processo Decisório
 
@@ -175,9 +190,9 @@ Para convergir em uma solução estrutural economicamente viável, o sistema ado
 
 1. **Agrupamento Funcional:** Os membros da treliça são alocados em grupos de similaridade construtiva (ex.: grupo de montantes, grupo de banzos inferiores) para manter a uniformidade de fabricação e montagem.
 2. **Inicialização Mínima:** O solver é iniciado atribuindo-se o menor perfil tabular disponível no banco de dados a todos os grupos simultaneamente.
-3. **Análise por Elementos Finitos:** O cálculo matricial é executado, obtendo-se as forças internas e as taxas de utilização ($U$) segundo a norma técnica.
-4. **Atualização Seletiva (Upgrade):** Constatada uma taxa de utilização superior a 1.0 em um ou mais componentes de um grupo, este tem seu perfil incrementado para a próxima seção transversal na tabela comercial.
-5. **Convergência:** A iteração é repetida até se atingir a estabilidade global, caracterizada por $U \le 1.0$ em todos os elementos estruturais. O processamento é então finalizado e os custos calculados para o material testado.
+3. **Análise por Elementos Finitos:** O cálculo matricial é executado, obtendo-se as forças internas e as taxas de utilização ($U$) segundo a formulação descrita na Seção 4.2.
+4. **Atualização Seletiva (Upgrade):** Constatada uma taxa de utilização superior a 1,0 em um ou mais componentes de um grupo, este tem seu perfil incrementado para a próxima seção transversal na tabela comercial.
+5. **Convergência:** A iteração é repetida até se atingir a estabilidade global, caracterizada por $U \le 1,0$ em todos os elementos estruturais, ou até que o limite de 30 iterações seja atingido. O processamento é então finalizado e os custos calculados para o material testado.
 
 ### 5.2. Fluxograma de Execução
 
@@ -190,18 +205,18 @@ sequenceDiagram
     participant Mef as Solucionador MEF
 
     Usr->>Srv: Submete parâmetros do projeto (Geometria e Solo)
-    Srv->>Cpu: Inicia processos paralelos isolados por liga metálica
+    Srv->>Cpu: Inicia 4 processos paralelos isolados por liga metálica
 
-    loop Otimização Estrutural Progressiva
+    loop Otimização Estrutural Progressiva (máx. 30 iterações)
         Cpu->>Cpu: Atribui os perfis mínimos aos grupos da treliça
         Cpu->>Mef: Formula matrizes de rigidez locais e global
         Mef->>Mef: Resolve sistema linear e processa reações
         Mef-->>Cpu: Retorna os esforços axiais apurados
         Cpu->>Cpu: Analisa o Estado Limite Último ($U$)
 
-        alt Excedeu Limite ($U > 1.0$)
+        alt Excedeu Limite (U > 1.0)
             Cpu->>Cpu: Atualiza o grupo subdimensionado para o próximo perfil do catálogo
-        else Estabilidade Plena ($U \le 1.0$)
+        else Estabilidade Plena (U ≤ 1.0)
             Cpu->>Cpu: Encerra ciclo iterativo para o material correspondente
         end
     end
@@ -220,42 +235,28 @@ A otimização estrutural consulta arquivos contendo dimensões e propriedades d
 
 A tabela inclui seções tubulares de perfil quadrado (SHS - Square Hollow Sections). O algoritmo inicia as buscas priorizando elementos de área reduzida.
 
-| Perfil Comercial | Área transversal ($A$) [m²] | Inércia no eixo ($I_x$) [m⁴] | Peso Linear [kg/m] |
-| :--------------- | :-------------------------- | :--------------------------- | :----------------- |
-| SHS 40x40x2.5    | 0.000375                    | 0.000000084                  | 2.94               |
-| SHS 50x50x3.0    | 0.000564                    | 0.000000201                  | 4.43               |
-| SHS 60x60x3.0    | 0.000684                    | 0.000000361                  | 5.37               |
-| SHS 75x75x4.0    | 0.001140                    | 0.000000958                  | 8.92               |
-| SHS 100x100x5.0  | 0.001900                    | 0.000002870                  | 14.90              |
-| SHS 150x150x8.0  | 0.004540                    | 0.000015100                  | 35.70              |
-| SHS 200x200x10.0 | 0.007600                    | 0.000045300                  | 59.70              |
+| Perfil Comercial | Área transversal ($A$) [m²] | Inércia no eixo ($I_x$) [m⁴] | Peso de Ref. (aço) [kg/m] |
+| :--------------- | :-------------------------- | :--------------------------- | :------------------------ |
+| SHS 40x40x2.5    | 0.000375                    | 0.000000084                  | 2.94                      |
+| SHS 50x50x3.0    | 0.000564                    | 0.000000201                  | 4.43                      |
+| SHS 60x60x3.0    | 0.000684                    | 0.000000361                  | 5.37                      |
+| SHS 75x75x4.0    | 0.001140                    | 0.000000958                  | 8.92                      |
+| SHS 100x100x5.0  | 0.001900                    | 0.000002870                  | 14.90                     |
+| SHS 150x150x8.0  | 0.004540                    | 0.000015100                  | 35.70                     |
+| SHS 200x200x10.0 | 0.007600                    | 0.000045300                  | 59.70                     |
+
+> **Observação sobre o cálculo do peso próprio:** A coluna "Peso de Ref." é informativa e fornece o peso linear do perfil em aço estrutural. O software, contudo, não utiliza essa coluna para os cálculos de carga de peso próprio. O peso de cada elemento é determinado dinamicamente como $p = A \cdot \rho_{material} \cdot L$, onde $\rho_{material}$ é a densidade da liga metálica em análise. Isso garante que a contribuição do peso próprio do alumínio (2.800 kg/m³) seja corretamente distinta da do aço (7.850 kg/m³).
 
 ### 6.2. Catálogo de Ligas Metálicas (`materials.csv`)
 
-A seleção do material afeta substancialmente a rigidez final e o custo por quilograma, promovendo competição de orçamentos durante os cálculos paralelos do backend.
+A seleção do material afeta substancialmente a rigidez final e o custo por quilograma, promovendo competição de orçamentos durante os cálculos paralelos do backend. O catálogo conta com **quatro ligas**, cada uma processada por um worker independente.
 
 | Especificação do Material        | Tensão de Escoamento ($f_y$) | Módulo de Elasticidade ($E$) | Densidade  | Valor de Referência |
 | :------------------------------- | :--------------------------- | :--------------------------- | :--------- | :------------------ |
-| Aço Estrutural A36               | 250 MPa                      | 200 GPa                      | 7850 kg/m³ | R\$ 8.45 / kg       |
-| Aço de Alta Resistência A572 G50 | 345 MPa                      | 200 GPa                      | 7850 kg/m³ | R\$ 12.95 / kg      |
-| Aço Patinável Corten             | 300 MPa                      | 200 GPa                      | 7850 kg/m³ | R\$ 10.00 / kg      |
-| Alumínio Estrutural 6061-T6      | 240 MPa                      | 70 GPa                       | 2800 kg/m³ | R\$ 65.00 / kg      |
-
-### 6.3 Processo de Busca
-
-A rotina inicia atribuindo a menor seção transversal de catálogo a todos os grupos (banzos, montantes, diagonais). Ao avaliar a matriz de utilização, se o membro mais sobrecarregado de um grupo exceder o índice de projeto ($U > 1.0$), o algoritmo sobe a classe do perfil exclusivamente para aquele grupo. Esse ciclo se repete heuristicamente até a convergência estática.
-
-```mermaid
-graph LR
-  Start([Início]) --> Init[Inicializar Perfis Mais Leves]
-  Init --> FEA[Análise de Elementos Finitos - PyNite]
-  FEA --> Check{U <= 1.0?}
-  Check -- Sim --> Success([Sucesso: Custo Mínimo])
-  Check -- Não --> Upgrade[Upgrade do Perfil no Grupo Crítico]
-  Upgrade --> Max{Limite do Catálogo?}
-  Max -- Sim --> Fail([Falha: Carga Excede Capacidade])
-  Max -- Não --> FEA
-```
+| Aço Estrutural A36               | 250 MPa                      | 200 GPa                      | 7850 kg/m³ | R\$ 8,45 / kg       |
+| Aço de Alta Resistência A572 G50 | 345 MPa                      | 200 GPa                      | 7850 kg/m³ | R\$ 12,95 / kg      |
+| Aço Patinável Corten             | 300 MPa                      | 200 GPa                      | 7850 kg/m³ | R\$ 10,00 / kg      |
+| Alumínio Estrutural 6061-T6      | 240 MPa                      | 70 GPa                       | 2800 kg/m³ | R\$ 65,00 / kg      |
 
 ## 7. Comportamentos Observados e Validação
 
