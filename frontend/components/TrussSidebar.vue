@@ -99,7 +99,6 @@ const resetParameters = () => {
   store.form.custom_ks = 80000;
   store.form.footing_b = 0.6;
   store.form.footing_l = 0.6;
-  store.optimize();
 };
 
 /**
@@ -155,7 +154,8 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
           >
           <select
             v-model="store.form.selectedTemplate"
-            class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-white"
+            :disabled="store.loading"
+            class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-white disabled:opacity-50"
           >
             <optgroup
               v-for="cat in templateCategories"
@@ -176,14 +176,18 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
         <!-- Definição de Dimensões Reais -->
         <div class="grid grid-cols-1 gap-4">
           <!-- Vão Livre -->
-          <div :class="{ 'opacity-50 pointer-events-none': !isSpanActive }">
+          <div
+            :class="{
+              'opacity-50 pointer-events-none': !isSpanActive || store.loading,
+            }"
+          >
             <label class="block text-sm font-semibold text-gray-200 mb-2">
               Vão / Comprimento (m)
             </label>
             <input
               v-model.number="store.form.length"
               @blur="sanitizeInput('length', 0.1)"
-              :disabled="!isSpanActive"
+              :disabled="!isSpanActive || store.loading"
               type="number"
               step="0.5"
               class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
@@ -191,21 +195,22 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
           </div>
 
           <!-- Altura Estrutural -->
-          <div>
+          <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
             <label class="block text-sm font-semibold text-gray-200 mb-2"
               >Altura (m)</label
             >
             <input
               v-model.number="store.form.height"
               @blur="sanitizeInput('height', 0.1)"
+              :disabled="store.loading"
               type="number"
               step="0.1"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500"
+              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
             />
           </div>
 
           <!-- Largura da Seção Transversal -->
-          <div>
+          <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
             <label class="block text-sm font-semibold text-gray-200 mb-2"
               >Largura (m)
               <span class="text-xs text-blue-400 font-normal"
@@ -215,21 +220,27 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
             <input
               v-model.number="store.form.width"
               @blur="sanitizeInput('width', 0)"
+              :disabled="store.loading"
               type="number"
               step="0.1"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500"
+              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
             />
           </div>
 
           <!-- Geometria Variável para Torres -->
-          <div :class="{ 'opacity-50 pointer-events-none': !isTopWidthActive }">
+          <div
+            :class="{
+              'opacity-50 pointer-events-none':
+                !isTopWidthActive || store.loading,
+            }"
+          >
             <label class="block text-sm font-semibold text-gray-200 mb-2"
               >Largura do Topo (m)</label
             >
             <input
               v-model.number="store.form.topWidth"
               @blur="sanitizeInput('topWidth', 0.01)"
-              :disabled="!isTopWidthActive"
+              :disabled="!isTopWidthActive || store.loading"
               type="number"
               step="0.1"
               class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
@@ -237,14 +248,19 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
           </div>
 
           <!-- Discretização da Malha -->
-          <div :class="{ 'opacity-50 pointer-events-none': !isPanelsActive }">
+          <div
+            :class="{
+              'opacity-50 pointer-events-none':
+                !isPanelsActive || store.loading,
+            }"
+          >
             <label class="block text-sm font-semibold text-gray-200 mb-2"
               >Painéis / Divisões</label
             >
             <input
               v-model.number="store.form.divisions"
               @blur="sanitizeInput('divisions', 2)"
-              :disabled="!isPanelsActive"
+              :disabled="!isPanelsActive || store.loading"
               type="number"
               min="2"
               max="20"
@@ -252,14 +268,19 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
             />
           </div>
 
-          <div :class="{ 'opacity-50 pointer-events-none': !isSectionsActive }">
+          <div
+            :class="{
+              'opacity-50 pointer-events-none':
+                !isSectionsActive || store.loading,
+            }"
+          >
             <label class="block text-sm font-semibold text-gray-200 mb-2"
               >Seções (Torres)</label
             >
             <input
               v-model.number="store.form.sections"
               @blur="sanitizeInput('sections', 1)"
-              :disabled="!isSectionsActive"
+              :disabled="!isSectionsActive || store.loading"
               type="number"
               min="1"
               max="20"
@@ -268,16 +289,17 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
           </div>
 
           <!-- Carregamento de Projeto -->
-          <div>
+          <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
             <label class="block text-sm font-semibold text-gray-200 mb-2"
               >Carga Total (kgf)</label
             >
             <input
               v-model.number="store.form.total_load"
               @blur="sanitizeInput('total_load', 1)"
+              :disabled="store.loading"
               type="number"
               step="100"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500"
+              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
             />
           </div>
 
@@ -287,13 +309,17 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
               Interação Solo-Estrutura (ISE)
             </h3>
 
-            <div class="mb-3">
+            <div
+              class="mb-3"
+              :class="{ 'opacity-50 pointer-events-none': store.loading }"
+            >
               <label class="block text-sm font-semibold text-gray-200 mb-2"
                 >Tipo de Solo</label
               >
               <select
                 v-model="store.form.soil_type"
-                class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-white"
+                :disabled="store.loading"
+                class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-white disabled:opacity-50"
               >
                 <option value="Areia Fofa">Areia Fofa</option>
                 <option value="Areia Compacta">Areia Compacta</option>
@@ -304,43 +330,50 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
               </select>
             </div>
 
-            <div v-if="store.form.soil_type === 'Customizado'" class="mb-3">
+            <div
+              v-if="store.form.soil_type === 'Customizado'"
+              class="mb-3"
+              :class="{ 'opacity-50 pointer-events-none': store.loading }"
+            >
               <label class="block text-sm font-semibold text-gray-200 mb-2"
                 >ks1 (kN/m³)</label
               >
               <input
                 v-model.number="store.form.custom_ks"
                 @blur="sanitizeInput('custom_ks', 1000)"
+                :disabled="store.loading"
                 type="number"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white disabled:opacity-50"
               />
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-              <div>
+              <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
                 <label class="block text-sm font-semibold text-gray-200 mb-2"
                   >Sapata B (m)</label
                 >
                 <input
                   v-model.number="store.form.footing_b"
                   @blur="sanitizeInput('footing_b', 0.3)"
+                  :disabled="store.loading"
                   type="number"
                   step="0.1"
                   min="0.3"
-                  class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white"
+                  class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white disabled:opacity-50"
                 />
               </div>
-              <div>
+              <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
                 <label class="block text-sm font-semibold text-gray-200 mb-2"
                   >Sapata L (m)</label
                 >
                 <input
                   v-model.number="store.form.footing_l"
                   @blur="sanitizeInput('footing_l', 0.3)"
+                  :disabled="store.loading"
                   type="number"
                   step="0.1"
                   min="0.3"
-                  class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white"
+                  class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white disabled:opacity-50"
                 />
               </div>
             </div>
@@ -389,7 +422,8 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
 
           <button
             @click="resetParameters"
-            class="w-full bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 font-medium py-2 rounded-lg transition text-sm"
+            :disabled="store.loading"
+            class="w-full bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 font-medium py-2 rounded-lg transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Resetar Parâmetros
           </button>

@@ -263,7 +263,14 @@ export const useTrussStore = defineStore("truss", () => {
       };
 
       ws.value.onclose = () => {
-        if (loading.value) loading.value = false;
+        // Tratamento de Quedas Silenciosas (Toasts de Erro): se a conexão cair durante o cálculo, notificamos o usuário.
+        if (loading.value) {
+          addToast(
+            "A conexão com o servidor caiu durante o cálculo. Por favor, tente novamente.",
+            "error",
+          );
+          loading.value = false;
+        }
         ws.value = null;
       };
     } catch (err: any) {

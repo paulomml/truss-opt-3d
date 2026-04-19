@@ -212,7 +212,7 @@ sequenceDiagram
         Cpu->>Mef: Formula matrizes de rigidez locais e global
         Mef->>Mef: Resolve sistema linear e processa reações
         Mef-->>Cpu: Retorna os esforços axiais apurados
-        Cpu->>Cpu: Analisa o Estado Limite Último ($U$)
+        Cpu->>Cpu: Analisa o Estado Limite Último (U)
 
         alt Excedeu Limite (U > 1.0)
             Cpu->>Cpu: Atualiza o grupo subdimensionado para o próximo perfil do catálogo
