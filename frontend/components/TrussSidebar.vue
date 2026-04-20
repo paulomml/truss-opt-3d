@@ -68,6 +68,15 @@ onMounted(() => {
 
 const structuralSafetyAlerts = computed(() => {
   const alerts: Array<{ message: string; type: "warning" | "danger" }> = [];
+
+  // Justificativa: Integração de erros estruturais críticos vindos do backend (PyNite/NBR 8800).
+  if (store.result && !store.result.is_structurally_stable && store.result.status_message) {
+    alerts.push({
+      message: store.result.status_message,
+      type: "danger",
+    });
+  }
+
   const {
     selectedTemplate,
     length,

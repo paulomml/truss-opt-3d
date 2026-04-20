@@ -30,7 +30,7 @@ export interface MemberResult {
   profile: string;
   axial_force: number;
   utilization: number;
-  stress_type: "Tension" | "Compression" | "None";
+  stress_type: "Tração" | "Compressão" | "Nenhum" | string;
 }
 
 export interface OptimizationResponse {

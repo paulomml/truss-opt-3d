@@ -227,10 +227,10 @@ export const useTrussStore = defineStore("truss", () => {
 
           result.value = validatedData;
           if (validatedData.is_structurally_stable) {
-            // Purge da malha preliminar para liberar a heap; o renderer agora consome o grafo otimizado.
+            // Purge da malha preliminar para liberar a heap; o renderer consome o grafo otimizado.
             rawTruss.value = null;
             addToast(
-              "Análise concluída. O dimensionamento estrutural foi concluído com sucesso.",
+              validatedData.status_message || "Análise concluída. O dimensionamento estrutural foi concluído com sucesso.",
               "success",
             );
           } else {
@@ -239,8 +239,7 @@ export const useTrussStore = defineStore("truss", () => {
                 "A análise estrutural não pôde ser concluída com os parâmetros atuais.",
               "warning",
             );
-            // Reset automático em caso de falha estrutural (não estável)
-            cancelOptimization();
+            // Justificativa: Não chamamos cancelOptimization() aqui para manter o result.value acessível na UI (ex: Sidebar).
           }
           loading.value = false;
           ws.value?.close();

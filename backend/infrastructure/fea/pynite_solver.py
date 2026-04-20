@@ -72,7 +72,7 @@ def build_and_solve_truss(
         material["name"], material["E"] * 1e9, G, nu, material["rho"] * 1e-9
     )
 
-    # Cache local de seções transversais. Iy e J agora consumidos do catálogo.
+    # Cache local de seções transversais. Iy e J consumidos do catálogo.
     for p in profiles_catalog:
         if p["Name"] not in model.sections:
             model.add_section(p["Name"], p["Area"], p["Ix"], p["Iy"], p["J"])

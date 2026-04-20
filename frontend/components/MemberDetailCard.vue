@@ -170,9 +170,7 @@ const close = () => {
                   kN
                 </span>
                 <span class="text-xs uppercase text-gray-400">{{
-                  store.selectedMember.stress_type === "Tension"
-                    ? "Tração"
-                    : "Compressão"
+                  store.selectedMember.stress_type
                 }}</span>
               </div>
             </div>
@@ -288,9 +286,7 @@ const close = () => {
                 kN
               </span>
               <span class="text-xs uppercase text-gray-400">{{
-                store.selectedMember.stress_type === "Tension"
-                  ? "Tração"
-                  : "Compressão"
+                store.selectedMember.stress_type
               }}</span>
             </div>
           </div>
