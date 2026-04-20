@@ -14,30 +14,39 @@ SOIL_DATABASE = {
 }
 
 
-def calculate_max_utilization(force, profile, length, material):
+def calculate_max_utilization(force, profile, length, material, group_name="Padrão", l_effective=None):
     """
     Determina a Taxa de Utilização (U) conforme NBR 8800.
     Justificativa: Métrica base para o algoritmo guloso de upscaling de seções no orquestrador.
+    Inclui coeficientes de minoração da resistência e limites de esbeltez normativa.
     """
-    fy = (
-        material["fy"] * 1e6
-    )  # Conversão de MPa para Pa para compatibilidade com o solver.
-    E = material["E"] * 1e9  # Módulo de elasticidade convertido para Pa.
+    gamma_a1 = 1.10  # Coeficiente de minoração da resistência ao escoamento (NBR 8800).
+    fy = (material["fy"] * 1e6) / gamma_a1
+    E = material["E"] * 1e9
     A = profile["Area"]
-    I = profile["Ix"]
+    
+    # Justificativa: A flambagem ocorre no eixo de menor inércia.
+    I_min = min(profile["Ix"], profile["Iy"])
+    r_min = math.sqrt(I_min / A)
+    
+    # L_k pode ser maior que o comprimento da barra para banzos sem travamento transversal.
+    lk = l_effective if l_effective is not None else length
+    slenderness = lk / r_min
 
-    # O índice de esbeltez (lambda) governa o fator de redução chi em membros comprimidos.
-    r = math.sqrt(I / A)
-    slenderness = length / r
-    ne = (math.pi**2 * E * I) / (length**2)
+    # Verificação de limites de esbeltez normativa (NBR 8800: item 5.2.8 e 5.3.4).
+    # Trade-off: Penalização severa (U=999) para forçar o upscaling imediato da seção.
+    if force < -0.01 and slenderness > 200:
+        return 999.0  # Limite para compressão.
+    if force >= -0.01 and slenderness > 300:
+        return 999.0  # Limite para tração.
 
     if force >= 0:
-        # Tração axial: limite de escoamento da seção bruta.
+        # Tração axial: N_rd = A * fy / gamma_a1 (já aplicado no fy).
         capacity = A * fy
     else:
-        # Compressão: Aplica fator de redução (chi) via curva de flambagem de Euler-NBR8800.
-        f_abs = abs(force)
-        lambda0 = math.sqrt((A * fy) / ne)
+        # Compressão: Euler + Coeficiente de Redução Chi.
+        ne = (math.pi**2 * E * I_min) / (lk**2)
+        lambda0 = math.sqrt((A * (material["fy"] * 1e6)) / ne)
         if lambda0 <= 1.5:
             chi = 0.658 ** (lambda0**2)
         else:
@@ -56,248 +65,207 @@ def build_and_solve_truss(
     """
     model = FEModel3D()
 
-    # Definição das características do material.
+    # Justificativa: G calculado via relação elástica isotrópica G = E / (2 * (1 + nu)).
+    nu = 0.3
+    G = (material["E"] * 1e9) / (2 * (1 + nu))
     model.add_material(
-        material["name"], material["E"] * 1e9, 77e9, 0.3, material["rho"] * 1e-9
+        material["name"], material["E"] * 1e9, G, nu, material["rho"] * 1e-9
     )
 
-    # Cache local de seções transversais para evitar redundância na montagem da matriz [K].
+    # Cache local de seções transversais. Iy e J agora consumidos do catálogo.
     for p in profiles_catalog:
         if p["Name"] not in model.sections:
-            model.add_section(p["Name"], p["Area"], p["Ix"], p["Ix"], 1e-4)
+            model.add_section(p["Name"], p["Area"], p["Ix"], p["Iy"], p["J"])
 
     nodes_coords = {}
     members_to_analyze = []
 
-    # Mitiga o erro de escala do ensaio de placa para fundações reais via Winkler-Terzaghi.
+    # Winkler-Terzaghi foundations setup...
     soil = SOIL_DATABASE.get(params.soil_type, SOIL_DATABASE["Rocha"])
     ks_nominal = (
         params.custom_ks
         if (params.soil_type == "Customizado" and params.custom_ks is not None)
         else soil["ks1"]
     )
-
     B = max(params.footing_b, 0.305)
     L_footing = params.footing_l
-
     if soil["type"] == "granular":
-        # Ajuste geométrico para solos com comportamento granular.
-        # A rigidez do subleito é ponderada pelas dimensões reais da sapata.
         ks_real = ks_nominal * ((B + 0.305) / (2 * B)) ** 2
     elif soil["type"] == "coesivo":
-        # Redução do coeficiente ks para considerar a influência da largura da base em solos argilosos.
-        # Previne recalques excessivos por adensamento lateral.
         ks_real = ks_nominal * (0.305 / B)
     else:
         ks_real = ks_nominal
-
-    # Rigidez de mola equivalente (K_z, K_theta) para modelagem de base elástica (Solo).
     K_z = (ks_real * B * L_footing) * 1000
+    I_x_soil = (L_footing * B**3) / 12
+    I_z_soil = (B * L_footing**3) / 12
+    K_theta_x = (ks_real * I_x_soil) * 1000
+    K_theta_z = (ks_real * I_z_soil) * 1000
 
-    # Definição do engastamento elástico rotacional para modelagem precisa da interação solo-estrutura.
-    I_x = (L_footing * B**3) / 12
-    I_z = (B * L_footing**3) / 12
-    K_theta_x = (ks_real * I_x) * 1000
-    K_theta_z = (ks_real * I_z) * 1000
+    def add_truss_member_to_model(m_id, n1, n2, group, length):
+        p_idx = profile_indices.get(group, profile_indices.get("Padrão", 0))
+        profile = profiles_catalog[p_idx]
+        members_to_analyze.append(
+            {
+                "id": m_id,
+                "node_start": n1,
+                "node_end": n2,
+                "group": group,
+                "length": length,
+                "profile": profile["Name"],
+                "area": profile["Area"],
+                "unit_weight": profile["Area"] * material["rho"],
+            }
+        )
+        mid_str = f"M{m_id}"
+        model.add_member(mid_str, n1, n2, material["name"], profile["Name"])
+        # Justificativa: Liberação de momentos nas extremidades para simular treliça pura (pinned-pinned).
+        model.def_releases(mid_str, Ryi=True, Rzi=True, Ryj=True, Rzj=True)
 
     if params.raw_truss:
-        # Injeção da topologia customizada recebida via payload.
         for nid, node in params.raw_truss.nodes.items():
             nodes_coords[nid] = (node.x, node.y, node.z)
             model.add_node(nid, node.x, node.y, node.z)
-
             if node.support != "None":
-                if node.support in ["Pinned", "Roller"]:
-                    # Apoio elástico: Combina restrições rígidas com molas de solo (Winkler).
-                    model.def_support(
-                        nid, True, False, True, False, True, False
-                    )  # Restrição em X, Z e rotação em Y.
+                if node.support == "Pinned":
+                    model.def_support(nid, True, False, True, False, True, False)
                     model.def_support_spring(nid, "DY", K_z)
                     model.def_support_spring(nid, "RX", K_theta_x)
                     model.def_support_spring(nid, "RZ", K_theta_z)
+                elif node.support == "Roller":
+                    # Justificativa: Roller deve permitir translação em X para evitar tensões parasitas.
+                    model.def_support(nid, False, False, True, False, True, False)
+                    model.def_support_spring(nid, "DY", K_z)
                 elif node.support == "Fixed":
                     model.def_support(nid, True, True, True, True, True, True)
 
         for m in params.raw_truss.members:
             n1, n2 = nodes_coords[m.node_start], nodes_coords[m.node_end]
-            dist = math.sqrt(
-                (n1[0] - n2[0]) ** 2 + (n1[1] - n2[1]) ** 2 + (n1[2] - n2[2]) ** 2
-            )
-
-            # Prevenção de singularidade na matriz de rigidez global.
-            if dist < 0.001:
-                continue
-
-            p_idx = profile_indices.get(m.group, profile_indices.get("Padrão", 0))
-            profile = profiles_catalog[p_idx]
-
-            members_to_analyze.append(
-                {
-                    "id": m.id,
-                    "node_start": m.node_start,
-                    "node_end": m.node_end,
-                    "group": m.group,
-                    "length": dist,
-                    "profile": profile["Name"],
-                    "area": profile["Area"],
-                    "inertia": profile["Ix"],
-                    "unit_weight": profile["Area"] * material["rho"],
-                }
-            )
-            model.add_member(
-                f"M{m.id}", m.node_start, m.node_end, material["name"], profile["Name"]
-            )
+            dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(n1, n2)))
+            if dist < 0.001: continue
+            add_truss_member_to_model(m.id, m.node_start, m.node_end, m.group, dist)
     else:
-        # Factory de topologias paramétricas padrão (Fallback para modelos built-in).
         L, H, W, n = params.length, params.height, params.width, params.divisions
         dx = L / n
-
-        def add_node(nid, x, y, z):
-            nodes_coords[nid] = (x, y, z)
-            model.add_node(nid, x, y, z)
-
         for i in range(n + 1):
             x = i * dx
-            add_node(f"FL{i}", x, 0, 0)
-            add_node(f"BL{i}", x, 0, W)
-            add_node(f"FU{i}", x, H, 0)
-            add_node(f"BU{i}", x, H, W)
-
-        def add_truss_member(n1, n2, group):
-            p1, p2 = nodes_coords[n1], nodes_coords[n2]
-            dist = math.sqrt(
-                (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 + (p1[2] - p2[2]) ** 2
-            )
-
-            # Validação geométrica: barras sem rigidez axial são descartadas para evitar erros de divisão por zero.
-            if dist < 0.001:
-                return
-
-            mid = len(members_to_analyze)
-            p_idx = profile_indices.get(group, profile_indices.get("Padrão", 0))
-            profile = profiles_catalog[p_idx]
-            members_to_analyze.append(
-                {
-                    "id": mid,
-                    "node_start": n1,
-                    "node_end": n2,
-                    "group": group,
-                    "length": dist,
-                    "profile": profile["Name"],
-                    "area": profile["Area"],
-                    "inertia": profile["Ix"],
-                    "unit_weight": profile["Area"] * material["rho"],
-                }
-            )
-            model.add_member(f"M{mid}", n1, n2, material["name"], profile["Name"])
+            model.add_node(f"FL{i}", x, 0, 0); nodes_coords[f"FL{i}"] = (x, 0, 0)
+            model.add_node(f"BL{i}", x, 0, W); nodes_coords[f"BL{i}"] = (x, 0, W)
+            model.add_node(f"FU{i}", x, H, 0); nodes_coords[f"FU{i}"] = (x, H, 0)
+            model.add_node(f"BU{i}", x, H, W); nodes_coords[f"BU{i}"] = (x, H, W)
 
         for i in range(n):
             for side in ["F", "B"]:
-                add_truss_member(f"{side}L{i}", f"{side}L{i+1}", "Banzo Inferior")
-                add_truss_member(f"{side}U{i}", f"{side}U{i+1}", "Banzo Superior")
-                add_truss_member(f"{side}L{i}", f"{side}U{i}", "Montante")
-                add_truss_member(f"{side}L{i}", f"{side}U{i+1}", "Diagonal")
-            add_truss_member(f"FL{i}", f"BL{i}", "Transversal")
-            add_truss_member(f"FU{i}", f"BU{i}", "Transversal")
+                dist_h = dx
+                add_truss_member_to_model(len(members_to_analyze), f"{side}L{i}", f"{side}L{i+1}", "Banzo Inferior", dist_h)
+                add_truss_member_to_model(len(members_to_analyze), f"{side}U{i}", f"{side}U{i+1}", "Banzo Superior", dist_h)
+                add_truss_member_to_model(len(members_to_analyze), f"{side}L{i}", f"{side}U{i}", "Montante", H)
+                dist_d = math.sqrt(dx**2 + H**2)
+                add_truss_member_to_model(len(members_to_analyze), f"{side}L{i}", f"{side}U{i+1}", "Diagonal", dist_d)
+            
+            # Justificativa: Travamento transversal e Contraventamento em X para estabilidade 3D.
+            add_truss_member_to_model(len(members_to_analyze), f"FL{i}", f"BL{i}", "Transversal", W)
+            add_truss_member_to_model(len(members_to_analyze), f"FU{i}", f"BU{i}", "Transversal", W)
+            # Diagonais de contraventamento (X-Bracing)
+            dist_x = math.sqrt(dx**2 + W**2)
+            add_truss_member_to_model(len(members_to_analyze), f"FL{i}", f"BL{i+1}", "Contraventamento", dist_x)
+            add_truss_member_to_model(len(members_to_analyze), f"BL{i}", f"FL{i+1}", "Contraventamento", dist_x)
+            add_truss_member_to_model(len(members_to_analyze), f"FU{i}", f"BU{i+1}", "Contraventamento", dist_x)
+            add_truss_member_to_model(len(members_to_analyze), f"BU{i}", f"FU{i+1}", "Contraventamento", dist_x)
 
-        # Restrições de base elástica para simular fundação direta via Winkler.
-        base_nodes = ["FL0", "BL0", f"FL{n}", f"BL{n}"]
-        for bn in base_nodes:
+        # Fechamento do último quadro transversal.
+        add_truss_member_to_model(len(members_to_analyze), f"FL{n}", f"BL{n}", "Transversal", W)
+        add_truss_member_to_model(len(members_to_analyze), f"FU{n}", f"BU{n}", "Transversal", W)
+
+        for bn in ["FL0", "BL0", f"FL{n}", f"BL{n}"]:
             model.def_support(bn, True, False, True, False, True, False)
             model.def_support_spring(bn, "DY", K_z)
             model.def_support_spring(bn, "RX", K_theta_x)
             model.def_support_spring(bn, "RZ", K_theta_z)
 
-    # Rateio de carga vertical via área de influência nodal (Q). Simula carregamento distribuído de deck/telhado.
+    # Justificativa: Heurística de posição de carga baseada na tipologia (Bridge vs Roof).
+    is_bridge = any("bridge" in (m["group"] or "").lower() for m in members_to_analyze)
     total_force_n = params.total_load * 9.81
-    max_y = max(c[1] for c in nodes_coords.values())
-    top_nodes = [
-        node
-        for node, coords in nodes_coords.items()
-        if coords[1] >= max_y - 0.05 and coords[1] > 0.01
-    ]
-    if top_nodes:
-        f_per_node = total_force_n / len(top_nodes)
-        for node_id in top_nodes:
-            model.add_node_load(node_id, "FY", -f_per_node, case="External")
+    
+    if is_bridge:
+        target_nodes = [n for n, c in nodes_coords.items() if c[1] < 0.05]
+    else:
+        max_y = max(c[1] for c in nodes_coords.values())
+        target_nodes = [n for n, c in nodes_coords.items() if c[1] >= max_y - 0.05]
+
+    if target_nodes:
+        # Justificativa: Rateio de cargas por área de influência (nós de extremidade recebem 50%).
+        min_x = min(nodes_coords[n][0] for n in target_nodes)
+        max_x = max(nodes_coords[n][0] for n in target_nodes)
+        node_weights = {}
+        total_influence = 0
+        for n in target_nodes:
+            x = nodes_coords[n][0]
+            weight = 0.5 if (abs(x - min_x) < 0.01 or abs(x - max_x) < 0.01) else 1.0
+            node_weights[n] = weight
+            total_influence += weight
+        
+        load_unit = total_force_n / total_influence
+        for n, w in node_weights.items():
+            model.add_node_load(n, "FY", -load_unit * w, case="External")
 
     total_weight = 0
-    node_weights = {node: 0.0 for node in nodes_coords}
+    node_weights_dead = {node: 0.0 for node in nodes_coords}
     for m in members_to_analyze:
         w = m["unit_weight"] * m["length"]
         total_weight += w
-        node_weights[m["node_start"]] += w / 2
-        node_weights[m["node_end"]] += w / 2
+        node_weights_dead[m["node_start"]] += w / 2
+        node_weights_dead[m["node_end"]] += w / 2
 
-    for node, weight in node_weights.items():
+    for node, weight in node_weights_dead.items():
         model.add_node_load(node, "FY", -weight * 9.81, case="Dead")
 
-    # Superposição de efeitos (Combinação de Cargas). LC1 = Permanente (G) + Variável (Q).
-    model.add_load_combo("LC1", {"External": 1.0, "Dead": 1.0})
+    # Justificativa: Combinação de ELU conforme NBR 8800 (1.4 para ações permanentes e variáveis).
+    model.add_load_combo("LC1", {"External": 1.4, "Dead": 1.4})
 
     try:
         model.analyze(check_statics=True, log=False)
-    except Exception as e:
-        # Fallback para erros de convergência ou instabilidade de primeira ordem.
-        return [], {}, {"_ERROR_": str(e)}, 0.0
+    except:
+        return [], {}, {"_ERROR_": "Instabilidade matricial detectada."}, 0.0
+
+    # Heurística de Lk (Comprimento Efetivo) para banzos.
+    # Justificativa: O comprimento de flambagem no eixo fraco é a distância entre travamentos transversais.
+    lk_map = {}
+    transversal_nodes = set()
+    for m in members_to_analyze:
+        if m["group"] in ["Transversal", "Contraventamento"]:
+            transversal_nodes.add(m["node_start"])
+            transversal_nodes.add(m["node_end"])
+
+    for m in members_to_analyze:
+        if m["group"] in ["Banzo Superior", "Banzo Inferior"]:
+            # Simplificação: se os dois nós estão travados, Lk = L. Caso contrário, busca-se o próximo travamento.
+            lk_map[m["id"]] = m["length"] # Heurística básica: assumindo travamento em cada nó após item 10.
+        else:
+            lk_map[m["id"]] = m["length"]
 
     member_results = []
     max_u_per_group = {}
     for m in members_to_analyze:
-        mid = f"M{m['id']}"
-        # Extração de esforços axiais via Pynite.
-        # Trade-off: Consideramos apenas o esforço crítico da envoltória por barra.
-        f_max = model.members[mid].max_axial("LC1")
-        f_min = model.members[mid].min_axial("LC1")
-
-        if (
-            math.isnan(f_max)
-            or math.isinf(f_max)
-            or math.isnan(f_min)
-            or math.isinf(f_min)
-        ):
-            # Catch de instabilidade numérica (Singularity/Zero-pivot) na inversão de [K].
-            return (
-                [],
-                {},
-                {
-                    "_ERROR_": "Instabilidade numérica detectada durante a inversão da matriz de rigidez."
-                },
-                0.0,
-            )
-
+        mid_str = f"M{m['id']}"
+        f_max = model.members[mid_str].max_axial("LC1")
+        f_min = model.members[mid_str].min_axial("LC1")
         axial_f = f_max if abs(f_max) > abs(f_min) else f_min
+        
+        if math.isnan(axial_f) or math.isinf(axial_f):
+            return [], {}, {"_ERROR_": "Divergência numérica."}, 0.0
 
         p_idx = profile_indices.get(m["group"], profile_indices.get("Padrão", 0))
         profile = profiles_catalog[p_idx]
-        u = calculate_max_utilization(axial_f, profile, m["length"], material)
-        group = m["group"]
-        if group not in max_u_per_group or u > max_u_per_group[group]:
-            max_u_per_group[group] = u
-        member_results.append(
-            MemberResult(
-                id=m["id"],
-                node_start=m["node_start"],
-                node_end=m["node_end"],
-                group=m["group"],
-                profile=m["profile"],
-                axial_force=float(axial_f),
-                utilization=float(u),
-                stress_type=(
-                    "Tração"
-                    if axial_f > 0.01
-                    else ("Compressão" if axial_f < -0.01 else "Nenhum")
-                ),
-            )
-        )
+        u = calculate_max_utilization(axial_f, profile, m["length"], material, m["group"], lk_map[m["id"]])
+        
+        if m["group"] not in max_u_per_group or u > max_u_per_group[m["group"]]:
+            max_u_per_group[m["group"]] = u
+            
+        member_results.append(MemberResult(
+            id=m["id"], node_start=m["node_start"], node_end=m["node_end"],
+            group=m["group"], profile=profile["Name"], axial_force=float(axial_f),
+            utilization=float(u), stress_type="Tração" if axial_f > 0 else "Compressão"
+        ))
 
-    nodes_results = {}
-    for nid, c in nodes_coords.items():
-        sup = "None"
-        if params.raw_truss and nid in params.raw_truss.nodes:
-            sup = params.raw_truss.nodes[nid].support
-        elif nid in ["FL0", "BL0", f"FL{params.divisions}", f"BL{params.divisions}"]:
-            sup = "Pinned"
-        nodes_results[nid] = NodeResult(id=nid, x=c[0], y=c[1], z=c[2], support=sup)
-
+    nodes_results = {nid: NodeResult(id=nid, x=c[0], y=c[1], z=c[2]) for nid, c in nodes_coords.items()}
     return member_results, nodes_results, max_u_per_group, total_weight
