@@ -63,7 +63,7 @@ export const useTrussStore = defineStore("truss", () => {
   const handleCancel = () => {
     cancelOptimization();
     addToast(
-      "O cálculo foi cancelado pelo usuário. Os parâmetros foram redefinidos para os valores padrão.",
+      "A operação foi cancelada. Os parâmetros retornaram aos valores iniciais.",
       "info",
     );
   };
@@ -227,28 +227,25 @@ export const useTrussStore = defineStore("truss", () => {
 
           result.value = validatedData;
           if (validatedData.is_structurally_stable) {
-            // Purge da malha preliminar para liberar a heap; o renderer agora consome o grafo otimizado.
+            // Purge da malha preliminar para liberar a heap; o renderer consome o grafo otimizado.
             rawTruss.value = null;
             addToast(
-              "Análise concluída. O dimensionamento estrutural foi concluído com sucesso.",
+              validatedData.status_message ||
+                "A análise foi concluída com sucesso. A estrutura dimensionada é segura.",
               "success",
             );
           } else {
             addToast(
               validatedData.status_message ||
-                "A análise estrutural não pôde ser concluída com os parâmetros atuais.",
+                "Aviso: A estrutura atual não suporta a carga informada.",
               "warning",
             );
-            // Reset automático em caso de falha estrutural (não estável)
-            cancelOptimization();
+            // Justificativa: Não chamamos cancelOptimization() aqui para manter o result.value acessível na UI (ex: Sidebar).
           }
           loading.value = false;
           ws.value?.close();
         } else if (data.type === "error") {
-          addToast(
-            "Falha no processamento da estrutura: " + data.message,
-            "error",
-          );
+          addToast("Erro no cálculo: " + data.message, "error");
           cancelOptimization();
           ws.value?.close();
         }
@@ -257,7 +254,7 @@ export const useTrussStore = defineStore("truss", () => {
       ws.value.onerror = (err) => {
         console.error("WebSocket error:", err);
         addToast(
-          "Falha na comunicação com o servidor de cálculo. Verifique a conexão de rede e tente novamente.",
+          "Não foi possível conectar ao servidor. Por favor, verifique sua conexão com a rede.",
           "error",
         );
         cancelOptimization();
@@ -267,7 +264,7 @@ export const useTrussStore = defineStore("truss", () => {
         // Watcher para quedas silenciosas de socket durante processos CPU-bound no backend.
         if (loading.value) {
           addToast(
-            "A conexão com o servidor foi perdida durante o processamento. É necessário reiniciar o cálculo.",
+            "Conexão perdida. Por favor, tente calcular novamente.",
             "error",
           );
           cancelOptimization();
@@ -278,7 +275,7 @@ export const useTrussStore = defineStore("truss", () => {
       result.value = null;
       console.error("Optimization error:", err);
       const msg = err.message || "Erro interno no servidor de cálculo";
-      addToast("Falha no processamento da estrutura: " + msg, "error");
+      addToast("Erro no cálculo: " + msg, "error");
       cancelOptimization();
     }
   };

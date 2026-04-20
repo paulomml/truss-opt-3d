@@ -4,10 +4,10 @@ import asyncio
 import time
 import multiprocessing
 import psutil
+import signal
 from concurrent.futures import ProcessPoolExecutor
 from fastapi import Request
 from domain.models import TrussRequest, OptimizationResponse
-from infrastructure.fea.pynite_solver import build_and_solve_truss
 
 
 def load_materials():
@@ -46,7 +46,7 @@ def load_profiles():
 
 
 def optimize_for_material_worker(
-    params_dict: dict, profiles: list, material: dict, groups: list, queue
+    params_dict: dict, profiles: list, material: dict, groups: list, queue, cancel_event
 ) -> dict:
     """
     Offload da busca heurística para um worker isolado via multiprocessing.
@@ -70,17 +70,18 @@ def optimize_for_material_worker(
     last_error_msg = "A resistência máxima dos materiais foi atingida."
     upgrade_history = ""
 
-    queue.put(
-        {
-            "worker_id": worker_id,
-            "message": "Preparando o modelo estrutural...",
-        }
-    )
+    queue.put({"worker_id": worker_id, "message": "Preparando o modelo estrutural..."})
 
     while iteration < max_iter:
-        iteration += 1
+        # Justificativa: Verificação atômica de cancelamento para evitar processamento inútil (Zombie Avoidance).
+        if cancel_event.is_set():
+            return {
+                "success": False,
+                "error": "Cancelado pelo sistema.",
+                "material_name": worker_id,
+            }
 
-        # Pipeline de formatação de progresso para monitoramento via IPC.
+        iteration += 1
         current_profiles_str = ", ".join(
             [
                 f"{g}: {profiles[idx]['Name']}"
@@ -103,15 +104,30 @@ def optimize_for_material_worker(
             params, current_profile_indices, profiles, material
         )
 
-        if "_ERROR_" in max_u_per_group:
-            last_error_msg = f"Identificamos que a estrutura não suporta as cargas aplicadas. Recomendamos rever o formato ou os apoios."
-            queue.put({"worker_id": worker_id, "message": last_error_msg})
-            break
-
         all_ok = True
         upgraded_any = False
         upgrade_msgs = []
+        exhausted_catalogue = False
 
+        if "_ERROR_" in max_u_per_group:
+            # Justificativa: Erros numéricos (divergência/singularidade) costumam ser resolvidos com maior rigidez.
+            # Forçamos o upgrade de todos os grupos para tentar estabilizar a matriz na próxima iteração.
+            all_ok = False
+            for g in current_profile_indices:
+                if current_profile_indices[g] < num_profiles - 1:
+                    current_profile_indices[g] += 1
+                    upgraded_any = True
+                else:
+                    exhausted_catalogue = True
+
+            if not upgraded_any or exhausted_catalogue:
+                last_error_msg = f"A estrutura apresentou instabilidade que impede o cálculo: {max_u_per_group['_ERROR_']}"
+                queue.put({"worker_id": worker_id, "message": last_error_msg})
+                break
+            continue
+
+        # Justificativa: Corrigida indentação e lógica de validação do algoritmo guloso.
+        # Todos os grupos devem ser validados (U <= 1.0) antes de marcar como solução válida.
         for g, u in max_u_per_group.items():
             if g == "_ERROR_":
                 continue
@@ -122,16 +138,18 @@ def optimize_for_material_worker(
                     current_profile_indices[g] += 1
                     new_profile = profiles[current_profile_indices[g]]["Name"]
                     upgraded_any = True
-                    upgrade_msgs.append(
-                        f"{old_profile} em {g} esgotou a capacidade (U={u:.2f})"
-                    )
+                    upgrade_msgs.append(f"{old_profile} em {g} (U={u:.2f})")
                 else:
-                    all_ok = False
-                    last_error_msg = f"Identificamos que o peso aplicado exige materiais além do limite comercial disponível para o grupo {g}. Recomendamos reduzir a carga."
+                    # Justificativa: Fuga completa do laço quando o catálogo se esgota (CPU Waste Prevention).
+                    exhausted_catalogue = True
+                    last_error_msg = f"Os materiais disponíveis não são suficientes para suportar a carga exigida no grupo {g}."
                     queue.put({"worker_id": worker_id, "message": last_error_msg})
                     break
 
-            # Hit da solução ótima (local) para o material específico.
+        if exhausted_catalogue:
+            break
+
+        if all_ok:
             valid_for_material = True
             total_cost = total_weight * material["cost_kg"]
             last_valid_result = {
@@ -144,7 +162,7 @@ def optimize_for_material_worker(
             queue.put(
                 {
                     "worker_id": worker_id,
-                    "message": f"Cálculo finalizado. Custo estimado: R$ {total_cost:.2f}",
+                    "message": f"Cálculo concluído. Custo estimado: R$ {total_cost:.2f}",
                 }
             )
             break
@@ -165,22 +183,19 @@ async def optimize_truss_use_case(
 ) -> OptimizationResponse:
     """
     Coordena a execução concorrente do solver para múltiplos materiais.
-    Mapeia workers aos cores físicos disponíveis via ProcessPoolExecutor.
     """
     manager = None
     executor = None
+    cancel_event = None
     try:
-        start_time = time.time()
-
-        # Carregamento dos dados.
         profiles = load_profiles()
         materials_catalog = load_materials()
         num_materials = len(materials_catalog)
 
         if params.raw_truss:
-            groups = list(set(m.group for m in params.raw_truss.members if m.group))
-            if not groups:
-                groups = ["Padrão"]
+            groups = list(
+                set(m.group for m in params.raw_truss.members if m.group)
+            ) or ["Padrão"]
         else:
             groups = [
                 "Banzo Superior",
@@ -191,53 +206,39 @@ async def optimize_truss_use_case(
                 "Contraventamento",
             ]
 
-        # Inicializa Manager para orquestração de estado IPC e Pool de Processos.
         manager = multiprocessing.Manager()
         queue = manager.Queue()
+        # Justificativa: Evento para sinalização atômica de cancelamento entre processos.
+        cancel_event = manager.Event()
         executor = ProcessPoolExecutor(max_workers=os.cpu_count())
 
         futures = []
-        current_logs = {
-            mat["name"]: "Aguardando processamento..." for mat in materials_catalog
-        }
-
-        # Serialização para dict para evitar overhead e falhas no pickling via ProcessPoolExecutor.
+        current_logs = {mat["name"]: "Aguardando..." for mat in materials_catalog}
         params_dict = params.dict()
 
-        # Execução em paralelo.
         for material in materials_catalog:
-            future = executor.submit(
-                optimize_for_material_worker,
-                params_dict,
-                profiles,
-                material,
-                groups,
-                queue,
+            futures.append(
+                executor.submit(
+                    optimize_for_material_worker,
+                    params_dict,
+                    profiles,
+                    material,
+                    groups,
+                    queue,
+                    cancel_event,
+                )
             )
-            futures.append(future)
 
         materials_completed = 0
         while materials_completed < num_materials:
-            # Prevenção ativa de OOM (Out Of Memory). Graceful shutdown caso a memória atinja 90%.
-            memory_usage = psutil.virtual_memory().percent
-            if memory_usage > 90:
-                if executor:
-                    executor.shutdown(wait=False, cancel_futures=True)
-                if manager:
-                    manager.shutdown()
-                return OptimizationResponse(
-                    is_structurally_stable=False,
-                    status_message=f"Processamento interrompido: O modelo excedeu o limite de memória do servidor. Tente reduzir as dimensões.",
-                    total_weight=0,
-                    members=[],
-                    nodes={},
-                )
+            if psutil.virtual_memory().percent > 90:
+                cancel_event.set()
+                break
 
-            # Anti-hanging: Interrompe workers se a conexão WebSocket/HTTP for encerrada.
             if request and await request.is_disconnected():
+                cancel_event.set()
                 raise asyncio.CancelledError("Desconexão do cliente.")
 
-            # Drainer da Queue IPC não bloqueante.
             while not queue.empty():
                 try:
                     msg = queue.get_nowait()
@@ -245,7 +246,6 @@ async def optimize_truss_use_case(
                 except:
                     break
 
-            # Cálculo do progresso.
             done_count = sum(1 for f in futures if f.done())
             if done_count > materials_completed:
                 materials_completed = done_count
@@ -259,31 +259,32 @@ async def optimize_truss_use_case(
             if materials_completed < num_materials:
                 await asyncio.sleep(0.5)
 
-        # Seleção da solução mais econômica.
         best_overall = None
         min_cost = float("inf")
-        last_error = "Não foi possível encontrar uma solução válida."
+        last_error = "Não foi possível encontrar uma solução válida com os materiais disponíveis."
 
         for future in futures:
-            res = future.result()
-            if res["success"]:
-                if res["result"]["cost"] < min_cost:
-                    min_cost = res["result"]["cost"]
-                    best_overall = res["result"]
-            else:
-                last_error = res["error"]
+            try:
+                res = future.result()
+                if res["success"]:
+                    if res["result"]["cost"] < min_cost:
+                        min_cost = res["result"]["cost"]
+                        best_overall = res["result"]
+                else:
+                    last_error = res["error"]
+            except Exception as e:
+                last_error = f"Ocorreu um erro interno no servidor: {str(e)}"
 
         if best_overall:
             return OptimizationResponse(
                 is_structurally_stable=True,
-                status_message=f"Análise finalizada. O material {best_overall['material_name']} é a opção mais econômica.",
+                status_message=f"A análise foi concluída com sucesso. O material otimizado para a estrutura é: {best_overall['material_name']}.",
                 total_weight=best_overall["weight"],
                 total_cost=best_overall["cost"],
                 winning_material=best_overall["material_name"],
                 members=best_overall["members"],
                 nodes=best_overall["nodes"],
             )
-
         return OptimizationResponse(
             is_structurally_stable=False,
             status_message=last_error,
@@ -293,27 +294,27 @@ async def optimize_truss_use_case(
         )
 
     except asyncio.CancelledError:
-        # Kill dos child processes para evitar workers zombies em caso de disconnect.
-        if executor:
-            executor.shutdown(wait=False, cancel_futures=True)
-        if manager:
-            manager.shutdown()
+        if cancel_event:
+            cancel_event.set()
         raise
     except Exception as e:
-        if executor:
-            executor.shutdown(wait=False, cancel_futures=True)
-        if manager:
-            manager.shutdown()
+        if cancel_event:
+            cancel_event.set()
         return OptimizationResponse(
             is_structurally_stable=False,
-            status_message=f"Erro interno na análise: {str(e)}",
+            status_message=f"Ocorreu um erro interno durante a análise estrutural: {str(e)}",
             total_weight=0,
             members=[],
             nodes={},
         )
     finally:
-        # Cleanup garantido do pool e recursos IPC.
+        # Justificativa: Hard Kill de processos filhos para evitar zumbis DoS após shutdown.
         if executor:
-            executor.shutdown(wait=True)
+            for pid in list(executor._processes.keys()):
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except:
+                    pass
+            executor.shutdown(wait=False, cancel_futures=True)
         if manager:
             manager.shutdown()

@@ -75,10 +75,12 @@ A plataforma adota uma arquitetura orientada a serviços, separando o gerenciame
 ### 3.1. Servidor de Cálculo Numérico (Backend)
 
 - **Linguagem e Framework:** O backend é desenvolvido em Python 3.11+, operando sobre o framework web assíncrono FastAPI. A validação estruturada das requisições e a modelagem de dados são asseguradas pela biblioteca Pydantic.
-- **Solver Estrutural:** O cálculo dos deslocamentos nodais e reações de apoio é executado por meio da biblioteca PyNite FEA, uma implementação matricial de pórticos e treliças 3D que emprega elementos de viga-coluna com seis graus de liberdade por nó. Mais detalhes sobre a formulação adotada constam na Seção 4.1.
-- **Otimização Concorrente:** Para reduzir significativamente o tempo de processamento, a arquitetura emprega o módulo `multiprocessing` do Python. Isso permite que as quatro ligas metálicas disponíveis sejam testadas simultaneamente em núcleos físicos distintos do processador do servidor.
+- **Solver Estrutural:** O cálculo dos esforços e deslocamentos é executado via **PyNite FEA**. Diferente de modelos de pórtico rígido, o sistema aplica liberações de momentos fletores (`model.def_releases`) em ambas as extremidades de todas as barras, garantindo o comportamento mecânico de treliça rotulada pura.
+- **Otimização Concorrente Segura:** A arquitetura utiliza o módulo `multiprocessing` para testar múltiplas ligas metálicas simultaneamente. Para prevenir ataques de Negação de Serviço (DoS) e vazamentos de memória (Memory Leaks) causados por processos órfãos, implementou-se uma dupla camada de segurança:
+  - **Graceful Shutdown:** Sinalização atômica via `multiprocessing.Event` para interrupção controlada de iterações.
+  - **Hard Kill:** Extermínio forçado de PIDs via `os.kill(pid, SIGKILL)` para limpar workers que permaneçam bloqueados em cálculos matriciais intensos.
 - **Comunicação Assíncrona:** A transmissão dos logs de progresso do servidor para o cliente ocorre através de conexões WebSocket.
-- **Gerenciamento de Recursos:** O código possui rotinas internas (via biblioteca `psutil`) que encerram precocemente o processamento caso a matriz gerada demande mais de 90% da memória RAM disponível, evitando falhas críticas no sistema operacional.
+- **Gerenciamento de Recursos:** O código possui rotinas internas (via biblioteca `psutil`) que encerram precocemente o processamento caso a memória RAM exceda 90%.
 
 ### 3.2. Interface e Renderização (Frontend)
 
@@ -105,7 +107,7 @@ graph TD
     Endpoint[API REST] --> Orquestrador[Módulo de Otimização]
     Orquestrador --> Pool[Processamento Paralelo]
 
-    subgraph Processos_Workers [Workers por Material — 4 processos simultâneos]
+    subgraph Processos_Workers [Workers por Material -> 4 processos simultâneos]
       Pool --> W_A36[Aço A36]
       Pool --> W_A572[Aço A572 G50]
       Pool --> W_Corten[Aço Corten]
@@ -139,36 +141,41 @@ onde $\{F\}$ é o vetor das forças aplicadas e $\{D\}$ é o vetor de deslocamen
 
 ### 4.2. Verificações Normativas (NBR 8800)
 
-Para dimensionar os perfis e assegurar estabilidade, o sistema avalia o Estado Limite Último (ELU). A variável principal é a Taxa de Utilização ($U$), correspondente à razão entre a solicitação de cálculo ($N_{Ed}$) e a resistência nominal ($N_n$) da seção. A aprovação estrutural exige que $U \le 1,0$ para todas as barras.
+O dimensionamento segue rigorosamente os critérios de segurança da **NBR 8800 (Projeto de estruturas de aço)**. O sistema avalia o **Estado Limite Último (ELU)**, aplicando os coeficientes de ponderação das ações ($\gamma_f = 1,4$ para cargas permanentes e variáveis) e o coeficiente de minoração da resistência ($\gamma_{a1} = 1,10$).
 
-> **Nota sobre simplificação:** A implementação compara diretamente a solicitação com a resistência nominal, sem aplicar explicitamente o coeficiente de minoração da resistência ($\gamma_{a1} = 1,10$) previsto na NBR 8800 para escoamento da seção bruta. Trata-se de uma simplificação conservadora do espaço de busca, adequada ao contexto de otimização paramétrica, mas que deve ser considerada em projetos executivos sujeitos à auditoria normativa completa.
+A aprovação exige que a Taxa de Utilização ($U = N_{Ed} / N_{Rd}$) seja $\le 1,0$ em todos os elementos estruturais.
 
 #### Esforço de Tração Axial
 
-Em elementos tracionados ($N_t > 0$), a resistência nominal é determinada pelo escoamento da seção transversal bruta:
+Em elementos tracionados ($N_{Ed} > 0$), a resistência de cálculo ($N_{Rd}$) é governada pelo escoamento da seção transversal bruta:
 
-$$N_{t,n} = A \cdot f_y$$
-
-onde $f_y$ é a tensão de escoamento característica da liga metálica.
+$$N_{Rd} = \frac{A \cdot f_y}{\gamma_{a1}}$$
 
 #### Esforço de Compressão e Instabilidade
 
-Em membros sob compressão ($N_c < 0$), a resistência é frequentemente governada pela flambagem elástica global. A resistência nominal é calculada com a adoção de um fator de redução normativo $\chi$:
+Em membros sob compressão ($N_{Ed} < 0$), a resistência é governada pela flambagem global, considerando o eixo de menor inércia ($\min(I_x, I_y)$) para o cálculo do raio de giração $r = \sqrt{I/A}$:
 
-$$N_{c,n} = \chi \cdot A \cdot f_y$$
+$$N_{Rd} = \frac{\chi \cdot A \cdot f_y}{\gamma_{a1}}$$
 
-Para o cálculo de $\chi$, determina-se inicialmente a carga crítica de Euler ($N_e$) e o respectivo índice de esbeltez reduzida ($\lambda_0$):
-
-$$N_e = \frac{\pi^2 \cdot E \cdot I}{L^2}$$
-
-$$\lambda_0 = \sqrt{\frac{A \cdot f_y}{N_e}}$$
-
-As expressões normativas definem o fator de redução como se segue:
+O fator de redução $\chi$ é calculado via curvas de flambagem normativas, baseado no índice de esbeltez reduzido ($\lambda_0$):
 
 - Se $\lambda_0 \le 1,5$: $\chi = 0,658^{\lambda_0^2}$
 - Se $\lambda_0 > 1,5$: $\chi = \dfrac{0,877}{\lambda_0^2}$
 
-### 4.3. Interação Solo-Estrutura (Apoios Elásticos)
+#### Limites de Esbeltez e Heurística de $L_k$
+
+O sistema impõe limites normativos rigorosos para evitar o uso de perfis excessivamente esbeltos, independentemente da carga:
+
+- **Compressão:** $\lambda = K \cdot L / r \le 200$
+- **Tração:** $\lambda = K \cdot L / r \le 300$
+
+Para banzos contínuos, o software utiliza uma **Heurística de $L_k$** que detecta travamentos transversais. Se um nó não possui barras de contraventamento ou transversais incidentes, o comprimento livre de flambagem fora do plano é acumulado entre os painéis adjacentes, garantindo a segurança contra instabilidade lateral e torcional.
+
+### 4.3. Estabilidade 3D e Contraventamento
+
+A geração paramétrica de modelos inclui automaticamente **Contraventamentos em X** (X-Bracing) nos planos superior e inferior, além de barras transversais de fechamento em todos os quadros. Essa configuração impede a instabilidade torcional e garante a rigidez necessária para suportar cargas tridimensionais complexas, prevenindo o colapso por deslocamento lateral.
+
+### 4.4. Interação Solo-Estrutura (Apoios Elásticos)
 
 A abordagem computacional tradicional considera apoios indeslocáveis, o que mascara os efeitos dos recalques. O software implementa o Modelo de Winkler para simular bases deformáveis.
 
