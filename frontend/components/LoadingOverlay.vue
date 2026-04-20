@@ -4,10 +4,6 @@ import { useTrussStore } from "@/stores/useTrussStore";
 
 const store = useTrussStore();
 
-/**
- * Lista de frases técnicas para exibição dinâmica durante o carregamento.
- * Sendo assim, o usuário recebe feedback visual sobre as etapas do solver.
- */
 const loadingPhrases = [
   "Calculando a melhor solução...",
   "Avaliando esbeltez e estabilidade global...",
@@ -16,7 +12,7 @@ const loadingPhrases = [
   "Verificando limites de tensão e compressão...",
   "Ajustando perfis estruturais...",
   "Calculando deslocamentos nodais...",
-  "Simulando carga e condições de contorno...",
+  "Simulando carga e apoios...",
   "Refinando a estrutura para menor peso...",
   "Validando integridade estrutural...",
 ];
@@ -25,7 +21,6 @@ const currentPhraseIndex = ref(0);
 let phraseInterval: any = null;
 
 onMounted(() => {
-  // Alternância automática de frases a cada 3 segundos para melhorar a UX.
   phraseInterval = setInterval(() => {
     currentPhraseIndex.value =
       (currentPhraseIndex.value + 1) % loadingPhrases.length;
@@ -33,14 +28,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  // Limpeza do intervalo para evitar vazamentos de memória.
   if (phraseInterval) clearInterval(phraseInterval);
 });
 
-/**
- * Heurística de cores para diferenciação semântica dos estados de processamento.
- * Sendo assim, o sistema fornece feedback imediato sobre o sucesso, falha ou atividade do motor de cálculo.
- */
 const getStatusColor = (msg: string) => {
   const lowerMsg = String(msg).toLowerCase();
 
@@ -67,10 +57,6 @@ const getStatusColor = (msg: string) => {
   return "bg-orange-500 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.6)]";
 };
 
-/**
- * Quebra as strings em várias linhas para os logs que enviam dados separados por pipes (" | ").
- * Isso permite uma leitura organizada dos passos, perfis e status.
- */
 const parseMessage = (msg: string) => {
   if (!msg) return [];
   return String(msg)
@@ -96,7 +82,7 @@ const parseMessage = (msg: string) => {
       </p>
 
       <!-- Barra de progresso global (Progresso da Análise). -->
-      <!-- Sendo assim, o usuário acompanha a evolução total da análise técnica. -->
+      <!-- O usuário acompanha a evolução total da análise técnica. -->
       <div
         class="w-full max-w-sm bg-gray-700 rounded-full h-3 mb-6 overflow-hidden border border-gray-600"
       >

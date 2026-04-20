@@ -1,8 +1,4 @@
 <script setup lang="ts">
-/*
- Interface de definição do contrato de comunicação do modal informativo.
- O componente recebe o estado de visibilidade e emite o evento de fechamento para sincronia com o store global.
-*/
 defineProps<{
   show: boolean;
 }>();
@@ -13,7 +9,6 @@ defineEmits<{
 </script>
 
 <template>
-  <!-- Transição de opacidade para o backdrop e o container do modal. -->
   <Transition
     enter-active-class="duration-300 ease-out"
     enter-from-class="opacity-0"
@@ -26,13 +21,11 @@ defineEmits<{
       v-if="show"
       class="fixed inset-0 z-[200] flex items-center justify-center p-4"
     >
-      <!-- Camada de fundo translúcida com desfoque gaussiano para isolamento visual do conteúdo. -->
       <div
         class="absolute inset-0 bg-black/60 backdrop-blur-sm"
         @click="$emit('close')"
       ></div>
 
-      <!-- Container principal com animação de escala e deslocamento vertical. -->
       <Transition
         enter-active-class="duration-300 ease-out"
         enter-from-class="opacity-0 scale-95 translate-y-4"
@@ -71,8 +64,7 @@ defineEmits<{
               <p
                 class="text-blue-400 font-medium uppercase tracking-widest text-sm"
               >
-                Sistema Computacional para Dimensionamento e Otimização
-                Paramétrica de Treliças Espaciais
+                Cálculo e Otimização de Estruturas Metálicas
               </p>
             </div>
 
@@ -89,13 +81,7 @@ defineEmits<{
                 </h3>
               </div>
               <p class="leading-relaxed text-justify">
-                O <strong>TRUSS-OPT 3D</strong> é um sistema computacional
-                desenvolvido para calcular, dimensionar e otimizar estruturas
-                metálicas do tipo treliça espacial. A partir da definição
-                geométrica e dos carregamentos pelo usuário, o software executa
-                análises sucessivas para encontrar a combinação de perfis
-                metálicos que atenda aos requisitos normativos de segurança com
-                o menor peso e custo possível.
+                O <strong>TRUSS-OPT 3D</strong> é uma solução dedicada ao cálculo e à otimização de treliças metálicas. Com base nos parâmetros fornecidos, o sistema identifica a configuração de perfis que assegura a viabilidade técnica e a eficiência de custos.
               </p>
             </section>
 
@@ -207,18 +193,7 @@ defineEmits<{
                 </h3>
               </div>
               <p class="leading-relaxed text-justify">
-                O dimensionamento tradicional de estruturas de metal é um
-                processo demorado. O engenheiro precisa chutar um tamanho de
-                peça, calcular na mão (ou com softwares lentos) e verificar se
-                suporta o peso. Se falhar, tenta uma peça maior. Se sobrar muita
-                resistência, tenta uma menor para economizar. Esse processo leva
-                horas ou dias. O
-                <strong
-                  >TRUSS-OPT 3D automatiza e extingue esse processo
-                  repetitivo</strong
-                >, fazendo milhares de testes por segundo e entregando a solução
-                otimizada quase instantaneamente, poupando tempo e dinheiro do
-                profissional.
+                O dimensionamento de estruturas metálicas costuma exigir múltiplas iterações manuais. O <strong>TRUSS-OPT 3D automatiza esse processo</strong>, realizando análises comparativas em alta velocidade para entregar uma solução otimizada, reduzindo o tempo de projeto e o consumo de materiais.
               </p>
             </section>
 
@@ -235,16 +210,7 @@ defineEmits<{
                 </h3>
               </div>
               <p class="leading-relaxed text-base text-justify">
-                O cérebro do software funciona com
-                <strong>Multiprocessamento</strong>: ele divide a tarefa em
-                vários "trabalhadores" virtuais simultâneos. Cada trabalhador
-                pega um tipo de metal (ex: Aço ou Alumínio) e testa a estrutura
-                usando o <strong>Método dos Elementos Finitos (MEF)</strong>,
-                uma técnica que fatia a estrutura inteira em pedaços minúsculos
-                para descobrir exatamente onde a força atua. O sistema vai
-                aumentando a espessura das peças milímetro por milímetro até que
-                a estrutura seja totalmente segura. No final, os trabalhadores
-                comparam os preços de mercado e exibem o vencedor.
+                O sistema utiliza processamento paralelo para avaliar diferentes materiais simultaneamente. A estrutura é analisada para identificar a distribuição de esforços, ajustando as seções transversais até que todos os critérios de segurança sejam atendidos. Ao final, o software apresenta a alternativa com o melhor custo-benefício.
               </p>
             </section>
 
@@ -257,32 +223,25 @@ defineEmits<{
                 <h3
                   class="text-xl font-bold text-white uppercase tracking-wider"
                 >
-                  Materiais e Normas utilizados
+                  Materiais e Normas
                 </h3>
               </div>
               <div class="space-y-4 leading-relaxed">
                 <p>
-                  O sistema baseia todos os seus cálculos rigorosamente nas
-                  exigências de segurança da norma técnica brasileira
-                  <strong>NBR 8800</strong>. Ele avalia quatro materiais
-                  comerciais:
+                  O sistema realiza a verificação de segurança com base na norma brasileira <strong>NBR 8800</strong>, considerando quatro materiais estruturais:
                 </p>
                 <ul class="list-disc list-inside space-y-2 ml-4">
                   <li>
-                    <strong>Aço A36:</strong> O aço estrutural padrão, mais
-                    comum e barato no mercado.
+                    <strong>Aço A36:</strong> Padrão, comum e barato.
                   </li>
                   <li>
-                    <strong>Aço A572 G50:</strong> Aço de alta resistência,
-                    suporta mais carga utilizando peças mais finas.
+                    <strong>Aço A572 G50:</strong> Alta resistência, permite peças mais finas.
                   </li>
                   <li>
-                    <strong>Aço Corten:</strong> Aço patinável com altíssima
-                    resistência à ferrugem, sem precisar de pintura.
+                    <strong>Aço Corten:</strong> Alta resistência à ferrugem.
                   </li>
                   <li>
-                    <strong>Alumínio 6061-T6:</strong> Extremamente leve, ideal
-                    para situações onde o peso próprio é um problema crítico.
+                    <strong>Alumínio 6061-T6:</strong> Extremamente leve.
                   </li>
                 </ul>
               </div>
@@ -297,83 +256,25 @@ defineEmits<{
                 <h3
                   class="text-xl font-bold text-white uppercase tracking-wider"
                 >
-                  Tecnologias utilizadas no desenvolvimento
+                  Tecnologias utilizadas
                 </h3>
               </div>
               <div class="space-y-4 leading-relaxed">
-                <p>
-                  O projeto foi construído empregando uma arquitetura moderna e
-                  de código aberto:
-                </p>
                 <ul class="list-disc list-inside space-y-2 ml-4">
                   <li>
-                    <strong>Python & FastAPI:</strong> Para o cálculo matemático
-                    paralelo e rápido no servidor (Backend).
+                    <strong>Python & FastAPI:</strong> Cálculos rápidos no servidor.
                   </li>
                   <li>
-                    <strong>Vue.js & Nuxt 4:</strong> Para a criação da
-                    interface do usuário dinâmica e responsiva (Frontend).
+                    <strong>Vue.js & Nuxt:</strong> Interface moderna e dinâmica.
                   </li>
                   <li>
-                    <strong>TresJS & Three.js:</strong> Motores gráficos WebGL
-                    para gerar os desenhos em 3D direto no navegador.
+                    <strong>TresJS & Three.js:</strong> Desenhos em 3D no navegador.
                   </li>
                   <li>
-                    <strong>Tailwind CSS:</strong> Para estilização da interface
-                    gráfica.
+                    <strong>Tailwind CSS:</strong> Estilização visual.
                   </li>
                 </ul>
               </div>
-            </section>
-
-            <!-- Seção 8 -->
-            <section class="space-y-4 text-base">
-              <div
-                class="flex items-center gap-3 border-b border-gray-800 pb-3"
-              >
-                <Icon name="lucide:cloud" class="w-6 h-6 text-blue-400" />
-                <h3
-                  class="text-xl font-bold text-white uppercase tracking-wider"
-                >
-                  Acesso ao ambiente de testes em nuvem
-                </h3>
-              </div>
-              <p class="leading-relaxed">
-                O software está disponível online publicamente na plataforma
-                Render em
-                <a
-                  href="https://trussopt3d.onrender.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-blue-400 hover:underline"
-                  >https://trussopt3d.onrender.com</a
-                >.
-              </p>
-            </section>
-
-            <!-- Seção 9 -->
-            <section class="space-y-4 text-base">
-              <div
-                class="flex items-center gap-3 border-b border-gray-800 pb-3"
-              >
-                <Icon name="lucide:github" class="w-6 h-6 text-blue-400" />
-                <h3
-                  class="text-xl font-bold text-white uppercase tracking-wider"
-                >
-                  Repositório do projeto (código-fonte)
-                </h3>
-              </div>
-              <p class="leading-relaxed">
-                O código integral do projeto é aberto e pode ser encontrado no
-                GitHub em
-                <a
-                  href="https://github.com/paulomml/truss-opt-3d"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-blue-400 hover:underline"
-                  >https://github.com/paulomml/truss-opt-3d</a
-                >.
-              </p>
             </section>
 
             <!-- Seção 10 -->
@@ -388,26 +289,14 @@ defineEmits<{
                 <h3
                   class="text-xl font-bold text-white uppercase tracking-wider"
                 >
-                  Limitações e avisos importantes
+                  Avisos importantes
                 </h3>
               </div>
               <div
                 class="p-6 bg-yellow-900/10 border border-yellow-700/30 rounded-xl"
               >
                 <p class="leading-relaxed text-justify text-gray-300">
-                  <strong>AVISO LEGAL:</strong> O TRUSS-OPT 3D foi desenvolvido
-                  estritamente para
-                  <strong
-                    >fins acadêmicos, educacionais e de estudo
-                    preliminar</strong
-                  >. Embora utilize métodos numéricos precisos e literatura
-                  técnica consagrada, este software
-                  <strong>NÃO SUBSTITUI</strong> a análise minuciosa, o cálculo
-                  e a assinatura (ART/RRT) de um Engenheiro habilitado. Toda
-                  obra exige um projeto executivo chancelado por profissional
-                  capacitado. O autor não se responsabiliza por quaisquer danos
-                  ou perdas decorrentes da utilização direta dos dados gerados
-                  por este aplicativo em obras reais.
+                  <strong>AVISO LEGAL:</strong> O TRUSS-OPT 3D foi desenvolvido para <strong>fins acadêmicos e educacionais</strong>. Este software <strong>NÃO SUBSTITUI</strong> a análise e assinatura de um Engenheiro habilitado. Toda obra exige um projeto executivo chancelado por profissional capacitado.
                 </p>
               </div>
             </section>
@@ -421,37 +310,11 @@ defineEmits<{
                 <h3
                   class="text-xl font-bold text-white uppercase tracking-wider"
                 >
-                  Licença de uso
+                  Licença
                 </h3>
               </div>
               <p class="leading-relaxed text-justify">
-                Este projeto é regido pela Licença de Código Aberto
-                <strong>MIT</strong>. Isso significa que o código pode ser lido,
-                copiado, alterado e melhorado por qualquer pessoa de forma
-                livre, desde que mantidos os créditos do autor original.
-              </p>
-            </section>
-
-            <!-- Seção 12 -->
-            <section class="space-y-4 text-base">
-              <div
-                class="flex items-center gap-3 border-b border-gray-800 pb-3"
-              >
-                <Icon name="lucide:heart" class="w-6 h-6 text-red-400" />
-                <h3
-                  class="text-xl font-bold text-white uppercase tracking-wider"
-                >
-                  Créditos e agradecimentos
-                </h3>
-              </div>
-              <p class="leading-relaxed text-justify">
-                Agradeço primeiramente ao Prof. Audelis Marcelo pela orientação
-                na disciplina de Métodos Numéricos da UVA, que serviu como pilar
-                intelectual para a construção matemática deste sistema. Um
-                agradecimento especial também à imensa comunidade global de
-                desenvolvedores <em>open source</em>, cujas bibliotecas abertas
-                permitiram transformar este conceito acadêmico em uma ferramenta
-                viva.
+                Projeto regido pela licença <strong>MIT</strong> (Código aberto e livre).
               </p>
             </section>
           </div>

@@ -8,8 +8,6 @@ import type {
 import * as generators from "@/utils/trussGenerators";
 
 export const useTrussStore = defineStore("truss", () => {
-  // Estado reativo contendo os parâmetros geométricos e de carregamento da estrutura.
-  // Estes dados alimentam o solver para a determinação dos esforços axiais.
   const form = reactive<TrussRequest>({
     length: 12.0,
     height: 2.5,
@@ -31,7 +29,7 @@ export const useTrussStore = defineStore("truss", () => {
   const selectedMember = ref<MemberResult | null>(null);
   const showMobileMenu = ref(false);
 
-  // Feedback de progresso multiprocessado e gerenciamento de conexão WebSocket.
+  // WebSocket lifecycle e tracking de progresso multiprocessado.
   const mainProgress = ref(0);
   const currentLogs = ref<Record<string, string>>({});
   const ws = ref<WebSocket | null>(null);
@@ -43,7 +41,7 @@ export const useTrussStore = defineStore("truss", () => {
   const { addToast } = useToast();
 
   const cancelOptimization = () => {
-    // Interrompe a conexão WebSocket e sinaliza para o backend abortar o pool de processos.
+    // Force close do stream e sinalização de aborto para tasks assíncronas.
     if (ws.value) {
       ws.value.close();
       ws.value = null;
@@ -53,8 +51,7 @@ export const useTrussStore = defineStore("truss", () => {
       abortController.value = null;
     }
 
-    // Reset rigoroso do estado da aplicação para limpeza de memória e retorno à tela inicial.
-    // Portanto, garantimos que nenhum resíduo de cálculo anterior permaneça ativo.
+    // Cleanup do estado para prevenir memory leaks e inconsistência visual (stale state).
     loading.value = false;
     rawTruss.value = null;
     result.value = null;
@@ -63,10 +60,6 @@ export const useTrussStore = defineStore("truss", () => {
     currentLogs.value = {};
   };
 
-  /**
-   * Encapsulamento da lógica de interrupção voluntária pelo usuário.
-   * Portanto, além de cessar o processamento, o sistema notifica o reset do estado da aplicação.
-   */
   const handleCancel = () => {
     cancelOptimization();
     addToast(
@@ -76,8 +69,7 @@ export const useTrussStore = defineStore("truss", () => {
   };
 
   const generateRawTruss = () => {
-    // Geração da topologia estrutural baseada em templates clássicos (Howe, Pratt, Warren).
-    // A malha nodal e a incidência das barras são definidas antes do envio para o backend.
+    // Graph factory: Converte parâmetros reativos em topologia nodal e de membros.
     let truss: RawTruss | null = null;
     const {
       length,
@@ -158,7 +150,8 @@ export const useTrussStore = defineStore("truss", () => {
   };
 
   const optimize = async () => {
-    // Inicia o fluxo de otimização via WebSockets para feedback em tempo real.
+    // Workflow de otimização estrutural.
+    // Justificativa: WebSockets eliminam o overhead de polling HTTP e mitigam timeouts em modelos CPU-bound.
     loading.value = true;
     mainProgress.value = 0;
     currentLogs.value = { Status: "Conectando ao servidor..." };
@@ -190,36 +183,22 @@ export const useTrussStore = defineStore("truss", () => {
         payload.custom_ks = undefined;
       }
 
-      // Definição da URL do WebSocket baseada no ambiente atual (Browser).
+      // Configuração de URL unificada que utiliza o proxy do Nuxt (Dev) ou Nginx (Prod).
+      // Isso resolve problemas de CORS/Auth em ambientes como GitHub Codespaces.
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const host = window.location.host;
-      let wsUrl = "";
+      const wsUrl = `${protocol}//${host}/api/ws/optimize`;
 
-      // Tratamento específico para o ambiente de desenvolvimento do GitHub Codespaces.
-      // Logo, se o usuário acessa via porta 3000, redirecionamos para a porta 8000 (Backend) diretamente.
-      if (host.includes("-3000.app.github.dev")) {
-        wsUrl = `${protocol}//${host.replace("-3000.", "-8000.")}/api/ws/optimize`;
-      } else if (host.includes(":3000")) {
-        // Caso local (ex: localhost:3000), tenta atingir o backend em localhost:8000.
-        wsUrl = `${protocol}//${window.location.hostname}:8000/api/ws/optimize`;
-      } else {
-        // Padrão de produção: utiliza o mesmo host/porta (Nginx gerencia o roteamento).
-        // Portanto, a conexão segue pelo proxy reverso unificado na porta 80.
-        wsUrl = `${protocol}//${host}/api/ws/optimize`;
-      }
-
-      // Inicialização da conexão WebSocket para comunicação síncrona com o motor de cálculo.
-      // Sendo assim, elimina-se o overhead de requisições HTTP repetitivas e timeouts de rede.
+      // Trade-off: Statefulness e complexidade de handshake em troca de latência mínima e streaming granular.
       ws.value = new WebSocket(wsUrl);
 
       ws.value.onopen = () => {
-        // Envio dos parâmetros estruturais assim que o canal de comunicação é estabelecido.
+        // Injeção do payload estrutural assim que o canal de sinalização é aberto.
         ws.value?.send(JSON.stringify(payload));
       };
 
       ws.value.onmessage = (event) => {
-        // Processamento de eventos de progresso paralelo e resultados da análise.
-        // Portanto, a interface reflete simultaneamente a atividade em todos os núcleos da CPU.
+        // Stream de eventos de progresso e persistência dos resultados.
         const data = JSON.parse(event.data);
 
         if (data.type === "progress") {
@@ -227,7 +206,7 @@ export const useTrussStore = defineStore("truss", () => {
           mainProgress.value = payload.main_progress || 0;
           currentLogs.value = payload.current_logs || {};
         } else if (data.type === "result") {
-          // Processamento do resultado final após a convergência do solver.
+          // Commit do resultado final e validação de estabilidade estrutural.
           const resultData = data.data;
           const validatedData: OptimizationResponse = {
             is_structurally_stable: Boolean(resultData?.is_structurally_stable),
@@ -248,6 +227,7 @@ export const useTrussStore = defineStore("truss", () => {
 
           result.value = validatedData;
           if (validatedData.is_structurally_stable) {
+            // Purge da malha preliminar para liberar a heap; o renderer agora consome o grafo otimizado.
             rawTruss.value = null;
             addToast(
               "Análise concluída. O dimensionamento estrutural foi concluído com sucesso.",
@@ -284,7 +264,7 @@ export const useTrussStore = defineStore("truss", () => {
       };
 
       ws.value.onclose = () => {
-        // Tratamento de Quedas Silenciosas (Toasts de Erro): se a conexão cair durante o cálculo, notificamos o usuário.
+        // Watcher para quedas silenciosas de socket durante processos CPU-bound no backend.
         if (loading.value) {
           addToast(
             "A conexão com o servidor foi perdida durante o processamento. É necessário reiniciar o cálculo.",

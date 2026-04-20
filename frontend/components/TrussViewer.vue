@@ -7,8 +7,6 @@ const store = useTrussStore();
 const cameraRef = ref();
 const controlsRef = ref();
 
-// Mapeamento dos resultados da análise estrutural para o ambiente de visualização 3D.
-// Portanto, cada barra é renderizada com sua cor correspondente ao tensor de tensão.
 const membersWithData = computed(() => {
   if (
     !store.result ||
@@ -36,7 +34,6 @@ const membersWithData = computed(() => {
   }
 });
 
-// Processamento da geometria bruta (pre-solver) para visualização da malha nodal inicial.
 const rawMembersWithData = computed(() => {
   if (!store.rawTruss || !store.rawTruss.members) return [];
   const nodes = store.rawTruss.nodes;
@@ -55,14 +52,12 @@ const rawMembersWithData = computed(() => {
 });
 
 function onPointerClick(ev: any, member: MemberResult | RawMember) {
-  // Interatividade: seleção de membros para inspeção detalhada dos esforços internos.
   ev.stopPropagation();
   if ("utilization" in member) {
     store.selectMember(member as MemberResult);
   }
 }
 
-// Auxiliares para representação visual das condições de contorno (vínculos).
 const getSupportRotation = (node: RawNode) => {
   return [0, 0, 0];
 };

@@ -1,8 +1,4 @@
 <script setup lang="ts">
-/*
- Definição de propriedades e eventos para o manual de instruções da aplicação.
- Sendo assim, o componente garante a reatividade necessária para o controle de fluxo do modal.
-*/
 defineProps<{
   show: boolean;
 }>();
@@ -13,7 +9,6 @@ defineEmits<{
 </script>
 
 <template>
-  <!-- Orquestração de transição para o manual de usuário. -->
   <Transition
     enter-active-class="duration-300 ease-out"
     enter-from-class="opacity-0"
@@ -26,13 +21,11 @@ defineEmits<{
       v-if="show"
       class="fixed inset-0 z-[200] flex items-center justify-center p-4"
     >
-      <!-- Camada de obscurecimento para foco narrativo no conteúdo de ajuda. -->
       <div
         class="absolute inset-0 bg-black/60 backdrop-blur-sm"
         @click="$emit('close')"
       ></div>
 
-      <!-- Janela de visualização do manual com efeitos de entrada espacial. -->
       <Transition
         enter-active-class="duration-300 ease-out"
         enter-from-class="opacity-0 scale-95 translate-y-4"
@@ -81,10 +74,7 @@ defineEmits<{
               <p
                 class="max-w-2xl mx-auto mt-4 text-base leading-relaxed text-gray-400"
               >
-                Criamos este manual pensando em você que nunca teve contato com
-                engenharia estrutural ou softwares de simulação. Aqui
-                explicaremos absolutamente tudo, passo a passo, de forma clara e
-                sem jargões difíceis.
+                Este manual apresenta o funcionamento do sistema e os conceitos básicos de engenharia estrutural de forma acessível.
               </p>
             </div>
 
@@ -108,11 +98,7 @@ defineEmits<{
                     O que é o TRUSS-OPT 3D?
                   </p>
                   <p>
-                    É um sistema de computador inteligente projetado para
-                    desenhar e calcular estruturas de metal. Ele testa milhares
-                    de combinações matemáticas em poucos segundos para lhe
-                    entregar a opção de construção mais barata e segura
-                    possível, de acordo com as normas.
+                    É um sistema inteligente projetado para desenhar e calcular estruturas de metal. Ele testa milhares de combinações para entregar a opção mais barata e segura de acordo com as normas.
                   </p>
                 </div>
                 <div
@@ -122,50 +108,34 @@ defineEmits<{
                     O que é uma treliça e para que ela serve?
                   </p>
                   <p>
-                    Imagine vários pedaços de metal retos (barras) ligados pelas
-                    pontas (nós), formando triângulos. Essa união de triângulos
-                    é o que chamamos de <strong>treliça</strong>. A forma
-                    triangular é o "segredo" da engenharia para suportar pesos
-                    gigantescos gastando muito pouco material. Elas servem para
-                    fazer telhados, pontes, antenas e palcos.
+                    Imagine várias barras de metal ligadas pelas pontas formando triângulos. Essa união é uma <strong>treliça</strong>. Triângulos são excelentes para suportar grandes pesos com pouco material. Elas servem para telhados, pontes, antenas e palcos.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Como o software me ajuda a projetar uma estrutura?
+                    Como o sistema auxilia no projeto?
                   </p>
                   <p>
-                    Normalmente, uma pessoa teria que chutar qual grossura de
-                    metal usar e fazer contas enormes no papel para ver se não
-                    vai cair. Aqui, você só precisa dizer qual é o tamanho do
-                    espaço que quer cobrir e o peso que a estrutura vai segurar.
-                    O software faz o trabalho duro: ele "adivinha" e testa as
-                    espessuras corretas para você.
+                    O software automatiza o dimensionamento estrutural. Após a inserção das dimensões e do peso suportado, o sistema identifica automaticamente as espessuras de metal adequadas.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Conheça a tela principal: onde fica cada coisa?
+                    Onde fica cada coisa?
                   </p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
                     <li>
-                      <strong>Painel Lateral (Esquerda):</strong> É o seu
-                      controle remoto. Onde você insere as medidas, o peso e o
-                      tipo de solo.
+                      <strong>Painel Lateral (Esquerda):</strong> Controle para inserir medidas, peso e tipo de solo.
                     </li>
                     <li>
-                      <strong>Área Central:</strong> É o Visualizador 3D. Onde o
-                      esqueleto da sua estrutura vai aparecer colorido após o
-                      cálculo.
+                      <strong>Área Central:</strong> Visualizador 3D da estrutura.
                     </li>
                     <li>
-                      <strong>Rodapé (Embaixo):</strong> É onde os resultados
-                      financeiros e de peso aparecem após o computador terminar
-                      de pensar.
+                      <strong>Rodapé (Embaixo):</strong> Resultados de custo e peso.
                     </li>
                   </ul>
                 </div>
@@ -192,36 +162,27 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que são os modelos de estrutura disponíveis?
+                    O que são os modelos disponíveis?
                   </p>
                   <p>
-                    O programa já possui formatos pré-desenhados (templates)
-                    para facilitar sua vida. Você só precisa escolher o formato
-                    que melhor se adapta àquilo que você quer construir.
+                    O sistema oferece modelos pré-definidos que auxiliam no início do projeto. Selecione a tipologia que melhor atende à sua necessidade.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Tesouras de telhado: Pratt, Howe e Fink quando usar cada
-                    uma?
+                    Tesouras de telhado: Pratt, Howe e Fink
                   </p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
                     <li>
-                      <strong>Pratt:</strong> As barras inclinadas de dentro
-                      apontam para o centro. É ótima para telhados longos e
-                      retos.
+                      <strong>Pratt:</strong> Ótima para telhados longos e retos.
                     </li>
                     <li>
-                      <strong>Howe:</strong> As barras inclinadas apontam para
-                      fora. Funciona muito bem se você for pendurar coisas
-                      pesadas no meio do telhado.
+                      <strong>Howe:</strong> Ideal para pendurar coisas pesadas no meio do telhado.
                     </li>
                     <li>
-                      <strong>Fink:</strong> Tem o desenho interno parecendo
-                      vários "W". É a melhor opção para telhados muito
-                      inclinados (como chalés).
+                      <strong>Fink:</strong> Melhor opção para telhados muito inclinados.
                     </li>
                   </ul>
                 </div>
@@ -229,17 +190,14 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Pontes: Warren e Pratt entendendo a diferença
+                    Pontes: Warren e Pratt
                   </p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
                     <li>
-                      <strong>Warren:</strong> Forma uma sequência de triângulos
-                      perfeitos. É o modelo que mais economiza metal.
+                      <strong>Warren:</strong> Mais econômica em metal.
                     </li>
                     <li>
-                      <strong>Pratt para Pontes:</strong> Usa "cruzes" dentro
-                      dos quadrados. É ideal quando o chão da ponte vai sofrer
-                      impactos muito fortes.
+                      <strong>Pratt:</strong> Ideal para pisos que sofrem fortes impactos.
                     </li>
                   </ul>
                 </div>
@@ -247,18 +205,14 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Torres: quadrada e triangular quando se aplicam?
+                    Torres: quadrada e triangular
                   </p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
                     <li>
-                      <strong>Quadrada:</strong> Tem quatro pernas. É muito
-                      fácil de construir e não balança quase nada. Ideal para
-                      caixas d'água grandes.
+                      <strong>Quadrada:</strong> Estável, ideal para caixas d'água.
                     </li>
                     <li>
-                      <strong>Triangular:</strong> Tem três pernas. Gasta bem
-                      menos material e é perfeita para antenas de rádio ou
-                      internet.
+                      <strong>Triangular:</strong> Mais leve, perfeita para antenas.
                     </li>
                   </ul>
                 </div>
@@ -266,13 +220,10 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Balanços (marquises): Pratt e Warren para que servem?
+                    Balanços (marquises)
                   </p>
                   <p>
-                    Um "balanço" é uma estrutura que está grudada em uma parede
-                    de um lado só e fica "voando" do outro (como o teto de um
-                    ponto de ônibus ou a arquibancada de um estádio). Esse
-                    modelo exige peças muito fortes perto da parede.
+                    Estruturas presas de um lado só, como pontos de ônibus ou coberturas de estádios.
                   </p>
                 </div>
               </div>
@@ -295,82 +246,40 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que é o Vão (comprimento) e como escolher o valor certo?
+                    O que é o Vão (comprimento)?
                   </p>
                   <p>
-                    É a distância exata de "pulo" que a estrutura precisa dar no
-                    ar sem colocar nenhum pilar no meio do caminho. Se o seu
-                    galpão tem 20 metros de largura livre, seu vão é 20.
+                    É a distância que a estrutura cobre sem pilares no meio.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que é a Altura da estrutura e qual é o impacto dela?
+                    O que é a Altura e seu impacto?
                   </p>
                   <p>
-                    É a espessura vertical do seu esqueleto de metal (do chão ao
-                    teto da peça). <strong>Dica de ouro:</strong> estruturas
-                    "gordinhas" (altas) envergam muito menos do que estruturas
-                    "fininhas" (baixas). Aumentar a altura quase sempre deixa o
-                    projeto mais barato, pois o programa poderá usar metais mais
-                    finos.
+                    É a espessura vertical da peça. Estruturas mais altas tendem a ser mais baratas, pois usam metais mais finos.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que é a Largura e o que significa colocar zero?
+                    O que é a Largura?
                   </p>
                   <p>
-                    A largura é a profundidade da estrutura. Se você digitar
-                    <strong>0 (zero)</strong>, o computador vai entender que
-                    você quer analisar apenas um desenho plano no papel (2D). Se
-                    você colocar qualquer número maior que zero (ex: 2 metros),
-                    o sistema criará uma estrutura de verdade com volume (3D),
-                    como um túnel ou uma caixa.
+                    A profundidade da estrutura. Se usar <strong>0 (zero)</strong>, a análise será apenas em um desenho plano (2D).
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que são Painéis e Divisões? Como esse número afeta a
-                    estrutura?
+                    O que são Painéis e Divisões?
                   </p>
                   <p>
-                    As divisões dizem em quantos "quadradinhos" ou triângulos a
-                    estrutura será cortada por dentro. Se você tiver um vão
-                    enorme e poucas divisões, as barras de metal lá dentro
-                    ficarão longas demais. Barras compridas dobram facilmente
-                    igual a um espaguete (flambagem). Aumentar as divisões
-                    encurta o tamanho das barras, deixando-as mais rígidas.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que é a Largura do Topo? (exclusivo para torres)
-                  </p>
-                  <p>
-                    Para torres, você pode fazer a base ser larga no chão e o
-                    topo ser fininho lá no céu (formato de Torre Eiffel). Isso
-                    corta o vento melhor e economiza muito metal.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que são Seções? (exclusivo para torres)
-                  </p>
-                  <p>
-                    São como se fossem os "andares" da sua torre. Se a torre tem
-                    30 metros de altura e você coloca 10 seções, o programa
-                    criará 10 blocos empilhados de 3 metros de altura cada.
+                    Define em quantos blocos a estrutura será dividida. O aumento das divisões reduz o comprimento das barras, aumentando sua rigidez e estabilidade.
                   </p>
                 </div>
               </div>
@@ -393,40 +302,20 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que é uma carga estrutural?
+                    O que é carga estrutural?
                   </p>
                   <p>
-                    É absolutamente tudo que faz "peso" em cima do metal para
-                    empurrá-lo para baixo (ou para os lados). Telhas de barro,
-                    vento batendo forte, placas solares, máquinas presas,
-                    pessoas andando... Tudo isso é carga.
+                    É todo peso sobre o metal: telhas, vento, placas solares, máquinas ou pessoas.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Como estimar a carga total que minha estrutura vai receber?
+                    O que é kgf (Quilograma-força)?
                   </p>
                   <p>
-                    Você precisa somar todos os pesos esperados. Exemplo: Se sua
-                    cobertura tem 100 metros quadrados, e o telhado pesa 10 kg
-                    por metro, você já tem 1.000 kg. Adicione ventos e uma boa
-                    margem de segurança. (O sistema já calcula o peso do próprio
-                    metal da treliça sozinho, então não precisa somar isso).
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    Em que unidade devo inserir o valor da carga?
-                  </p>
-                  <p>
-                    A unidade solicitada é o
-                    <strong>kgf (Quilograma-força)</strong>. Para efeitos
-                    práticos, é o mesmo valor numérico que o peso em "quilos"
-                    (kg) que você vê numa balança normal.
+                    Para fins práticos, considere o mesmo valor que o peso em quilos (kg).
                   </p>
                 </div>
               </div>
@@ -449,43 +338,10 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Por que o tipo de solo importa para uma estrutura metálica?
+                    Por que o solo importa?
                   </p>
                   <p>
-                    Você pode desenhar a estrutura mais forte do mundo no ar,
-                    mas se ela for apoiada numa lama (argila mole), ela vai
-                    afundar torta. Se uma perna afundar e a outra não, o metal
-                    vai torcer e rasgar. O tipo de solo avisa ao programa se a
-                    terra embaixo é firme ou mole.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    Qual tipo de solo devo selecionar para o meu caso?
-                  </p>
-                  <p>
-                    Tente usar o bom senso do local da obra: se for um terreno
-                    muito duro, use <strong>Rocha</strong> ou
-                    <strong>Areia Compacta</strong>. Se for área de alagadiço,
-                    aterro novo ou terreno muito macio, escolha
-                    <strong>Argila Mole</strong> ou <strong>Areia Fofa</strong>.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que é o coeficiente de reação do subleito e quando usar o
-                    valor customizado?
-                  </p>
-                  <p>
-                    É o número técnico que mede a "dureza" do solo. Deixe o
-                    programa cuidar disso sozinho escolhendo os solos da lista.
-                    Só clique em "Customizado" se você tiver um laudo de
-                    sondagem de solo feito por um engenheiro geotécnico que
-                    forneça esse número exato.
+                    Se o solo for mole (argila), a estrutura pode afundar e entortar o metal. O sistema avisa se o terreno é firme ou mole.
                   </p>
                 </div>
                 <div
@@ -495,25 +351,7 @@ defineEmits<{
                     O que são as dimensões da sapata (B e L)?
                   </p>
                   <p>
-                    A sapata é o bloco de concreto que fica enterrado no chão
-                    segurando o poste de metal (pilar).
-                    <strong>B</strong> significa a Largura e
-                    <strong>L</strong> o Comprimento dela em metros. Valores
-                    maiores distribuem melhor o peso na terra.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    Como o solo mole pode prejudicar minha estrutura?
-                  </p>
-                  <p>
-                    Se o solo ceder, a estrutura vai tentar "puxar" e esticar as
-                    peças de metal para compensar. O sistema será obrigado a
-                    escolher metais muito mais grossos e caros para a estrutura
-                    se aguentar enquanto o chão falha. Para evitar isso, aumente
-                    o tamanho da sapata.
+                    São a largura (B) e o comprimento (L) do bloco de concreto que segura cada pé da estrutura.
                   </p>
                 </div>
               </div>
@@ -536,76 +374,24 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que acontece quando clico em "Iniciar Análise Estrutural"?
+                    O que o software faz ao iniciar a análise?
                   </p>
                   <p>
-                    A tela bloqueia por precaução e uma janela de carregamento
-                    (log) aparece. Neste momento, o sistema está convertendo
-                    todas as suas medidas em códigos matemáticos e enviando para
-                    os nossos servidores na nuvem.
+                    Ele simula milhares de vezes a construção, testando metais cada vez mais grossos até encontrar a opção 100% segura com o menor custo.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que o software está fazendo durante o processamento?
-                  </p>
-                  <p>
-                    Em vez de calcular uma vez só, ele simula a construção do
-                    projeto milhares de vezes. Ele tenta usar a barra mais fina
-                    possível; aplica as cargas e vê se ela quebra na simulação.
-                    Se quebrar, ele troca por uma um pouco mais grossa e testa
-                    de novo, até que a estrutura esteja 100% segura usando o
-                    mínimo de metal possível.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que significam os materiais que aparecem no log?
-                  </p>
-                  <p>
-                    O computador coloca 4 materiais em uma corrida ao mesmo
-                    tempo (Aço comum, Aço forte, Aço que não enferruja e
-                    Alumínio). Ele testa todos simultaneamente para ver qual
-                    gera o projeto mais barato no final.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    Como interpretar o painel de progresso em tempo real?
+                    Significado das cores no progresso:
                   </p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
-                    <li>Ponto <strong>Cinza</strong>: na fila esperando.</li>
-                    <li>
-                      Ponto <strong>Laranja Pulsando</strong>: o robô está
-                      calculando aquele metal agora.
-                    </li>
-                    <li>
-                      Ponto <strong>Verde</strong>: finalizado com sucesso!
-                    </li>
-                    <li>
-                      Ponto <strong>Vermelho</strong>: falhou, pois aquele
-                      material não aguenta o peso mesmo usando as peças mais
-                      grossas do catálogo.
-                    </li>
+                    <li>Ponto <strong>Cinza</strong>: aguardando.</li>
+                    <li>Ponto <strong>Laranja</strong>: calculando agora.</li>
+                    <li>Ponto <strong>Verde</strong>: sucesso.</li>
+                    <li>Ponto <strong>Vermelho</strong>: falha (material insuficiente).</li>
                   </ul>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    Posso cancelar a otimização a qualquer momento?
-                  </p>
-                  <p>
-                    Com certeza. Se perceber que digitou um número errado (ex:
-                    100.000 kg em vez de 1.000 kg), clique no botão de Cancelar
-                    Análise. O processo para na hora e limpa a memória.
-                  </p>
                 </div>
               </div>
             </section>
@@ -627,83 +413,23 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Como rotacionar, aproximar e afastar a visualização?
-                  </p>
-                  <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
-                    <li>
-                      <strong>Rotacionar a câmera:</strong> Clique, segure e
-                      arraste com o botão ESQUERDO do mouse (ou 1 dedo no
-                      celular).
-                    </li>
-                    <li>
-                      <strong>Mover para os lados (Pan):</strong> Clique, segure
-                      e arraste com o botão DIREITO (ou 2 dedos no celular).
-                    </li>
-                    <li>
-                      <strong>Dar Zoom:</strong> Gire a rodinha (scroll) do
-                      mouse (ou faça formato de pinça com os dedos).
-                    </li>
-                  </ul>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que representam as bolinhas e os cilindros no modelo?
+                    O que representam as bolinhas e os cilindros?
                   </p>
                   <p>
-                    Os tubos (cilindros) alongados são as barras metálicas que
-                    você terá que comprar na siderúrgica. As pequenas bolinhas
-                    brancas nos cantos são os <strong>Nós</strong> (onde os
-                    soldador ou os parafusos vão emendar essas barras na vida
-                    real).
+                    Os tubos são as barras de metal. As bolinhas brancas são os <strong>Nós</strong> (onde os soldadores ou parafusos emendam as barras).
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que são os símbolos de apoio (cones e blocos)?
-                  </p>
-                  <p>
-                    Eles mostram onde a estrutura está presa no chão. O
-                    <strong>Cone</strong> significa que ela está presa mas ainda
-                    pode girar ligeiramente se forçada. O
-                    <strong>Bloco</strong> quadrado significa que ela está
-                    chumbada e completamente imóvel (engastada).
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que é o mapa de cores das barras (do azul ao vermelho)?
-                  </p>
-                  <p>
-                    O TRUSS-OPT 3D pinta a estrutura com um "semáforo de perigo
-                    e economia":
+                    Mapa de cores para análise de segurança:
                   </p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2 text-sm">
-                    <li>
-                      <strong class="text-blue-400">Azul:</strong> A peça está
-                      folgada, tem metal de sobra para pouco peso.
-                    </li>
-                    <li>
-                      <strong class="text-green-400">Verde:</strong> O ideal!
-                      Suporta a carga com segurança e sem desperdício de
-                      material.
-                    </li>
-                    <li>
-                      <strong class="text-yellow-400">Amarelo:</strong> Esforço
-                      alto. A peça está sendo forçada, mas ainda é segura pelas
-                      normas.
-                    </li>
-                    <li>
-                      <strong class="text-red-400">Vermelho:</strong> Alerta
-                      máximo de economia. A peça está trabalhando no limite de
-                      segurança permitido. Foi aprovada para baratear a obra,
-                      mas não permite erros na construção.
-                    </li>
+                    <li><strong class="text-blue-400">Azul:</strong> Peça com folga.</li>
+                    <li><strong class="text-green-400">Verde:</strong> Ideal (seguro e econômico).</li>
+                    <li><strong class="text-yellow-400">Amarelo:</strong> Peça sendo forçada, mas segura.</li>
+                    <li><strong class="text-red-400">Vermelho:</strong> Alerta (limite de segurança).</li>
                   </ul>
                 </div>
               </div>
@@ -726,85 +452,22 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Como ver os detalhes de uma barra específica?
+                    O que é a Taxa de Utilização?
                   </p>
                   <p>
-                    Basta clicar nela no desenho 3D. Imediatamente aparecerá uma
-                    caixa com todos os detalhes técnicos daquela peça.
+                    Indica quanto da força total a peça está usando. Se for 90%, está usando 90% da sua capacidade para não quebrar.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que é a Taxa de Utilização e o que ela me diz?
-                  </p>
-                  <p>
-                    Vai de 0% a 100%. Se a taxa for de 90%, quer dizer que ela
-                    está usando 90% de toda a força que ela tem para não
-                    quebrar. Quanto mais perto de 100%, mais otimizada e no
-                    limite ela está.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que é a Força Axial e como interpretar o valor?
-                  </p>
-                  <p>
-                    É a quantidade de força que a barra está aguentando, medida
-                    em kN (quilonewtons). Dica: multiplique esse valor por 100
-                    para ter a ideia em quilos. Se a força for 10 kN, ela está
-                    segurando quase 1.000 kg.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    Qual é a diferença entre tração e compressão?
+                    Tração vs. Compressão
                   </p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
-                    <li>
-                      <strong>Tração:</strong> A força está "esticando" a peça,
-                      puxando as pontas para fora (como um cabo de guerra).
-                      Metais aguentam isso muito bem mesmo sendo finos.
-                    </li>
-                    <li>
-                      <strong>Compressão:</strong> A força está "esmagando" a
-                      peça para dentro. Isso é perigoso porque peças finas, ao
-                      serem esmagadas, entortam para o lado e desabam (o que
-                      chamamos de flambagem). O software sempre engrossa as
-                      peças que sofrem compressão.
-                    </li>
+                    <li><strong>Tração:</strong> Força esticando a peça.</li>
+                    <li><strong>Compressão:</strong> Força esmagando a peça. O software engrossa barras sob compressão para evitar que entortem.</li>
                   </ul>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que é o perfil comercial atribuído a cada barra?
-                  </p>
-                  <p>
-                    É o nome exato da peça que você vai pedir para comprar na
-                    loja. O computador tenta usar o mesmo tamanho de perfil em
-                    várias partes para facilitar a construção (ex: Tubo Quadrado
-                    100x100).
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que é a análise de durabilidade e vida útil da estrutura?
-                  </p>
-                  <p>
-                    É uma estimativa baseada no tipo de solo e ambiente
-                    escolhido. Se o solo for agressivo (argila úmida) e o metal
-                    escolhido for fraco à corrosão, o painel avisará sobre a
-                    necessidade de manutenção.
-                  </p>
                 </div>
               </div>
             </section>
@@ -826,63 +489,21 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Como interpretar o painel de resumo na parte inferior da
-                    tela?
+                    O que é o Material Recomendado?
                   </p>
                   <p>
-                    Abaixo do modelo 3D ficam os resultados numéricos finais (os
-                    "troféus" do cálculo) que você usará para o orçamento e
-                    fabricação.
+                    É a opção mais barata que atende a todos os requisitos de segurança.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que significa "Material Recomendado"?
+                    O que é o custo estimado?
                   </p>
                   <p>
-                    Significa que, depois do computador simular construir o
-                    mesmo projeto 4 vezes com materiais diferentes, este
-                    escolhido é o material que resolve o problema sem cair e que
-                    resulta no menor valor financeiro final.
+                    O preço médio de mercado dos materiais (não inclui mão de obra).
                   </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que é o custo estimado e como ele é calculado?
-                  </p>
-                  <p>
-                    É a multiplicação do peso total de todas as barras pelo
-                    preço médio de mercado do quilo (R$/kg) daquele metal
-                    específico. É uma ótima previsão para o custo de aquisição
-                    (não inclui mão de obra).
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que representam o peso total, o comprimento total e a
-                    quantidade de peças?
-                  </p>
-                  <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
-                    <li>
-                      <strong>Peso Total:</strong> Essencial para alugar
-                      caminhões ou guindastes para o transporte.
-                    </li>
-                    <li>
-                      <strong>Comprimento Total:</strong> A soma do tamanho de
-                      todas as barras em linha reta (para encomendar na
-                      fábrica).
-                    </li>
-                    <li>
-                      <strong>Quantidade de Peças:</strong> O número de cortes
-                      individuais que o metalúrgico terá que fazer na montagem.
-                    </li>
-                  </ul>
                 </div>
               </div>
             </section>
@@ -907,79 +528,20 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    Quais combinações de dimensões costumam gerar os melhores
-                    resultados?
+                    O que significa "Aviso de Segurança"?
                   </p>
                   <p>
-                    Regra de ouro: a Altura deve ser de 10% a 15% do Vão livre.
-                    Ajuste a quantidade de divisões até que os triângulos
-                    internos pareçam bem equilibrados (não esticados demais, nem
-                    fechados demais).
+                    A estrutura é muito longa e rasteira, o que pode causar trepidações. Recomenda-se deixá-la mais robusta aumentando a altura.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que significa o alerta de "esbeltez crítica"?
+                    Como utilizar o botão "Resetar Valores"?
                   </p>
                   <p>
-                    Significa que a estrutura é longa demais e rasteira demais.
-                    Quando o vento bater, ela vai tremer e balançar muito, mesmo
-                    que o metal aguente. É um aviso para você deixá-la mais
-                    "robusta".
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    Por que a otimização pode não encontrar uma solução viável?
-                  </p>
-                  <p>
-                    Se você exigir que uma pequena ponte carregue dezenas de
-                    milhões de quilos, o programa vai testar o maior tubo
-                    comercial possível e, ainda assim, a ponte vai quebrar no
-                    simulador. Cargas extremas exigem perfis especiais
-                    industriais, não tubos comuns.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    Quando o alumínio é vantajoso em relação ao aço?
-                  </p>
-                  <p>
-                    O Alumínio dobra fácil, então costuma perder se tiver muito
-                    peso em cima dele. Mas se a estrutura for gigantesca e o seu
-                    maior inimigo for tentar sustentar o próprio peso do metal
-                    no ar, o alumínio vence porque é superleve.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    Como o tipo de solo afeta o custo final da estrutura?
-                  </p>
-                  <p>
-                    Solos ruins amolecem e fazem um dos apoios afundar mais que
-                    o outro. A estrutura em cima se contorce toda, e o programa
-                    precisa gastar dinheiro colocando aço extra para ela não
-                    quebrar. Chão ruim custa caro.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    Como usar o botão "Resetar Parâmetros"?
-                  </p>
-                  <p>
-                    Se você digitou valores ruins e a estrutura travou ou ficou
-                    inviável, basta apertar esse botão para esquecer tudo e
-                    recomeçar do zero com um modelo padrão equilibrado.
+                    Esta função restaura todos os campos para os valores de um modelo padrão equilibrado.
                   </p>
                 </div>
               </div>
@@ -1002,54 +564,20 @@ defineEmits<{
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que fazer se a conexão com o servidor cair durante o
-                    cálculo?
+                    O que significa "Falha de estabilidade"?
                   </p>
                   <p>
-                    Às vezes os dados caem por instabilidade da sua internet.
-                    Aguarde o alerta de erro fechar e apenas clique no botão de
-                    "Iniciar Análise Estrutural" novamente.
+                    O projeto desabou na simulação matemática por falta de apoios corretos.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
                   <p class="font-bold text-white mb-1">
-                    O que significa "Instabilidade numérica detectada"?
+                    O que significa "Dimensionamento inviável"?
                   </p>
                   <p>
-                    Significa que o seu projeto desabou na matemática. A
-                    estrutura ficou "solta" no ar sem apoios corretos, ou virou
-                    um mecanismo (como um pêndulo) no simulador.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    O que significa "Resistência máxima atingida. Estrutura
-                    inviável"?
-                  </p>
-                  <p>
-                    O computador pegou a barra de metal mais pesada e grossa
-                    existente no catálogo e, mesmo assim, ela quebrou sob a
-                    carga gigantesca que você inseriu. Diminua a carga ou mude o
-                    formato.
-                  </p>
-                </div>
-                <div
-                  class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
-                >
-                  <p class="font-bold text-white mb-1">
-                    Por que a tela de carregamento demora mais em estruturas
-                    grandes?
-                  </p>
-                  <p>
-                    Se você tiver um galpão enorme e colocar 20 divisões, criará
-                    muitos triângulos extras. O computador terá que resolver uma
-                    matriz de centenas de equações matemáticas gigantes para
-                    calcular todas essas barras adicionais. Quanto maior, mais
-                    segundos levará para a resposta chegar.
+                    Mesmo com as barras mais grossas do catálogo, a estrutura quebrou sob o peso informado. Diminua a carga ou mude o formato.
                   </p>
                 </div>
               </div>
@@ -1073,52 +601,12 @@ defineEmits<{
               <div
                 class="space-y-4 text-base leading-relaxed bg-gray-800/30 p-6 rounded-xl border border-gray-700/50"
               >
-                <p class="font-bold text-white mb-4">
-                  Glossário completo de termos técnicos em linguagem simples:
-                </p>
                 <ul class="list-disc list-inside space-y-3 ml-2 text-gray-300">
                   <li>
-                    <strong class="text-blue-300">Treliça:</strong> Estrutura
-                    composta somente por barras retas cujas pontas são ligadas
-                    em nós, formando triângulos rígidos (sem flexão ao longo da
-                    barra).
+                    <strong class="text-blue-300">Nó:</strong> Ponto onde as pontas das barras se encontram e são fixadas.
                   </li>
                   <li>
-                    <strong class="text-blue-300">Nó:</strong> O "cotovelo" da
-                    estrutura. O ponto exato onde várias pontas de barras se
-                    encontram e são parafusadas/soldadas.
-                  </li>
-                  <li>
-                    <strong class="text-blue-300">Banzo:</strong> A "linha da
-                    coluna" da estrutura. O trilho horizontal que corre pela
-                    parte superior é o Banzo Superior, e o que corre por baixo é
-                    o Banzo Inferior.
-                  </li>
-                  <li>
-                    <strong class="text-blue-300">Montante:</strong> As barras
-                    internas que ficam perfeitamente retas na vertical.
-                  </li>
-                  <li>
-                    <strong class="text-blue-300">Diagonal:</strong> As barras
-                    internas que ficam inclinadas, cortando o espaço e
-                    finalizando o formato do triângulo salvador.
-                  </li>
-                  <li>
-                    <strong class="text-blue-300">Flambagem:</strong> É o
-                    encurvamento de uma peça quando ela é esmagada nas pontas
-                    (compressão). Pense em uma régua de plástico que, quando
-                    apertada nas duas extremidades, em vez de diminuir de
-                    tamanho, ela dá uma "barriga" e dobra para o lado.
-                  </li>
-                  <li>
-                    <strong class="text-blue-300"
-                      >MEF (Método dos Elementos Finitos):</strong
-                    >
-                    A tática matemática usada pelo servidor. Ele recorta a
-                    treliça inteira em pequenos pedaços (elementos) no mundo
-                    virtual e resolve uma matriz com milhares de variáveis para
-                    saber exatamente qual a força que ataca cada "nó" e cada
-                    barra.
+                    <strong class="text-blue-300">Flambagem:</strong> Encurvamento de uma peça quando submetida a esforços de compressão (como uma haste flexível que dobra ao ser pressionada nas pontas).
                   </li>
                 </ul>
               </div>

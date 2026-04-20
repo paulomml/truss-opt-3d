@@ -11,6 +11,10 @@ RUN npm install
 # Migração da interface reativa e lógica de visualização 3D para o diretório de trabalho.
 COPY . .
 
+# Argumento e variável de ambiente para configurar o proxy em tempo de build/runtime.
+ARG API_URL_BASE=http://backend:8000
+ENV API_URL_BASE=$API_URL_BASE
+
 # Compilação do frontend para geração dos ativos estáticos otimizados e minificados para produção.
 RUN rm -rf .nuxt .output && npm run build
 

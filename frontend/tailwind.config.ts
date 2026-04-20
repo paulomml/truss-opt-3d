@@ -11,7 +11,7 @@ export default {
     extend: {
       colors: {
         // Paleta cromática otimizada para interfaces técnicas de engenharia (CAD).
-        // Sendo assim, o contraste é ajustado para reduzir a fadiga visual durante a análise estrutural.
+        // O contraste é ajustado para reduzir a fadiga visual durante a análise.
         primary: {
           50: "#eff6ff",
           100: "#dbeafe",

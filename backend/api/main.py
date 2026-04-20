@@ -7,10 +7,11 @@ from fastapi.staticfiles import StaticFiles
 from domain.models import TrussRequest, OptimizationResponse
 from use_cases.optimize_truss import optimize_truss_use_case
 
-# Inicialização da interface de comunicação para processamento das requisições estruturais.
+# Entrypoint da API FastAPI. 
+# Abstrai a complexidade do motor FEA para consumo via HTTP/WebSocket.
 app = FastAPI(title="3D Truss Optimizer API")
 
-# Configuração do middleware de segurança para permitir o tráfego entre diferentes origens (CORS).
+# Middleware CORS: Permitir todas as origens para facilitar o desenvolvimento e deploy em infra distribuída.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,8 +24,8 @@ app.add_middleware(
 @app.post("/api/optimize", response_model=OptimizationResponse)
 async def optimize(request: TrussRequest, fastapi_req: Request):
     """
-    Ponto de entrada legacional para o processamento do design estrutural.
-    Recomenda-se o uso do endpoint WebSocket para feedback em tempo real.
+    Endpoint síncrono legado. 
+    Atenção: Sujeito a timeouts em modelos complexos. Preferir /api/ws/optimize.
     """
     try:
         result = await optimize_truss_use_case(request, fastapi_req)
@@ -36,21 +37,20 @@ async def optimize(request: TrussRequest, fastapi_req: Request):
 @app.websocket("/api/ws/optimize")
 async def websocket_optimize(websocket: WebSocket):
     """
-    Canal de comunicação bidirecional para otimização estrutural em tempo real.
-    Sendo assim, o sistema permite o monitoramento granular do progresso e a detecção imediata de instabilidades de conexão.
+    Comunicação full-duplex para streaming de progresso do solver.
+    Evita o overhead de polling HTTP e fornece feedback granular dos workers de multiprocessing.
     """
     await websocket.accept()
 
     async def run_optimizer(payload: dict):
-        # Conversão do payload bruto para o modelo de domínio validado.
         request_obj = TrussRequest(**payload)
 
         async def progress_callback(
             main_progress: float,
             current_logs: dict,
         ):
-            # Envio de metadados de progresso enriquecidos para a UI do cliente via WebSocket.
-            # Sendo assim, o frontend pode exibir o estado de cada núcleo de processamento.
+            # Streaming de metadados de progresso via WebSocket. 
+            # Permite que o frontend atualize a UI reativamente sem bloquear a main thread.
             await websocket.send_json(
                 {
                     "type": "progress",
@@ -67,14 +67,11 @@ async def websocket_optimize(websocket: WebSocket):
 
     opt_task = None
     try:
-        # Aguarda a mensagem inicial contendo as configurações da treliça.
         data = await websocket.receive_text()
-        # Deserialização dos parâmetros geométricos.
-        # Logo, o sistema valida a integridade dos dados antes de iniciar o solver matricial.
         payload = json.loads(data)
 
-        # Execução assíncrona da rotina de otimização.
-        # Portanto, o servidor mantém a capacidade de resposta para sinais de cancelamento durante o cálculo pesado.
+        # Offload da otimização para uma task assíncrona.
+        # Mantém a disponibilidade do socket para escutar sinais de interrupção (cancelamento) do cliente.
         opt_task = asyncio.create_task(run_optimizer(payload))
 
         # Task secundária para monitorar se o cliente envia sinais ou desconecta.
@@ -86,7 +83,7 @@ async def websocket_optimize(websocket: WebSocket):
 
         if opt_task in done:
             result = opt_task.result()
-            # Encaminha o resultado final da otimização estável.
+            # Dispatch do resultado final processado.
             await websocket.send_json({"type": "result", "data": result.dict()})
         else:
             # Se o listen_task terminar primeiro, houve cancelamento ou desconexão.
@@ -104,8 +101,7 @@ async def websocket_optimize(websocket: WebSocket):
         except:
             pass
     finally:
-        # Garante a liberação de recursos e interrupção de tarefas órfãs.
-        # Sendo assim, preserva-se a disponibilidade computacional para novas requisições.
+        # Graceful cleanup: cancela tasks órfãs para evitar resource exhaustion no servidor.
         if opt_task and not opt_task.done():
             opt_task.cancel()
 
@@ -118,8 +114,8 @@ async def health():
     return {"status": "ok"}
 
 
-# Provedor de arquivos estáticos para a interface do usuário em ambiente de produção.
-# Portanto, as rotas da API possuem prioridade de roteamento sobre os ativos do frontend.
+# Provedor de ativos estáticos (SPA fallback) para produção.
+# Prioridade de roteamento: API > Static Files.
 public_dir = os.path.join(os.path.dirname(__file__), "..", "public")
 if os.path.isdir(public_dir) and os.listdir(public_dir):
     app.mount("/", StaticFiles(directory=public_dir, html=True), name="static")

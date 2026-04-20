@@ -4,8 +4,7 @@ import { onMounted, onUnmounted } from "vue";
 let healthInterval: any;
 
 onMounted(() => {
-  // Mantém o servidor Render ativo fazendo pings a cada 5 minutos.
-  // Isso evita o desligamento automático da instância por inatividade.
+  // Mitiga o cold-start de instâncias free-tier (Render).
   healthInterval = setInterval(
     () => {
       $fetch("/api/health").catch((err) =>
@@ -22,10 +21,8 @@ onUnmounted(() => {
 </script>
 
 <style>
-/* Padronização tipográfica global: Importação da família Roboto para garantir legibilidade técnica. */
 @import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
 
-/* Estilização Global da Barra de Rolagem (Scrollbar) harmonizada com o tema dark da aplicação. */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -49,7 +46,6 @@ onUnmounted(() => {
   background-clip: content-box;
 }
 
-/* Suporte para Firefox */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(75, 85, 99, 0.8) rgba(31, 41, 55, 0.5);
@@ -57,7 +53,6 @@ onUnmounted(() => {
 </style>
 
 <template>
-  <!-- Ponto de entrada da aplicação: orquestração de layouts, páginas e sistema de notificações. -->
   <div class="fixed inset-0 overflow-hidden">
     <NuxtLayout>
       <NuxtPage />

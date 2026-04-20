@@ -1,9 +1,5 @@
 import type { RawTruss, RawNode, RawMember, SupportType } from "@/types/truss";
 
-/**
- * Utilitário para geração de identificadores únicos de nós.
- * A nomenclatura sistemática facilita o mapeamento topológico durante a fase de extrusão.
- */
 function createNodeId(
   prefix: string,
   index: number,
@@ -12,9 +8,6 @@ function createNodeId(
   return `${prefix}${suffix}_${index}`;
 }
 
-/**
- * Adição de nó à coleção com definição de coordenadas espaciais e condições de contorno.
- */
 function addNode(
   nodes: Record<string, RawNode>,
   id: string,
@@ -26,9 +19,6 @@ function addNode(
   nodes[id] = { id, x, y, z, support };
 }
 
-/**
- * Definição da incidência das barras (membros) entre nós para composição da matriz de rigidez global.
- */
 function addMember(
   members: RawMember[],
   nodeStart: string,
@@ -44,8 +34,8 @@ function addMember(
 }
 
 /**
- * Algoritmo de extrusão 3D para conversão de treliças planas em modelos espaciais estáveis.
- * Portanto, são gerados contraventamentos e barras transversais para garantir a rigidez fora do plano.
+ * Extrusão 3D via duplicação de malha e injeção de X-bracing.
+ * Justificativa: Transforma grafos planares em estruturas espacialmente estáveis contra flambagem global e torção.
  */
 function extrude3D(planar: RawTruss, width: number): RawTruss {
   if (width <= 0) return planar;
@@ -53,27 +43,27 @@ function extrude3D(planar: RawTruss, width: number): RawTruss {
   const nodes: Record<string, RawNode> = {};
   const members: RawMember[] = [];
 
-  // Duplicação dos nós para as faces frontal (z=0) e traseira (z=width) da estrutura.
+  // Duplicação da malha para as faces frontal (z=0) e traseira (z=width).
   for (const [id, node] of Object.entries(planar.nodes)) {
     addNode(nodes, id + "F", node.x, node.y, 0, node.support);
     addNode(nodes, id + "B", node.x, node.y, width, node.support);
   }
 
-  // Mapeamento das barras planas para ambas as faces espaciais.
+  // Réplica dos membros planares em ambas as camadas do espaço R3.
   for (const m of planar.members) {
     addMember(members, m.node_start + "F", m.node_end + "F", m.group);
     addMember(members, m.node_start + "B", m.node_end + "B", m.group);
   }
 
-  // Geração de barras transversais e contraventamentos em X (X-Bracing) para estabilidade global.
+  // Estabilização global via X-Bracing e membros transversais.
   const nodeIds = Object.keys(planar.nodes);
 
-  // Barras transversais que unem os nós homólogos das faces frontal e traseira.
+  // Membros transversais (conectores de profundidade).
   for (const id of nodeIds) {
     addMember(members, id + "F", id + "B", "Transversal");
   }
 
-  // Contraventamento em X para mitigar efeitos de torção e cargas laterais.
+  // Contraventamento cruzado para mitigar esforços de torção e flambagem global da estrutura.
   for (const m of planar.members) {
     const n1 = planar.nodes[m.node_start];
     const n2 = planar.nodes[m.node_end];
@@ -104,7 +94,7 @@ export function generatePrattRoof(
   width: number,
   panels: number,
 ): RawTruss {
-  // Geração de treliça tipo Pratt: montantes submetidos à compressão e diagonais à tração.
+  // Treliça Pratt: montantes sob compressão e diagonais sob tração para cargas gravitacionais.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -166,8 +156,8 @@ export function generateHoweRoof(
   width: number,
   panels: number,
 ): RawTruss {
-  // Geração de treliça tipo Howe: diagonais comprimidas e montantes tracionados.
-  // Sendo assim, este modelo é eficiente para inclinações de telhado convencionais.
+  // Treliça Howe: diagonais comprimidas e montantes tracionados. 
+  // Eficiente para inclinações convencionais e superposição de cargas pontuais.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -222,7 +212,7 @@ export function generateFinkRoof(
   height: number,
   width: number,
 ): RawTruss {
-  // Configuração tipo Fink: ideal para vãos curtos e altas inclinações devido à subdivisão das diagonais.
+  // Treliça Fink: ideal para vãos curtos e alta inclinação devido à subdivisão geométrica das diagonais.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -285,7 +275,7 @@ export function generateWarrenBridge(
   width: number,
   panels: number,
 ): RawTruss {
-  // Geração de treliça Warren: caracterizada pela ausência de montantes verticais, otimizando o peso próprio.
+  // Treliça Warren: redução de montantes verticais para otimização de peso próprio (Dead Load).
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -339,7 +329,7 @@ export function generatePrattBridge(
   width: number,
   panels: number,
 ): RawTruss {
-  // Pratt Bridge: configuração onde as diagonais são tracionadas sob carregamento gravitacional uniforme.
+  // Pratt Bridge: topologia com diagonais predominantemente tracionadas sob carga distribuída.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -409,7 +399,7 @@ export function generateSquareTower(
   topWidth: number,
   sections: number,
 ): RawTruss {
-  // Geração de torre de seção quadrada: ideal para suportar carregamentos verticais e momentos fletores.
+  // Torre de seção quadrada: estabilidade contra esforços de torção e momentos fletores biaxiais.
   height = Math.max(0.1, height);
   width = Math.max(0, width);
   topWidth = Math.max(0.01, topWidth);
@@ -525,7 +515,7 @@ export function generateTriangularTower(
   topWidth: number,
   sections: number,
 ): RawTruss {
-  // Torre de seção triangular: configuração isostática estável com menor número de elementos.
+  // Torre triangular: configuração isostática estável com redução de membros transversais.
   height = Math.max(0.1, height);
   width = Math.max(0, width);
   topWidth = Math.max(0.01, topWidth);
@@ -631,7 +621,7 @@ export function generateCantileverPratt(
   width: number,
   panels: number,
 ): RawTruss {
-  // Geração de marquise em balanço tipo Pratt: diagonais tracionadas para vãos projetados.
+  // Cantilever Pratt: diagonais tracionadas para otimizar a transferência de carga ao apoio rígido.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -691,7 +681,7 @@ export function generateCantileverWarren(
   width: number,
   panels: number,
 ): RawTruss {
-  // Marquise tipo Warren: redução do número de nós e membros para estruturas leves em balanço.
+  // Cantilever Warren: redução de redundância nodal para estruturas leves em balanço.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);

@@ -6,8 +6,8 @@ export function getCylinderData(
   nodes: Record<string, NodeResult>,
 ) {
   /*
-   Transformação geométrica para representação espacial dos elementos de barra (cilindros).
-   A posição e orientação são calculadas a partir dos vetores de posição dos nós de incidência.
+   Compute de transform para instanciamento dos cilindros (membros).
+   Mapeia coordenadas nodais R3 para posição e rotação via Quaternion.
   */
   const start = nodes[member.node_start];
   const end = nodes[member.node_end];
@@ -20,10 +20,10 @@ export function getCylinderData(
   const vEnd = new Vector3(end.x, end.y, end.z);
 
   const distance = vStart.distanceTo(vEnd);
-  // Posicionamento do centro de massa do elemento cilíndrico no ponto médio entre os nós.
+  // Anchor point no centro do segmento (lerp 0.5). 
   const position = vStart.clone().lerp(vEnd, 0.5);
 
-  // Cálculo do quatérnio de rotação para alinhamento do eixo Y local ao vetor diretor da barra.
+  // Orientação via Quaternion para alinhar o eixo Y local (up) ao vetor diretor da barra.
   const direction = new Vector3().subVectors(vEnd, vStart).normalize();
   const quaternion = new Quaternion().setFromUnitVectors(
     new Vector3(0, 1, 0),
@@ -39,9 +39,8 @@ export function getCylinderData(
 
 export function getMemberColor(utilization: number) {
   /*
-   Mapeamento térmico da taxa de utilização estrutural.
-   A escala cromática transita do Azul (0% de solicitação) ao Vermelho (100% ou falha), passando pelo Verde.
-   Sendo assim, o usuário identifica visualmente as regiões críticas da treliça.
+   Heatmap de utilização estrutural.
+   Escala: Blue (0%) -> Green (50%) -> Red (100%+).
   */
   const u = Math.max(0, Math.min(1, utilization));
   let r, g, b;

@@ -6,8 +6,6 @@ const store = useTrussStore();
 const isMobile = ref(false);
 const showContent = ref(false);
 
-// Estimativa de durabilidade e corrosão baseada nas propriedades químicas e físicas do solo.
-// O tipo de solo influencia diretamente a agressividade ambiental sobre o aço estrutural.
 const corrosionInfo = computed(() => {
   const soil = store.form.soil_type;
   switch (soil) {
@@ -17,7 +15,6 @@ const corrosionInfo = computed(() => {
         time: "5 a 10 anos",
         color: "text-red-400",
         icon: "lucide:alert-triangle",
-        // Orientações simplificadas sobre a agressividade ambiental para solos de baixa resistência.
         tip: "Como o solo é agressivo, esta peça precisa de uma pintura especial super resistente para não enferrujar rápido.",
       };
     case "Argila Rija":
@@ -58,12 +55,11 @@ const corrosionInfo = computed(() => {
         time: "30 a 50 anos",
         color: "text-gray-400",
         icon: "lucide:info",
-        tip: "Siga o plano de manutenção preventiva padrão para garantir a longevidade da estrutura.",
+        tip: "Siga o plano de manutenção padrão para garantir a durabilidade da estrutura.",
       };
   }
 });
 
-// Sincronização do estado reativo para exibição dos esforços internos do elemento selecionado.
 watch(
   () => store.selectedMember,
   (newVal) => {
@@ -94,12 +90,10 @@ const close = () => {
 
 <template>
   <div>
-    <!-- Container de Modal Mobile: detalhamento técnico adaptado para telas reduzidas. -->
     <div
       v-if="isMobile && store.selectedMember"
       class="fixed inset-0 z-[1050] flex items-end"
     >
-      <!-- Fundo translúcido para foco na informação estrutural. -->
       <Transition
         enter-active-class="transition-opacity duration-500 ease-out"
         enter-from-class="opacity-0"
@@ -115,7 +109,6 @@ const close = () => {
         ></div>
       </Transition>
 
-      <!-- Cartão de detalhes: memória de cálculo pontual por elemento. -->
       <Transition name="slide-up" @after-leave="store.selectMember(null)">
         <div
           v-if="showContent"
@@ -158,7 +151,7 @@ const close = () => {
             </div>
             <div class="flex justify-between border-b border-gray-700 pb-3">
               <span class="text-gray-400 text-sm font-medium"
-                >Solicitação Axial:</span
+                >Força Axial:</span
               >
               <div class="text-right">
                 <span
@@ -215,7 +208,6 @@ const close = () => {
               </div>
             </div>
 
-            <!-- Indicador de durabilidade e proteção superficial. -->
             <div class="pt-4 border-t border-gray-700 mt-2">
               <div class="flex items-center gap-2 mb-1">
                 <Icon
@@ -224,7 +216,7 @@ const close = () => {
                 />
                 <span
                   class="text-sm font-bold uppercase tracking-wider text-gray-400"
-                  >Análise de Durabilidade (ISE)</span
+                  >Análise de Durabilidade</span
                 >
               </div>
               <div class="flex flex-col gap-1">
@@ -246,7 +238,6 @@ const close = () => {
       </Transition>
     </div>
 
-    <!-- Interface Desktop: posicionamento fixo para inspeção dinâmica. -->
     <Transition name="fade">
       <div
         v-if="store.selectedMember && !isMobile"
@@ -263,7 +254,7 @@ const close = () => {
         </div>
         <div class="space-y-3">
           <div class="flex justify-between border-b border-gray-700 pb-2">
-            <span class="text-gray-400 text-sm">ID:</span>
+            <span class="text-gray-400 text-sm">ID da Barra:</span>
             <span class="font-mono font-bold text-white">{{
               store.selectedMember.id
             }}</span>
@@ -282,24 +273,26 @@ const close = () => {
           </div>
           <div class="flex justify-between border-b border-gray-700 pb-2">
             <span class="text-gray-400 text-sm">Força Axial:</span>
-            <span
-              :class="[
-                'font-bold font-mono text-sm',
-                store.selectedMember.axial_force > 0
-                  ? 'text-blue-400'
-                  : 'text-red-400',
-              ]"
-            >
-              {{
-                (Math.abs(store.selectedMember.axial_force) / 1000).toFixed(2)
-              }}
-              kN<br />
+            <div class="text-right">
+              <span
+                :class="[
+                  'font-bold font-mono text-sm block',
+                  store.selectedMember.axial_force > 0
+                    ? 'text-blue-400'
+                    : 'text-red-400',
+                ]"
+              >
+                {{
+                  (Math.abs(store.selectedMember.axial_force) / 1000).toFixed(2)
+                }}
+                kN
+              </span>
               <span class="text-xs uppercase text-gray-400">{{
                 store.selectedMember.stress_type === "Tension"
                   ? "Tração"
                   : "Compressão"
               }}</span>
-            </span>
+            </div>
           </div>
           <div class="pt-2">
             <div class="flex justify-between mb-1">
@@ -339,7 +332,7 @@ const close = () => {
               />
               <span
                 class="text-xs font-bold uppercase tracking-wider text-gray-400"
-                >Vida Útil de Projeto (Solo)</span
+                >Análise de Durabilidade</span
               >
             </div>
             <div class="flex flex-col gap-1">
