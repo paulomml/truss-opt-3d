@@ -20,6 +20,8 @@ O dimensionamento tradicional de estruturas reticuladas frequentemente envolve u
 
 A plataforma utiliza algoritmos de busca e multiprocessamento para analisar catálogos reais de materiais, como aço e alumínio. A cada iteração, o sistema examina os esforços axiais por meio do Método dos Elementos Finitos (MEF) e verifica a instabilidade elástica. O resultado final entregue ao usuário é um projeto estrutural tecnicamente viável, que garante uma excelente relação de custo-benefício, respeitando as exigências técnicas vigentes.
 
+**Nota sobre Abstração de Interface:** Embora o motor matemático (Backend) opere sobre o rigor técnico do Método dos Elementos Finitos (MEF) e das normas brasileiras, a Interface Gráfica (Frontend) nesta versão foi intencionalmente abstraída para usuários leigos. Esta decisão visa democratizar o acesso ao pré-dimensionamento estrutural e servir como uma ferramenta educacional intuitiva, mitigando a barreira imposta pelos jargões complexos da Engenharia Civil, sem comprometer a integridade dos resultados gerados pelo solver.
+
 ## 2. Funcionalidades da Plataforma
 
 A interface da plataforma foi projetada para oferecer controle preciso sobre a modelagem estrutural. A seguir, detalham-se as principais operações que o usuário pode realizar no software:

@@ -12,8 +12,8 @@ from infrastructure.fea.pynite_solver import build_and_solve_truss
 
 def load_materials():
     """
-    Importação das propriedades mecânicas e metalúrgicas dos materiais estruturais.
-    Os valores de tensão de escoamento (fy) e ruptura (fu) fundamentam a verificação dos estados limites normativos.
+    Carrega propriedades mecânicas e custos estruturais via CSV.
+    Trade-off: I/O síncrono no startup. O cache em memória mitiga gargalos durante as iterações do solver.
     """
     csv_path = os.path.join(
         os.path.dirname(__file__), "..", "infrastructure", "data", "materials.csv"
@@ -36,8 +36,7 @@ def load_materials():
 
 def load_profiles():
     """
-    Carregamento do banco de dados discreto de seções transversais comerciais.
-    Sendo assim, o sistema pode iterar sobre perfis tubulares reais para encontrar a seção que minimiza o peso próprio.
+    Carrega catálogo discreto de seções transversais comerciais.
     """
     csv_path = os.path.join(
         os.path.dirname(__file__), "..", "infrastructure", "data", "profiles.csv"
@@ -50,36 +49,38 @@ def optimize_for_material_worker(
     params_dict: dict, profiles: list, material: dict, groups: list, queue
 ) -> dict:
     """
-    Worker isolado para processamento via Multiprocessing.
-    Esta função executa a busca exaustiva de perfis para um material específico.
-    Sendo assim, o uso de CPU é maximizado sem interferir no event loop principal.
+    Offload da busca heurística para um worker isolado via multiprocessing.
+    Justificativa: O solver FEA é CPU-bound. Executar na thread principal bloquearia o event loop do FastAPI.
+    Trade-off: Aumenta o footprint de memória devido ao IPC (Pickling), mas garante estabilidade na API sob concorrência.
     """
-    # Importação local necessária para o worker multiprocessado.
+    # Importação local para o worker multiprocessado.
     from infrastructure.fea.pynite_solver import build_and_solve_truss
     from domain.models import TrussRequest
 
-    # Reconstrução do objeto de parâmetros dentro do processo filho.
+    # Reconstrução do pydantic model a partir do dict (Pickle limitation do multiprocessing).
     params = TrussRequest(**params_dict)
 
     num_profiles = len(profiles)
     max_iter = 30
     current_profile_indices = {g: 0 for g in groups}
     iteration = 0
-
     worker_id = material["name"]
     valid_for_material = False
     last_valid_result = None
-    last_error_msg = "Resistência máxima atingida."
+    last_error_msg = "A resistência máxima dos materiais foi atingida."
     upgrade_history = ""
 
     queue.put(
-        {"worker_id": worker_id, "message": "Iniciando estruturação dos dados..."}
+        {
+            "worker_id": worker_id,
+            "message": "Preparando o modelo estrutural...",
+        }
     )
 
     while iteration < max_iter:
         iteration += 1
 
-        # Formata os perfis atuais para exibição detalhada.
+        # Pipeline de formatação de progresso para monitoramento via IPC.
         current_profiles_str = ", ".join(
             [
                 f"{g}: {profiles[idx]['Name']}"
@@ -96,17 +97,14 @@ def optimize_for_material_worker(
         if upgrade_history:
             status_msg += f" | Status: {upgrade_history}"
 
-        # Envio de progresso granular via Queue para o processo pai (IPC).
-        # Logo, o usuário percebe exatamente quais perfis estão em teste e o motivo das trocas.
         queue.put({"worker_id": worker_id, "message": status_msg})
 
-        # Resolução do sistema linear e cálculo da matriz de rigidez global.
         members, nodes, max_u_per_group, total_weight = build_and_solve_truss(
             params, current_profile_indices, profiles, material
         )
 
         if "_ERROR_" in max_u_per_group:
-            last_error_msg = f"Erro estrutural: {max_u_per_group['_ERROR_']}"
+            last_error_msg = f"Identificamos que a estrutura não suporta as cargas aplicadas. Recomendamos rever o formato ou os apoios."
             queue.put({"worker_id": worker_id, "message": last_error_msg})
             break
 
@@ -125,17 +123,15 @@ def optimize_for_material_worker(
                     new_profile = profiles[current_profile_indices[g]]["Name"]
                     upgraded_any = True
                     upgrade_msgs.append(
-                        f"{old_profile} em {g} excedeu limite (U={u:.2f})"
+                        f"{old_profile} em {g} esgotou a capacidade (U={u:.2f})"
                     )
                 else:
                     all_ok = False
-                    last_error_msg = (
-                        f"Maior perfil ({old_profile}) falhou em {g}. Inviável."
-                    )
+                    last_error_msg = f"Identificamos que o peso aplicado exige materiais além do limite comercial disponível para o grupo {g}. Recomendamos reduzir a carga."
                     queue.put({"worker_id": worker_id, "message": last_error_msg})
                     break
 
-        if all_ok:
+            # Hit da solução ótima (local) para o material específico.
             valid_for_material = True
             total_cost = total_weight * material["cost_kg"]
             last_valid_result = {
@@ -148,7 +144,7 @@ def optimize_for_material_worker(
             queue.put(
                 {
                     "worker_id": worker_id,
-                    "message": f"Sucesso! Custo: R$ {total_cost:.2f}",
+                    "message": f"Cálculo finalizado. Custo estimado: R$ {total_cost:.2f}",
                 }
             )
             break
@@ -168,15 +164,15 @@ async def optimize_truss_use_case(
     params: TrussRequest, request: Request = None, progress_callback=None
 ) -> OptimizationResponse:
     """
-    Orquestrador da otimização estrutural utilizando um pool de processos.
-    Logo, a carga computacional é distribuída por todos os núcleos disponíveis da CPU.
+    Coordena a execução concorrente do solver para múltiplos materiais.
+    Mapeia workers aos cores físicos disponíveis via ProcessPoolExecutor.
     """
     manager = None
     executor = None
     try:
         start_time = time.time()
 
-        # Carregamento preliminar dos dados para partilha com os workers.
+        # Carregamento dos dados.
         profiles = load_profiles()
         materials_catalog = load_materials()
         num_materials = len(materials_catalog)
@@ -195,7 +191,7 @@ async def optimize_truss_use_case(
                 "Contraventamento",
             ]
 
-        # Inicialização do mecanismo IPC e do pool de processos.
+        # Inicializa Manager para orquestração de estado IPC e Pool de Processos.
         manager = multiprocessing.Manager()
         queue = manager.Queue()
         executor = ProcessPoolExecutor(max_workers=os.cpu_count())
@@ -205,11 +201,10 @@ async def optimize_truss_use_case(
             mat["name"]: "Aguardando processamento..." for mat in materials_catalog
         }
 
-        # Conversão do objeto Pydantic para dicionário para garantir a serialização (Pickle).
-        # Sendo assim, evitamos falhas de IPC entre o processo pai e os workers.
+        # Serialização para dict para evitar overhead e falhas no pickling via ProcessPoolExecutor.
         params_dict = params.dict()
 
-        # Submissão das tarefas de otimização em paralelo.
+        # Execução em paralelo.
         for material in materials_catalog:
             future = executor.submit(
                 optimize_for_material_worker,
@@ -223,8 +218,7 @@ async def optimize_truss_use_case(
 
         materials_completed = 0
         while materials_completed < num_materials:
-            # Proteção de Memória (Anti-OOM): Monitoramento do consumo global de RAM.
-            # Sendo assim, interrompemos o cálculo se o servidor atingir 90% de ocupação da memória.
+            # Prevenção ativa de OOM (Out Of Memory). Graceful shutdown caso a memória atinja 90%.
             memory_usage = psutil.virtual_memory().percent
             if memory_usage > 90:
                 if executor:
@@ -233,17 +227,17 @@ async def optimize_truss_use_case(
                     manager.shutdown()
                 return OptimizationResponse(
                     is_structurally_stable=False,
-                    status_message=f"Interrupção de segurança: Consumo de memória muito elevado ({memory_usage}%). Tente reduzir a complexidade da estrutura.",
+                    status_message=f"Processamento interrompido: O modelo excedeu o limite de memória do servidor. Tente reduzir as dimensões.",
                     total_weight=0,
                     members=[],
                     nodes={},
                 )
 
-            # Monitoramento de sinais de cancelamento ou desconexão do cliente.
+            # Anti-hanging: Interrompe workers se a conexão WebSocket/HTTP for encerrada.
             if request and await request.is_disconnected():
                 raise asyncio.CancelledError("Desconexão do cliente.")
 
-            # Coleta de atualizações de log de todos os workers ativos.
+            # Drainer da Queue IPC não bloqueante.
             while not queue.empty():
                 try:
                     msg = queue.get_nowait()
@@ -251,7 +245,7 @@ async def optimize_truss_use_case(
                 except:
                     break
 
-            # Verificação de tarefas concluídas para cálculo de progresso.
+            # Cálculo do progresso.
             done_count = sum(1 for f in futures if f.done())
             if done_count > materials_completed:
                 materials_completed = done_count
@@ -265,10 +259,10 @@ async def optimize_truss_use_case(
             if materials_completed < num_materials:
                 await asyncio.sleep(0.5)
 
-        # Consolidação dos resultados e seleção da solução de menor custo global.
+        # Seleção da solução mais econômica.
         best_overall = None
         min_cost = float("inf")
-        last_error = "Nenhuma solução válida encontrada."
+        last_error = "Não foi possível encontrar uma solução válida."
 
         for future in futures:
             res = future.result()
@@ -282,7 +276,7 @@ async def optimize_truss_use_case(
         if best_overall:
             return OptimizationResponse(
                 is_structurally_stable=True,
-                status_message=f"O material {best_overall['material_name']} apresentou o melhor desempenho de custo para este projeto.",
+                status_message=f"Análise finalizada. O material {best_overall['material_name']} é a opção mais econômica.",
                 total_weight=best_overall["weight"],
                 total_cost=best_overall["cost"],
                 winning_material=best_overall["material_name"],
@@ -299,8 +293,7 @@ async def optimize_truss_use_case(
         )
 
     except asyncio.CancelledError:
-        # Encerramento rigoroso dos processos filhos para evitar 'zombies'.
-        # Portanto, libertamos os recursos da CPU e memória imediatamente.
+        # Kill dos child processes para evitar workers zombies em caso de disconnect.
         if executor:
             executor.shutdown(wait=False, cancel_futures=True)
         if manager:
@@ -313,12 +306,13 @@ async def optimize_truss_use_case(
             manager.shutdown()
         return OptimizationResponse(
             is_structurally_stable=False,
-            status_message=f"Ocorreu um imprevisto durante o processamento: {str(e)}",
+            status_message=f"Erro interno na análise: {str(e)}",
             total_weight=0,
             members=[],
             nodes={},
         )
     finally:
+        # Cleanup garantido do pool e recursos IPC.
         if executor:
             executor.shutdown(wait=True)
         if manager:

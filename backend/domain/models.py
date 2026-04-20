@@ -2,20 +2,18 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 
 # Definição das abstrações do domínio estrutural.
-# Estes modelos representam a topologia, as condições de contorno e os resultados da análise matricial.
+# Estes modelos representam a estrutura, os apoios e os resultados da análise.
 
 
 class RawNode(BaseModel):
-    # Representação vetorial do nó no espaço R³.
     id: str
     x: float
     y: float
     z: float
-    support: str = "None"  # Condição de vinculação (Livre, Engastado, Elástico).
+    support: str = "None"
 
 
 class RawMember(BaseModel):
-    # Elemento finito unidimensional (barra) definido pela incidência nodal.
     id: int
     node_start: str
     node_end: str
@@ -23,7 +21,6 @@ class RawMember(BaseModel):
 
 
 class RawTruss(BaseModel):
-    # Conjunto topológico que define a malha estrutural completa.
     nodes: Dict[str, RawNode]
     members: List[RawMember]
 
@@ -55,7 +52,6 @@ class TrussRequest(BaseModel):
 
 
 class NodeResult(BaseModel):
-    # Resultados nodais obtidos após a convergência do equilíbrio estático.
     id: str
     x: float
     y: float
@@ -64,29 +60,21 @@ class NodeResult(BaseModel):
 
 
 class MemberResult(BaseModel):
-    # Resumo do estado de tensão e utilização de cada elemento de barra.
     id: int
     node_start: str
     node_end: str
     group: str
     profile: str
-    axial_force: float  # Esforço axial de cálculo em Newtons (N).
-    utilization: (
-        float  # Taxa de aproveitamento da seção (U = Solicitação / Resistência).
-    )
-    stress_type: str  # Classificação do esforço preponderante (Tração ou Compressão).
+    axial_force: float
+    utilization: float
+    stress_type: str
 
 
 class OptimizationResponse(BaseModel):
-    # Resposta final do processo de otimização econômica e técnica.
-    is_structurally_stable: bool  # Flag de atendimento aos Estados Limites (ELU/ELS).
+    is_structurally_stable: bool
     status_message: str
-    total_weight: float  # Massa total da estrutura otimizada.
-    total_cost: float = (
-        0.0  # Custo financeiro estimado baseado no mercado de aços estruturais.
-    )
-    winning_material: str = (
-        "N/A"  # Material que apresentou o melhor desempenho de custo.
-    )
+    total_weight: float
+    total_cost: float = 0.0
+    winning_material: str = "N/A"
     members: List[MemberResult]
     nodes: Dict[str, NodeResult]

@@ -9,15 +9,11 @@ export interface Toast {
 const toasts = ref<Toast[]>([]);
 
 export const useToast = () => {
-  /*
-   Lógica de gerenciamento do estado das notificações de sistema.
-   O ciclo de vida das mensagens é controlado para garantir a comunicação de alertas técnicos ao usuário.
-  */
   const addToast = (message: string, type: ToastType = "info") => {
     const id = Date.now();
     toasts.value.push({ id, message, type });
 
-    // Descarte automático após intervalo definido para limpeza do buffer visual.
+    // Previne memory leaks e poluição da DOM em fluxos com alto volume de erros (WS reconnection).
     setTimeout(() => {
       removeToast(id);
     }, 5000);

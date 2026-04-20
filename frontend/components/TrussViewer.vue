@@ -7,8 +7,6 @@ const store = useTrussStore();
 const cameraRef = ref();
 const controlsRef = ref();
 
-// Mapeamento dos resultados da análise estrutural para o ambiente de visualização 3D.
-// Portanto, cada barra é renderizada com sua cor correspondente ao tensor de tensão.
 const membersWithData = computed(() => {
   if (
     !store.result ||
@@ -36,7 +34,6 @@ const membersWithData = computed(() => {
   }
 });
 
-// Processamento da geometria bruta (pre-solver) para visualização da malha nodal inicial.
 const rawMembersWithData = computed(() => {
   if (!store.rawTruss || !store.rawTruss.members) return [];
   const nodes = store.rawTruss.nodes;
@@ -55,14 +52,12 @@ const rawMembersWithData = computed(() => {
 });
 
 function onPointerClick(ev: any, member: MemberResult | RawMember) {
-  // Interatividade: seleção de membros para inspeção detalhada dos esforços internos.
   ev.stopPropagation();
   if ("utilization" in member) {
     store.selectMember(member as MemberResult);
   }
 }
 
-// Auxiliares para representação visual das condições de contorno (vínculos).
 const getSupportRotation = (node: RawNode) => {
   return [0, 0, 0];
 };
@@ -247,14 +242,17 @@ const getSupportRotation = (node: RawNode) => {
         </template>
       </template>
     </TresCanvas>
+    <!-- Interface de orientação inicial: exibida quando nenhum modelo estrutural foi processado. -->
     <div
       v-else
       class="flex flex-col items-center justify-center h-full w-full bg-gray-900 text-white italic p-8 text-center"
+      title="Área de visualização tridimensional da estrutura."
     >
       <Icon name="lucide:building-2" class="w-16 h-16 mb-4 text-gray-500" />
       <p class="max-w-md text-gray-300">
-        Selecione um <b>Modelo de Estrutura</b> no painel esquerdo, defina os
-        parâmetros e clique em <b>Otimizar</b> para visualizar a treliça.
+        Selecione um <b>Tipo de Estrutura</b> no painel lateral, defina os
+        parâmetros desejados e clique em <b>Iniciar Análise Estrutural</b> para
+        visualizar o modelo.
       </p>
     </div>
   </div>

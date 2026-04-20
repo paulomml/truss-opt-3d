@@ -3,7 +3,8 @@ from Pynite import FEModel3D
 from domain.models import TrussRequest, NodeResult, MemberResult
 import math
 
-# Parâmetros geotécnicos para o coeficiente de reação do subleito (ks1), referenciados ao ensaio de placa de 30,5 cm conforme bibliografia clássica de Terzaghi.
+# Coeficiente de reação do subleito (ks1) via Winkler-Terzaghi.
+# Referência: Ensaio de placa normatizado (30,5 cm). Usado como rigidez de mola base.
 SOIL_DATABASE = {
     "Areia Fofa": {"ks1": 15000, "type": "granular"},
     "Areia Compacta": {"ks1": 100000, "type": "granular"},
@@ -15,8 +16,8 @@ SOIL_DATABASE = {
 
 def calculate_max_utilization(force, profile, length, material):
     """
-    Avaliação do Estado Limite Último (ELU) conforme preceitos da NBR 8800.
-    Logo, a função determina o quociente entre a solicitação axial de cálculo e a resistência de projeto da seção.
+    Determina a Taxa de Utilização (U) conforme NBR 8800.
+    Justificativa: Métrica base para o algoritmo guloso de upscaling de seções no orquestrador.
     """
     fy = (
         material["fy"] * 1e6
@@ -25,18 +26,16 @@ def calculate_max_utilization(force, profile, length, material):
     A = profile["Area"]
     I = profile["Ix"]
 
-    # Determinação do índice de esbeltez para avaliação de instabilidade global e flambagem.
+    # O índice de esbeltez (lambda) governa o fator de redução chi em membros comprimidos.
     r = math.sqrt(I / A)
     slenderness = length / r
     ne = (math.pi**2 * E * I) / (length**2)
 
     if force >= 0:
-        # Verificação da capacidade resistente sob esforço de tração axial simples.
-        # Portanto, a resistência é limitada pela área bruta e a tensão de escoamento.
+        # Tração axial: limite de escoamento da seção bruta.
         capacity = A * fy
     else:
-        # Dimensionamento à compressão: consideração da flambagem elástica de Euler.
-        # Sendo assim, aplica-se o fator de redução por instabilidade baseado na esbeltez.
+        # Compressão: Aplica fator de redução (chi) via curva de flambagem de Euler-NBR8800.
         f_abs = abs(force)
         lambda0 = math.sqrt((A * fy) / ne)
         if lambda0 <= 1.5:
@@ -52,17 +51,17 @@ def build_and_solve_truss(
     params: TrussRequest, profile_indices, profiles_catalog, material
 ):
     """
-    Formulação do modelo discreto via Método dos Elementos Finitos (MEF) para resolução do sistema matricial.
-    Sendo assim, o modelo processa a rigidez global e retorna os estados de tensão e deformação.
+    Formulação FEA via Matriz de Rigidez Direta.
+    Resolve [K]{u} = {F} para extração de esforços críticos da envoltória.
     """
     model = FEModel3D()
 
-    # Definição das propriedades constitutivas do material para integração na matriz de rigidez global.
+    # Definição das características do material.
     model.add_material(
         material["name"], material["E"] * 1e9, 77e9, 0.3, material["rho"] * 1e-9
     )
 
-    # Atribuição das propriedades geométricas das seções transversais (área e momentos de inércia) ao modelo.
+    # Cache local de seções transversais para evitar redundância na montagem da matriz [K].
     for p in profiles_catalog:
         if p["Name"] not in model.sections:
             model.add_section(p["Name"], p["Area"], p["Ix"], p["Ix"], 1e-4)
@@ -70,8 +69,7 @@ def build_and_solve_truss(
     nodes_coords = {}
     members_to_analyze = []
 
-    # Correção do coeficiente de recalque para fundações reais via método de Winkler-Terzaghi.
-    # Portanto, mitiga-se o erro de escala inerente ao ensaio de placa normatizado.
+    # Mitiga o erro de escala do ensaio de placa para fundações reais via Winkler-Terzaghi.
     soil = SOIL_DATABASE.get(params.soil_type, SOIL_DATABASE["Rocha"])
     ks_nominal = (
         params.custom_ks
@@ -84,16 +82,16 @@ def build_and_solve_truss(
 
     if soil["type"] == "granular":
         # Ajuste geométrico para solos com comportamento granular.
-        # Logo, a rigidez do subleito é ponderada pelas dimensões reais da sapata.
+        # A rigidez do subleito é ponderada pelas dimensões reais da sapata.
         ks_real = ks_nominal * ((B + 0.305) / (2 * B)) ** 2
     elif soil["type"] == "coesivo":
         # Redução do coeficiente ks para considerar a influência da largura da base em solos argilosos.
-        # Sendo assim, previnem-se recalques excessivos por adensamento lateral.
+        # Previne recalques excessivos por adensamento lateral.
         ks_real = ks_nominal * (0.305 / B)
     else:
         ks_real = ks_nominal
 
-    # Cálculo da rigidez equivalente da mola de apoio vertical (K_z) para simulação da base elástica.
+    # Rigidez de mola equivalente (K_z, K_theta) para modelagem de base elástica (Solo).
     K_z = (ks_real * B * L_footing) * 1000
 
     # Definição do engastamento elástico rotacional para modelagem precisa da interação solo-estrutura.
@@ -103,14 +101,14 @@ def build_and_solve_truss(
     K_theta_z = (ks_real * I_z) * 1000
 
     if params.raw_truss:
-        # Mapeamento topológico de nós e incidências para geometrias definidas via interface gráfica.
+        # Injeção da topologia customizada recebida via payload.
         for nid, node in params.raw_truss.nodes.items():
             nodes_coords[nid] = (node.x, node.y, node.z)
             model.add_node(nid, node.x, node.y, node.z)
 
             if node.support != "None":
                 if node.support in ["Pinned", "Roller"]:
-                    # Implementação das condições de contorno via molas de Winkler para simulação do apoio elástico.
+                    # Apoio elástico: Combina restrições rígidas com molas de solo (Winkler).
                     model.def_support(
                         nid, True, False, True, False, True, False
                     )  # Restrição em X, Z e rotação em Y.
@@ -126,7 +124,7 @@ def build_and_solve_truss(
                 (n1[0] - n2[0]) ** 2 + (n1[1] - n2[1]) ** 2 + (n1[2] - n2[2]) ** 2
             )
 
-            # Filtro de segurança: ignorar barras com comprimento nulo (colapso de nós) para evitar erros no solver.
+            # Prevenção de singularidade na matriz de rigidez global.
             if dist < 0.001:
                 continue
 
@@ -150,7 +148,7 @@ def build_and_solve_truss(
                 f"M{m.id}", m.node_start, m.node_end, material["name"], profile["Name"]
             )
     else:
-        # Geração algorítmica da topologia paramétrica para modelos de treliça tipo Howe.
+        # Factory de topologias paramétricas padrão (Fallback para modelos built-in).
         L, H, W, n = params.length, params.height, params.width, params.divisions
         dx = L / n
 
@@ -171,7 +169,7 @@ def build_and_solve_truss(
                 (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 + (p1[2] - p2[2]) ** 2
             )
 
-            # Validação geométrica para assegurar que a barra possua rigidez axial calculável.
+            # Validação geométrica: barras sem rigidez axial são descartadas para evitar erros de divisão por zero.
             if dist < 0.001:
                 return
 
@@ -202,7 +200,7 @@ def build_and_solve_truss(
             add_truss_member(f"FL{i}", f"BL{i}", "Transversal")
             add_truss_member(f"FU{i}", f"BU{i}", "Transversal")
 
-        # Configuração das condições de fronteira elástica nos nós extremos da estrutura.
+        # Restrições de base elástica para simular fundação direta via Winkler.
         base_nodes = ["FL0", "BL0", f"FL{n}", f"BL{n}"]
         for bn in base_nodes:
             model.def_support(bn, True, False, True, False, True, False)
@@ -210,7 +208,7 @@ def build_and_solve_truss(
             model.def_support_spring(bn, "RX", K_theta_x)
             model.def_support_spring(bn, "RZ", K_theta_z)
 
-    # Distribuição das solicitações externas nos nós do banzo superior conforme área de influência nodal.
+    # Rateio de carga vertical via área de influência nodal (Q). Simula carregamento distribuído de deck/telhado.
     total_force_n = params.total_load * 9.81
     max_y = max(c[1] for c in nodes_coords.values())
     top_nodes = [
@@ -234,20 +232,21 @@ def build_and_solve_truss(
     for node, weight in node_weights.items():
         model.add_node_load(node, "FY", -weight * 9.81, case="Dead")
 
-    # Superposição de efeitos entre carga permanente (peso próprio) e sobrecarga externa.
-    # Portanto, a análise elástica linear reflete a condição de carregamento mais desfavorável.
+    # Superposição de efeitos (Combinação de Cargas). LC1 = Permanente (G) + Variável (Q).
     model.add_load_combo("LC1", {"External": 1.0, "Dead": 1.0})
 
     try:
         model.analyze(check_statics=True, log=False)
     except Exception as e:
+        # Fallback para erros de convergência ou instabilidade de primeira ordem.
         return [], {}, {"_ERROR_": str(e)}, 0.0
 
     member_results = []
     max_u_per_group = {}
     for m in members_to_analyze:
         mid = f"M{m['id']}"
-        # Extração dos esforços envoltórios axiais para verificação do estado limite último.
+        # Extração de esforços axiais via Pynite.
+        # Trade-off: Consideramos apenas o esforço crítico da envoltória por barra.
         f_max = model.members[mid].max_axial("LC1")
         f_min = model.members[mid].min_axial("LC1")
 
@@ -257,6 +256,7 @@ def build_and_solve_truss(
             or math.isnan(f_min)
             or math.isinf(f_min)
         ):
+            # Catch de instabilidade numérica (Singularity/Zero-pivot) na inversão de [K].
             return (
                 [],
                 {},

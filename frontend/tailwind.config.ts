@@ -11,7 +11,7 @@ export default {
     extend: {
       colors: {
         // Paleta cromática otimizada para interfaces técnicas de engenharia (CAD).
-        // Sendo assim, o contraste é ajustado para reduzir a fadiga visual durante a análise estrutural.
+        // O contraste é ajustado para reduzir a fadiga visual durante a análise.
         primary: {
           50: "#eff6ff",
           100: "#dbeafe",
@@ -63,15 +63,8 @@ export default {
         "4xl": ["2.25rem", { lineHeight: "2.5rem", fontWeight: "700" }],
       },
       fontFamily: {
-        sans: [
-          "-apple-system",
-          "BlinkMacSystemFont",
-          '"Segoe UI"',
-          "Roboto",
-          '"Helvetica Neue"',
-          "Arial",
-          "sans-serif",
-        ],
+        // Redefinição da família tipográfica padrão para Roboto, alinhando com a identidade visual do projeto.
+        sans: ["Roboto", "sans-serif"],
         mono: [
           '"JetBrains Mono"',
           '"Fira Code"',

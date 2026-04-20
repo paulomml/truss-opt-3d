@@ -31,7 +31,6 @@ const getMemberLength = (
   member: MemberResult,
   nodes: Record<string, NodeResult>,
 ): number => {
-  // Determinação do comprimento geométrico efetivo do elemento de barra para cubagem.
   const directLength = (member as any).length;
   if (typeof directLength === "number" && directLength >= 0) {
     return directLength;
@@ -48,7 +47,6 @@ const totalNodes = computed(() =>
 );
 
 const totalLength = computed(() => {
-  // Somatório das extensões lineares de todos os elementos finitos para orçamento de materiais.
   if (!trussResult.value?.members?.length || !trussResult.value?.nodes) {
     return 0;
   }
@@ -126,14 +124,16 @@ const toggleSummary = () => {
           </button>
         </div>
 
-        <!-- Painéis informativos com os indicadores de desempenho estrutural e econômico. -->
         <div
           :class="[
             'summary-cards mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4',
             { expanded: isExpanded, collapsed: !isExpanded },
           ]"
         >
-          <div class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4">
+          <div
+            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
+            title="Exibe o valor total para a compra dos materiais."
+          >
             <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
               Custo Estimado
             </p>
@@ -141,11 +141,14 @@ const toggleSummary = () => {
               <span class="text-sm font-normal">R$</span> {{ formattedCost }}
             </p>
             <p class="mt-2 text-sm text-gray-400">
-              Custo total de aquisição baseado no material selecionado.
+              Custo total de aquisição dos materiais.
             </p>
           </div>
 
-          <div class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4">
+          <div
+            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
+            title="Exibe o peso total de toda a estrutura metálica."
+          >
             <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
               Peso Total
             </p>
@@ -154,12 +157,15 @@ const toggleSummary = () => {
               <span class="text-base font-normal text-gray-400">kg</span>
             </p>
             <p class="mt-2 text-sm text-gray-400">
-              Massa total da estrutura considerando a liga de
+              Massa total considerando a liga de
               {{ winningMaterial }}.
             </p>
           </div>
 
-          <div class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4">
+          <div
+            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
+            title="Exibe a soma do comprimento de todas as barras de metal."
+          >
             <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
               Comprimento Total
             </p>
@@ -168,11 +174,14 @@ const toggleSummary = () => {
               <span class="text-base font-normal text-gray-400">m</span>
             </p>
             <p class="mt-2 text-sm text-gray-400">
-              Extensão linear total de perfis estruturais necessários.
+              Soma do comprimento de todas as barras de metal.
             </p>
           </div>
 
-          <div class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4">
+          <div
+            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
+            title="Exibe o número total de peças individuais."
+          >
             <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
               Quantidade de Peças
             </p>
@@ -181,7 +190,7 @@ const toggleSummary = () => {
               <span class="text-base font-normal text-gray-400">un.</span>
             </p>
             <p class="mt-2 text-sm text-gray-400">
-              Total de elementos de barra para o processo de fabricação.
+              Total de peças para fabricação.
             </p>
           </div>
         </div>
