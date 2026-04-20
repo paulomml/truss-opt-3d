@@ -92,15 +92,27 @@ def optimize_for_material_worker(
             params, current_profile_indices, profiles, material
         )
 
-        if "_ERROR_" in max_u_per_group:
-            last_error_msg = f"Identificamos instabilidade estrutural crítica."
-            queue.put({"worker_id": worker_id, "message": last_error_msg})
-            break
-
         all_ok = True
         upgraded_any = False
         upgrade_msgs = []
         exhausted_catalogue = False
+
+        if "_ERROR_" in max_u_per_group:
+            # Justificativa: Erros numéricos (divergência/singularidade) costumam ser resolvidos com maior rigidez.
+            # Forçamos o upgrade de todos os grupos para tentar estabilizar a matriz na próxima iteração.
+            all_ok = False
+            for g in current_profile_indices:
+                if current_profile_indices[g] < num_profiles - 1:
+                    current_profile_indices[g] += 1
+                    upgraded_any = True
+                else:
+                    exhausted_catalogue = True
+            
+            if not upgraded_any or exhausted_catalogue:
+                last_error_msg = f"Instabilidade estrutural persistente: {max_u_per_group['_ERROR_']}"
+                queue.put({"worker_id": worker_id, "message": last_error_msg})
+                break
+            continue
 
         # Justificativa: Corrigida indentação e lógica de validação do algoritmo guloso.
         # Todos os grupos devem ser validados (U <= 1.0) antes de marcar como solução válida.

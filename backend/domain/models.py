@@ -38,7 +38,7 @@ class TrussRequest(BaseModel):
         ..., ge=2, description="Número de painéis ou subdivisões do vão."
     )
     total_load: float = Field(
-        ..., gt=0, description="Carga vertical total solicitante em kgf."
+        ..., ge=0, description="Carga vertical total solicitante em kgf."
     )
     soil_type: str = Field(
         "Rocha", description="Classificação geotécnica para interação solo-estrutura."

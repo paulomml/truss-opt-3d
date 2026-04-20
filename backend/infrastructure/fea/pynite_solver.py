@@ -118,8 +118,13 @@ def build_and_solve_truss(
         )
         mid_str = f"M{m_id}"
         model.add_member(mid_str, n1, n2, material["name"], profile["Name"])
-        # Justificativa: Liberação de momentos nas extremidades para simular treliça pura (pinned-pinned).
-        model.def_releases(mid_str, Ryi=True, Rzi=True, Ryj=True, Rzj=True)
+        
+        # Justificativa: A liberação total em barras colineares (banzos) gera instabilidade de translação (mecanismo).
+        # Mantemos a continuidade nos banzos para estabilizar nós intermediários e fixamos Rx para evitar instabilidade rotacional.
+        if group in ["Banzo Superior", "Banzo Inferior"]:
+            model.def_releases(mid_str, Ryi=False, Rzi=False, Ryj=True, Rzj=True)
+        else:
+            model.def_releases(mid_str, Ryi=True, Rzi=True, Ryj=True, Rzj=True)
 
     if params.raw_truss:
         for nid, node in params.raw_truss.nodes.items():
@@ -193,14 +198,20 @@ def build_and_solve_truss(
         target_nodes = [n for n, c in nodes_coords.items() if c[1] >= max_y - 0.05]
 
     if target_nodes:
-        # Justificativa: Rateio de cargas por área de influência (nós de extremidade recebem 50%).
+        # Justificativa: Rateio de cargas por área de influência.
+        # Para treliças longitudinais (com banzos), os nós de extremidade recebem 50% simulando carga distribuída.
+        # Para torres (sem banzos), a carga no topo é concentrada e rateada igualmente entre os montantes.
+        has_banzos = any("banzo" in (m["group"] or "").lower() for m in members_to_analyze)
         min_x = min(nodes_coords[n][0] for n in target_nodes)
         max_x = max(nodes_coords[n][0] for n in target_nodes)
         node_weights = {}
         total_influence = 0
         for n in target_nodes:
             x = nodes_coords[n][0]
-            weight = 0.5 if (abs(x - min_x) < 0.01 or abs(x - max_x) < 0.01) else 1.0
+            if has_banzos:
+                weight = 0.5 if (abs(x - min_x) < 0.01 or abs(x - max_x) < 0.01) else 1.0
+            else:
+                weight = 1.0
             node_weights[n] = weight
             total_influence += weight
         
@@ -224,8 +235,16 @@ def build_and_solve_truss(
 
     try:
         model.analyze(check_statics=True, log=False)
-    except:
-        return [], {}, {"_ERROR_": "Instabilidade matricial detectada."}, 0.0
+        
+        # Justificativa: Falhas de solo (ks=0) podem não gerar matriz singular perfeita, mas causam deslocamentos astronômicos.
+        for nid, node in model.nodes.items():
+            if hasattr(node, 'DY') and isinstance(node.DY, dict):
+                dy = node.DY.get("LC1", 0)
+                if abs(dy) > 1.0:
+                    return [], {}, {"_ERROR_": f"Instabilidade severa (deslocamento excessivo no nó {nid})."}, 0.0
+                    
+    except Exception as e:
+        return [], {}, {"_ERROR_": str(e)}, 0.0
 
     # Heurística de Lk (Comprimento Efetivo) para banzos.
     # Justificativa: O comprimento de flambagem no eixo fraco é a distância entre travamentos transversais.
@@ -267,5 +286,10 @@ def build_and_solve_truss(
             utilization=float(u), stress_type="Tração" if axial_f > 0 else "Compressão"
         ))
 
-    nodes_results = {nid: NodeResult(id=nid, x=c[0], y=c[1], z=c[2]) for nid, c in nodes_coords.items()}
+    nodes_results = {}
+    for nid, c in nodes_coords.items():
+        # Justificativa: O repasse explícito da condição de contorno (support) é indispensável para a correta renderização geométrica das sapatas na camada de visualização.
+        sup = params.raw_truss.nodes[nid].support if (params.raw_truss and nid in params.raw_truss.nodes) else "None"
+        nodes_results[nid] = NodeResult(id=nid, x=c[0], y=c[1], z=c[2], support=sup)
+
     return member_results, nodes_results, max_u_per_group, total_weight
