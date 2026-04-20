@@ -3,7 +3,7 @@ from Pynite import FEModel3D
 from domain.models import TrussRequest, NodeResult, MemberResult
 import math
 
-# Coeficiente de reação do subleito (ks1) via Winkler-Terzaghi. 
+# Coeficiente de reação do subleito (ks1) via Winkler-Terzaghi.
 # Referência: Ensaio de placa normatizado (30,5 cm). Usado como rigidez de mola base.
 SOIL_DATABASE = {
     "Areia Fofa": {"ks1": 15000, "type": "granular"},
@@ -51,7 +51,7 @@ def build_and_solve_truss(
     params: TrussRequest, profile_indices, profiles_catalog, material
 ):
     """
-    Formulação FEA via Matriz de Rigidez Direta. 
+    Formulação FEA via Matriz de Rigidez Direta.
     Resolve [K]{u} = {F} para extração de esforços críticos da envoltória.
     """
     model = FEModel3D()
@@ -245,7 +245,7 @@ def build_and_solve_truss(
     max_u_per_group = {}
     for m in members_to_analyze:
         mid = f"M{m['id']}"
-        # Extração de esforços axiais via Pynite. 
+        # Extração de esforços axiais via Pynite.
         # Trade-off: Consideramos apenas o esforço crítico da envoltória por barra.
         f_max = model.members[mid].max_axial("LC1")
         f_min = model.members[mid].min_axial("LC1")

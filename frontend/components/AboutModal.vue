@@ -81,7 +81,11 @@ defineEmits<{
                 </h3>
               </div>
               <p class="leading-relaxed text-justify">
-                O <strong>TRUSS-OPT 3D</strong> é uma solução dedicada ao cálculo e à otimização de treliças metálicas. Com base nos parâmetros fornecidos, o sistema identifica a configuração de perfis que assegura a viabilidade técnica e a eficiência de custos.
+                O <strong>TRUSS-OPT 3D</strong> é uma solução dedicada ao
+                cálculo e à otimização de treliças metálicas. Com base nos
+                parâmetros fornecidos, o sistema identifica a configuração de
+                perfis que assegura a viabilidade técnica e a eficiência de
+                custos.
               </p>
             </section>
 
@@ -193,7 +197,12 @@ defineEmits<{
                 </h3>
               </div>
               <p class="leading-relaxed text-justify">
-                O dimensionamento de estruturas metálicas costuma exigir múltiplas iterações manuais. O <strong>TRUSS-OPT 3D automatiza esse processo</strong>, realizando análises comparativas em alta velocidade para entregar uma solução otimizada, reduzindo o tempo de projeto e o consumo de materiais.
+                O dimensionamento de estruturas metálicas costuma exigir
+                múltiplas iterações manuais. O
+                <strong>TRUSS-OPT 3D automatiza esse processo</strong>,
+                realizando análises comparativas em alta velocidade para
+                entregar uma solução otimizada, reduzindo o tempo de projeto e o
+                consumo de materiais.
               </p>
             </section>
 
@@ -210,7 +219,12 @@ defineEmits<{
                 </h3>
               </div>
               <p class="leading-relaxed text-base text-justify">
-                O sistema utiliza processamento paralelo para avaliar diferentes materiais simultaneamente. A estrutura é analisada para identificar a distribuição de esforços, ajustando as seções transversais até que todos os critérios de segurança sejam atendidos. Ao final, o software apresenta a alternativa com o melhor custo-benefício.
+                O sistema utiliza processamento paralelo para avaliar diferentes
+                materiais simultaneamente. A estrutura é analisada para
+                identificar a distribuição de esforços, ajustando as seções
+                transversais até que todos os critérios de segurança sejam
+                atendidos. Ao final, o software apresenta a alternativa com o
+                melhor custo-benefício.
               </p>
             </section>
 
@@ -228,21 +242,20 @@ defineEmits<{
               </div>
               <div class="space-y-4 leading-relaxed">
                 <p>
-                  O sistema realiza a verificação de segurança com base na norma brasileira <strong>NBR 8800</strong>, considerando quatro materiais estruturais:
+                  O sistema realiza a verificação de segurança com base na norma
+                  brasileira <strong>NBR 8800</strong>, considerando quatro
+                  materiais estruturais:
                 </p>
                 <ul class="list-disc list-inside space-y-2 ml-4">
+                  <li><strong>Aço A36:</strong> Padrão, comum e barato.</li>
                   <li>
-                    <strong>Aço A36:</strong> Padrão, comum e barato.
-                  </li>
-                  <li>
-                    <strong>Aço A572 G50:</strong> Alta resistência, permite peças mais finas.
+                    <strong>Aço A572 G50:</strong> Alta resistência, permite
+                    peças mais finas.
                   </li>
                   <li>
                     <strong>Aço Corten:</strong> Alta resistência à ferrugem.
                   </li>
-                  <li>
-                    <strong>Alumínio 6061-T6:</strong> Extremamente leve.
-                  </li>
+                  <li><strong>Alumínio 6061-T6:</strong> Extremamente leve.</li>
                 </ul>
               </div>
             </section>
@@ -262,17 +275,18 @@ defineEmits<{
               <div class="space-y-4 leading-relaxed">
                 <ul class="list-disc list-inside space-y-2 ml-4">
                   <li>
-                    <strong>Python & FastAPI:</strong> Cálculos rápidos no servidor.
+                    <strong>Python & FastAPI:</strong> Cálculos rápidos no
+                    servidor.
                   </li>
                   <li>
-                    <strong>Vue.js & Nuxt:</strong> Interface moderna e dinâmica.
+                    <strong>Vue.js & Nuxt:</strong> Interface moderna e
+                    dinâmica.
                   </li>
                   <li>
-                    <strong>TresJS & Three.js:</strong> Desenhos em 3D no navegador.
+                    <strong>TresJS & Three.js:</strong> Desenhos em 3D no
+                    navegador.
                   </li>
-                  <li>
-                    <strong>Tailwind CSS:</strong> Estilização visual.
-                  </li>
+                  <li><strong>Tailwind CSS:</strong> Estilização visual.</li>
                 </ul>
               </div>
             </section>
@@ -296,7 +310,11 @@ defineEmits<{
                 class="p-6 bg-yellow-900/10 border border-yellow-700/30 rounded-xl"
               >
                 <p class="leading-relaxed text-justify text-gray-300">
-                  <strong>AVISO LEGAL:</strong> O TRUSS-OPT 3D foi desenvolvido para <strong>fins acadêmicos e educacionais</strong>. Este software <strong>NÃO SUBSTITUI</strong> a análise e assinatura de um Engenheiro habilitado. Toda obra exige um projeto executivo chancelado por profissional capacitado.
+                  <strong>AVISO LEGAL:</strong> O TRUSS-OPT 3D foi desenvolvido
+                  para <strong>fins acadêmicos e educacionais</strong>. Este
+                  software <strong>NÃO SUBSTITUI</strong> a análise e assinatura
+                  de um Engenheiro habilitado. Toda obra exige um projeto
+                  executivo chancelado por profissional capacitado.
                 </p>
               </div>
             </section>
@@ -314,7 +332,8 @@ defineEmits<{
                 </h3>
               </div>
               <p class="leading-relaxed text-justify">
-                Projeto regido pela licença <strong>MIT</strong> (Código aberto e livre).
+                Projeto regido pela licença <strong>MIT</strong> (Código aberto
+                e livre).
               </p>
             </section>
           </div>

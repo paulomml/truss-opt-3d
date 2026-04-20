@@ -156,7 +156,7 @@ export function generateHoweRoof(
   width: number,
   panels: number,
 ): RawTruss {
-  // Treliça Howe: diagonais comprimidas e montantes tracionados. 
+  // Treliça Howe: diagonais comprimidas e montantes tracionados.
   // Eficiente para inclinações convencionais e superposição de cargas pontuais.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);

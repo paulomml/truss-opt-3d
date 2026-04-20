@@ -74,7 +74,8 @@ defineEmits<{
               <p
                 class="max-w-2xl mx-auto mt-4 text-base leading-relaxed text-gray-400"
               >
-                Este manual apresenta o funcionamento do sistema e os conceitos básicos de engenharia estrutural de forma acessível.
+                Este manual apresenta o funcionamento do sistema e os conceitos
+                básicos de engenharia estrutural de forma acessível.
               </p>
             </div>
 
@@ -98,7 +99,10 @@ defineEmits<{
                     O que é o TRUSS-OPT 3D?
                   </p>
                   <p>
-                    É um sistema inteligente projetado para desenhar e calcular estruturas de metal. Ele testa milhares de combinações para entregar a opção mais barata e segura de acordo com as normas.
+                    É um sistema inteligente projetado para desenhar e calcular
+                    estruturas de metal. Ele testa milhares de combinações para
+                    entregar a opção mais barata e segura de acordo com as
+                    normas.
                   </p>
                 </div>
                 <div
@@ -108,7 +112,11 @@ defineEmits<{
                     O que é uma treliça e para que ela serve?
                   </p>
                   <p>
-                    Imagine várias barras de metal ligadas pelas pontas formando triângulos. Essa união é uma <strong>treliça</strong>. Triângulos são excelentes para suportar grandes pesos com pouco material. Elas servem para telhados, pontes, antenas e palcos.
+                    Imagine várias barras de metal ligadas pelas pontas formando
+                    triângulos. Essa união é uma <strong>treliça</strong>.
+                    Triângulos são excelentes para suportar grandes pesos com
+                    pouco material. Elas servem para telhados, pontes, antenas e
+                    palcos.
                   </p>
                 </div>
                 <div
@@ -118,24 +126,27 @@ defineEmits<{
                     Como o sistema auxilia no projeto?
                   </p>
                   <p>
-                    O software automatiza o dimensionamento estrutural. Após a inserção das dimensões e do peso suportado, o sistema identifica automaticamente as espessuras de metal adequadas.
+                    O software automatiza o dimensionamento estrutural. Após a
+                    inserção das dimensões e do peso suportado, o sistema
+                    identifica automaticamente as espessuras de metal adequadas.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
-                  <p class="font-bold text-white mb-1">
-                    Onde fica cada coisa?
-                  </p>
+                  <p class="font-bold text-white mb-1">Onde fica cada coisa?</p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
                     <li>
-                      <strong>Painel Lateral (Esquerda):</strong> Controle para inserir medidas, peso e tipo de solo.
+                      <strong>Painel Lateral (Esquerda):</strong> Controle para
+                      inserir medidas, peso e tipo de solo.
                     </li>
                     <li>
-                      <strong>Área Central:</strong> Visualizador 3D da estrutura.
+                      <strong>Área Central:</strong> Visualizador 3D da
+                      estrutura.
                     </li>
                     <li>
-                      <strong>Rodapé (Embaixo):</strong> Resultados de custo e peso.
+                      <strong>Rodapé (Embaixo):</strong> Resultados de custo e
+                      peso.
                     </li>
                   </ul>
                 </div>
@@ -165,7 +176,9 @@ defineEmits<{
                     O que são os modelos disponíveis?
                   </p>
                   <p>
-                    O sistema oferece modelos pré-definidos que auxiliam no início do projeto. Selecione a tipologia que melhor atende à sua necessidade.
+                    O sistema oferece modelos pré-definidos que auxiliam no
+                    início do projeto. Selecione a tipologia que melhor atende à
+                    sua necessidade.
                   </p>
                 </div>
                 <div
@@ -176,13 +189,16 @@ defineEmits<{
                   </p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
                     <li>
-                      <strong>Pratt:</strong> Ótima para telhados longos e retos.
+                      <strong>Pratt:</strong> Ótima para telhados longos e
+                      retos.
                     </li>
                     <li>
-                      <strong>Howe:</strong> Ideal para pendurar coisas pesadas no meio do telhado.
+                      <strong>Howe:</strong> Ideal para pendurar coisas pesadas
+                      no meio do telhado.
                     </li>
                     <li>
-                      <strong>Fink:</strong> Melhor opção para telhados muito inclinados.
+                      <strong>Fink:</strong> Melhor opção para telhados muito
+                      inclinados.
                     </li>
                   </ul>
                 </div>
@@ -193,11 +209,10 @@ defineEmits<{
                     Pontes: Warren e Pratt
                   </p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
+                    <li><strong>Warren:</strong> Mais econômica em metal.</li>
                     <li>
-                      <strong>Warren:</strong> Mais econômica em metal.
-                    </li>
-                    <li>
-                      <strong>Pratt:</strong> Ideal para pisos que sofrem fortes impactos.
+                      <strong>Pratt:</strong> Ideal para pisos que sofrem fortes
+                      impactos.
                     </li>
                   </ul>
                 </div>
@@ -209,21 +224,22 @@ defineEmits<{
                   </p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
                     <li>
-                      <strong>Quadrada:</strong> Estável, ideal para caixas d'água.
+                      <strong>Quadrada:</strong> Estável, ideal para caixas
+                      d'água.
                     </li>
                     <li>
-                      <strong>Triangular:</strong> Mais leve, perfeita para antenas.
+                      <strong>Triangular:</strong> Mais leve, perfeita para
+                      antenas.
                     </li>
                   </ul>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
-                  <p class="font-bold text-white mb-1">
-                    Balanços (marquises)
-                  </p>
+                  <p class="font-bold text-white mb-1">Balanços (marquises)</p>
                   <p>
-                    Estruturas presas de um lado só, como pontos de ônibus ou coberturas de estádios.
+                    Estruturas presas de um lado só, como pontos de ônibus ou
+                    coberturas de estádios.
                   </p>
                 </div>
               </div>
@@ -259,17 +275,18 @@ defineEmits<{
                     O que é a Altura e seu impacto?
                   </p>
                   <p>
-                    É a espessura vertical da peça. Estruturas mais altas tendem a ser mais baratas, pois usam metais mais finos.
+                    É a espessura vertical da peça. Estruturas mais altas tendem
+                    a ser mais baratas, pois usam metais mais finos.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
-                  <p class="font-bold text-white mb-1">
-                    O que é a Largura?
-                  </p>
+                  <p class="font-bold text-white mb-1">O que é a Largura?</p>
                   <p>
-                    A profundidade da estrutura. Se usar <strong>0 (zero)</strong>, a análise será apenas em um desenho plano (2D).
+                    A profundidade da estrutura. Se usar
+                    <strong>0 (zero)</strong>, a análise será apenas em um
+                    desenho plano (2D).
                   </p>
                 </div>
                 <div
@@ -279,7 +296,9 @@ defineEmits<{
                     O que são Painéis e Divisões?
                   </p>
                   <p>
-                    Define em quantos blocos a estrutura será dividida. O aumento das divisões reduz o comprimento das barras, aumentando sua rigidez e estabilidade.
+                    Define em quantos blocos a estrutura será dividida. O
+                    aumento das divisões reduz o comprimento das barras,
+                    aumentando sua rigidez e estabilidade.
                   </p>
                 </div>
               </div>
@@ -305,7 +324,8 @@ defineEmits<{
                     O que é carga estrutural?
                   </p>
                   <p>
-                    É todo peso sobre o metal: telhas, vento, placas solares, máquinas ou pessoas.
+                    É todo peso sobre o metal: telhas, vento, placas solares,
+                    máquinas ou pessoas.
                   </p>
                 </div>
                 <div
@@ -315,7 +335,8 @@ defineEmits<{
                     O que é kgf (Quilograma-força)?
                   </p>
                   <p>
-                    Para fins práticos, considere o mesmo valor que o peso em quilos (kg).
+                    Para fins práticos, considere o mesmo valor que o peso em
+                    quilos (kg).
                   </p>
                 </div>
               </div>
@@ -341,7 +362,9 @@ defineEmits<{
                     Por que o solo importa?
                   </p>
                   <p>
-                    Se o solo for mole (argila), a estrutura pode afundar e entortar o metal. O sistema avisa se o terreno é firme ou mole.
+                    Se o solo for mole (argila), a estrutura pode afundar e
+                    entortar o metal. O sistema avisa se o terreno é firme ou
+                    mole.
                   </p>
                 </div>
                 <div
@@ -351,7 +374,8 @@ defineEmits<{
                     O que são as dimensões da sapata (B e L)?
                   </p>
                   <p>
-                    São a largura (B) e o comprimento (L) do bloco de concreto que segura cada pé da estrutura.
+                    São a largura (B) e o comprimento (L) do bloco de concreto
+                    que segura cada pé da estrutura.
                   </p>
                 </div>
               </div>
@@ -377,7 +401,9 @@ defineEmits<{
                     O que o software faz ao iniciar a análise?
                   </p>
                   <p>
-                    Ele simula milhares de vezes a construção, testando metais cada vez mais grossos até encontrar a opção 100% segura com o menor custo.
+                    Ele simula milhares de vezes a construção, testando metais
+                    cada vez mais grossos até encontrar a opção 100% segura com
+                    o menor custo.
                   </p>
                 </div>
                 <div
@@ -390,7 +416,10 @@ defineEmits<{
                     <li>Ponto <strong>Cinza</strong>: aguardando.</li>
                     <li>Ponto <strong>Laranja</strong>: calculando agora.</li>
                     <li>Ponto <strong>Verde</strong>: sucesso.</li>
-                    <li>Ponto <strong>Vermelho</strong>: falha (material insuficiente).</li>
+                    <li>
+                      Ponto <strong>Vermelho</strong>: falha (material
+                      insuficiente).
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -416,7 +445,9 @@ defineEmits<{
                     O que representam as bolinhas e os cilindros?
                   </p>
                   <p>
-                    Os tubos são as barras de metal. As bolinhas brancas são os <strong>Nós</strong> (onde os soldadores ou parafusos emendam as barras).
+                    Os tubos são as barras de metal. As bolinhas brancas são os
+                    <strong>Nós</strong> (onde os soldadores ou parafusos
+                    emendam as barras).
                   </p>
                 </div>
                 <div
@@ -426,10 +457,22 @@ defineEmits<{
                     Mapa de cores para análise de segurança:
                   </p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2 text-sm">
-                    <li><strong class="text-blue-400">Azul:</strong> Peça com folga.</li>
-                    <li><strong class="text-green-400">Verde:</strong> Ideal (seguro e econômico).</li>
-                    <li><strong class="text-yellow-400">Amarelo:</strong> Peça sendo forçada, mas segura.</li>
-                    <li><strong class="text-red-400">Vermelho:</strong> Alerta (limite de segurança).</li>
+                    <li>
+                      <strong class="text-blue-400">Azul:</strong> Peça com
+                      folga.
+                    </li>
+                    <li>
+                      <strong class="text-green-400">Verde:</strong> Ideal
+                      (seguro e econômico).
+                    </li>
+                    <li>
+                      <strong class="text-yellow-400">Amarelo:</strong> Peça
+                      sendo forçada, mas segura.
+                    </li>
+                    <li>
+                      <strong class="text-red-400">Vermelho:</strong> Alerta
+                      (limite de segurança).
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -455,18 +498,21 @@ defineEmits<{
                     O que é a Taxa de Utilização?
                   </p>
                   <p>
-                    Indica quanto da força total a peça está usando. Se for 90%, está usando 90% da sua capacidade para não quebrar.
+                    Indica quanto da força total a peça está usando. Se for 90%,
+                    está usando 90% da sua capacidade para não quebrar.
                   </p>
                 </div>
                 <div
                   class="bg-gray-800/30 p-5 rounded-xl border border-gray-700/50"
                 >
-                  <p class="font-bold text-white mb-1">
-                    Tração vs. Compressão
-                  </p>
+                  <p class="font-bold text-white mb-1">Tração vs. Compressão</p>
                   <ul class="list-disc list-inside mt-2 space-y-2 ml-2">
                     <li><strong>Tração:</strong> Força esticando a peça.</li>
-                    <li><strong>Compressão:</strong> Força esmagando a peça. O software engrossa barras sob compressão para evitar que entortem.</li>
+                    <li>
+                      <strong>Compressão:</strong> Força esmagando a peça. O
+                      software engrossa barras sob compressão para evitar que
+                      entortem.
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -492,7 +538,8 @@ defineEmits<{
                     O que é o Material Recomendado?
                   </p>
                   <p>
-                    É a opção mais barata que atende a todos os requisitos de segurança.
+                    É a opção mais barata que atende a todos os requisitos de
+                    segurança.
                   </p>
                 </div>
                 <div
@@ -502,7 +549,8 @@ defineEmits<{
                     O que é o custo estimado?
                   </p>
                   <p>
-                    O preço médio de mercado dos materiais (não inclui mão de obra).
+                    O preço médio de mercado dos materiais (não inclui mão de
+                    obra).
                   </p>
                 </div>
               </div>
@@ -531,7 +579,9 @@ defineEmits<{
                     O que significa "Aviso de Segurança"?
                   </p>
                   <p>
-                    A estrutura é muito longa e rasteira, o que pode causar trepidações. Recomenda-se deixá-la mais robusta aumentando a altura.
+                    A estrutura é muito longa e rasteira, o que pode causar
+                    trepidações. Recomenda-se deixá-la mais robusta aumentando a
+                    altura.
                   </p>
                 </div>
                 <div
@@ -541,7 +591,8 @@ defineEmits<{
                     Como utilizar o botão "Resetar Valores"?
                   </p>
                   <p>
-                    Esta função restaura todos os campos para os valores de um modelo padrão equilibrado.
+                    Esta função restaura todos os campos para os valores de um
+                    modelo padrão equilibrado.
                   </p>
                 </div>
               </div>
@@ -567,7 +618,8 @@ defineEmits<{
                     O que significa "Falha de estabilidade"?
                   </p>
                   <p>
-                    O projeto desabou na simulação matemática por falta de apoios corretos.
+                    O projeto desabou na simulação matemática por falta de
+                    apoios corretos.
                   </p>
                 </div>
                 <div
@@ -577,7 +629,9 @@ defineEmits<{
                     O que significa "Dimensionamento inviável"?
                   </p>
                   <p>
-                    Mesmo com as barras mais grossas do catálogo, a estrutura quebrou sob o peso informado. Diminua a carga ou mude o formato.
+                    Mesmo com as barras mais grossas do catálogo, a estrutura
+                    quebrou sob o peso informado. Diminua a carga ou mude o
+                    formato.
                   </p>
                 </div>
               </div>
@@ -603,10 +657,14 @@ defineEmits<{
               >
                 <ul class="list-disc list-inside space-y-3 ml-2 text-gray-300">
                   <li>
-                    <strong class="text-blue-300">Nó:</strong> Ponto onde as pontas das barras se encontram e são fixadas.
+                    <strong class="text-blue-300">Nó:</strong> Ponto onde as
+                    pontas das barras se encontram e são fixadas.
                   </li>
                   <li>
-                    <strong class="text-blue-300">Flambagem:</strong> Encurvamento de uma peça quando submetida a esforços de compressão (como uma haste flexível que dobra ao ser pressionada nas pontas).
+                    <strong class="text-blue-300">Flambagem:</strong>
+                    Encurvamento de uma peça quando submetida a esforços de
+                    compressão (como uma haste flexível que dobra ao ser
+                    pressionada nas pontas).
                   </li>
                 </ul>
               </div>

@@ -20,7 +20,7 @@ export function getCylinderData(
   const vEnd = new Vector3(end.x, end.y, end.z);
 
   const distance = vStart.distanceTo(vEnd);
-  // Anchor point no centro do segmento (lerp 0.5). 
+  // Anchor point no centro do segmento (lerp 0.5).
   const position = vStart.clone().lerp(vEnd, 0.5);
 
   // Orientação via Quaternion para alinhar o eixo Y local (up) ao vetor diretor da barra.

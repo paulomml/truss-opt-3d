@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from domain.models import TrussRequest, OptimizationResponse
 from use_cases.optimize_truss import optimize_truss_use_case
 
-# Entrypoint da API FastAPI. 
+# Entrypoint da API FastAPI.
 # Abstrai a complexidade do motor FEA para consumo via HTTP/WebSocket.
 app = FastAPI(title="3D Truss Optimizer API")
 
@@ -24,7 +24,7 @@ app.add_middleware(
 @app.post("/api/optimize", response_model=OptimizationResponse)
 async def optimize(request: TrussRequest, fastapi_req: Request):
     """
-    Endpoint síncrono legado. 
+    Endpoint síncrono legado.
     Atenção: Sujeito a timeouts em modelos complexos. Preferir /api/ws/optimize.
     """
     try:
@@ -49,7 +49,7 @@ async def websocket_optimize(websocket: WebSocket):
             main_progress: float,
             current_logs: dict,
         ):
-            # Streaming de metadados de progresso via WebSocket. 
+            # Streaming de metadados de progresso via WebSocket.
             # Permite que o frontend atualize a UI reativamente sem bloquear a main thread.
             await websocket.send_json(
                 {
