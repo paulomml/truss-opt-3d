@@ -241,7 +241,7 @@ def build_and_solve_truss(
             if hasattr(node, 'DY') and isinstance(node.DY, dict):
                 dy = node.DY.get("LC1", 0)
                 if abs(dy) > 1.0:
-                    return [], {}, {"_ERROR_": f"Instabilidade severa (deslocamento excessivo no nó {nid})."}, 0.0
+                    return [], {}, {"_ERROR_": f"A estrutura sofreu deslocamento excessivo no apoio ou nó {nid}."}, 0.0
                     
     except Exception as e:
         return [], {}, {"_ERROR_": str(e)}, 0.0
@@ -271,7 +271,7 @@ def build_and_solve_truss(
         axial_f = f_max if abs(f_max) > abs(f_min) else f_min
         
         if math.isnan(axial_f) or math.isinf(axial_f):
-            return [], {}, {"_ERROR_": "Divergência numérica."}, 0.0
+            return [], {}, {"_ERROR_": "Divergência numérica. O cálculo não conseguiu convergir para uma solução estável."}, 0.0
 
         p_idx = profile_indices.get(m["group"], profile_indices.get("Padrão", 0))
         profile = profiles_catalog[p_idx]

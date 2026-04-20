@@ -37,7 +37,7 @@ defineEmits<{
       >
         <div
           v-if="show"
-          class="relative bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[95vh]"
+          class="relative bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[calc(100vh-2rem)] my-4"
         >
           <!-- Cabeçalho -->
           <div

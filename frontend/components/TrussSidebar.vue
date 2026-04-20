@@ -378,7 +378,7 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
             <label
               class="block text-sm font-semibold text-gray-200 mb-2"
               title="Define a quantidade de divisões internas da estrutura."
-              >Quantidade de Seções (Divisões)</label
+              >Painéis do Vão (Telhados/Pontes)</label
             >
             <input
               v-model.number="store.form.divisions"
@@ -401,7 +401,7 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
             <label
               class="block text-sm font-semibold text-gray-200 mb-2"
               title="Define o número de andares para modelos de torre."
-              >Número de Seções (Torres)</label
+              >Andares (Torres)</label
             >
             <input
               v-model.number="store.form.sections"

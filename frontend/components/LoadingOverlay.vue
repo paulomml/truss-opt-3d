@@ -5,16 +5,16 @@ import { useTrussStore } from "@/stores/useTrussStore";
 const store = useTrussStore();
 
 const loadingPhrases = [
-  "Calculando a melhor solução...",
-  "Avaliando esbeltez e estabilidade global...",
-  "Processando matriz de rigidez...",
-  "Otimizando seções transversais...",
-  "Verificando limites de tensão e compressão...",
-  "Ajustando perfis estruturais...",
-  "Calculando deslocamentos nodais...",
-  "Simulando carga e apoios...",
-  "Refinando a estrutura para menor peso...",
-  "Validando integridade estrutural...",
+  "Analisando a estabilidade estrutural...",
+  "Calculando a distribuição de esforços internos...",
+  "Otimizando as seções transversais dos perfis...",
+  "Avaliando o comportamento sob as cargas aplicadas...",
+  "Verificando os limites de esbeltez e resistência...",
+  "Simulando a interação da estrutura com os apoios...",
+  "Processando múltiplas alternativas de materiais...",
+  "Buscando a configuração de melhor custo-benefício...",
+  "Verificando a conformidade com as normas técnicas...",
+  "Realizando cálculos de deslocamentos e deformações...",
 ];
 
 const currentPhraseIndex = ref(0);

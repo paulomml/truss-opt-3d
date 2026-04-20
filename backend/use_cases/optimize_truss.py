@@ -109,7 +109,7 @@ def optimize_for_material_worker(
                     exhausted_catalogue = True
             
             if not upgraded_any or exhausted_catalogue:
-                last_error_msg = f"Instabilidade estrutural persistente: {max_u_per_group['_ERROR_']}"
+                last_error_msg = f"A estrutura apresentou instabilidade que impede o cálculo: {max_u_per_group['_ERROR_']}"
                 queue.put({"worker_id": worker_id, "message": last_error_msg})
                 break
             continue
@@ -129,7 +129,7 @@ def optimize_for_material_worker(
                 else:
                     # Justificativa: Fuga completa do laço quando o catálogo se esgota (CPU Waste Prevention).
                     exhausted_catalogue = True
-                    last_error_msg = f"Limite comercial atingido para o grupo {g}."
+                    last_error_msg = f"Os materiais disponíveis não são suficientes para suportar a carga exigida no grupo {g}."
                     queue.put({"worker_id": worker_id, "message": last_error_msg})
                     break
         
@@ -146,7 +146,7 @@ def optimize_for_material_worker(
                 "members": members,
                 "nodes": nodes,
             }
-            queue.put({"worker_id": worker_id, "message": f"Cálculo finalizado. R$ {total_cost:.2f}"})
+            queue.put({"worker_id": worker_id, "message": f"Cálculo concluído. Custo estimado: R$ {total_cost:.2f}"})
             break
 
         if not upgraded_any:
@@ -220,7 +220,7 @@ async def optimize_truss_use_case(
 
         best_overall = None
         min_cost = float("inf")
-        last_error = "Sem solução válida."
+        last_error = "Não foi possível encontrar uma solução válida com os materiais disponíveis."
 
         for future in futures:
             try:
@@ -232,11 +232,11 @@ async def optimize_truss_use_case(
                 else:
                     last_error = res["error"]
             except Exception as e:
-                last_error = f"Erro no worker: {str(e)}"
+                last_error = f"Ocorreu um erro interno no servidor: {str(e)}"
 
         if best_overall:
             return OptimizationResponse(
-                is_structurally_stable=True, status_message=f"Sucesso: {best_overall['material_name']}",
+                is_structurally_stable=True, status_message=f"A análise foi concluída com sucesso. O material otimizado para a estrutura é: {best_overall['material_name']}.",
                 total_weight=best_overall["weight"], total_cost=best_overall["cost"],
                 winning_material=best_overall["material_name"], members=best_overall["members"], nodes=best_overall["nodes"]
             )
@@ -247,7 +247,7 @@ async def optimize_truss_use_case(
         raise
     except Exception as e:
         if cancel_event: cancel_event.set()
-        return OptimizationResponse(is_structurally_stable=False, status_message=f"Erro: {str(e)}", total_weight=0, members=[], nodes={})
+        return OptimizationResponse(is_structurally_stable=False, status_message=f"Ocorreu um erro interno durante a análise estrutural: {str(e)}", total_weight=0, members=[], nodes={})
     finally:
         # Justificativa: Hard Kill de processos filhos para evitar zumbis DoS após shutdown.
         if executor:
