@@ -75,12 +75,24 @@ def optimize_for_material_worker(
     while iteration < max_iter:
         # Justificativa: Verificação atômica de cancelamento para evitar processamento inútil (Zombie Avoidance).
         if cancel_event.is_set():
-            return {"success": False, "error": "Cancelado pelo sistema.", "material_name": worker_id}
+            return {
+                "success": False,
+                "error": "Cancelado pelo sistema.",
+                "material_name": worker_id,
+            }
 
         iteration += 1
-        current_profiles_str = ", ".join([f"{g}: {profiles[idx]['Name']}" for g, idx in current_profile_indices.items() if g != "Padrão"])
+        current_profiles_str = ", ".join(
+            [
+                f"{g}: {profiles[idx]['Name']}"
+                for g, idx in current_profile_indices.items()
+                if g != "Padrão"
+            ]
+        )
         if not current_profiles_str:
-            current_profiles_str = f"Perfil: {profiles[current_profile_indices.get('Padrão', 0)]['Name']}"
+            current_profiles_str = (
+                f"Perfil: {profiles[current_profile_indices.get('Padrão', 0)]['Name']}"
+            )
 
         status_msg = f"Passo {iteration}/{max_iter} | Perfis: {current_profiles_str}"
         if upgrade_history:
@@ -107,7 +119,7 @@ def optimize_for_material_worker(
                     upgraded_any = True
                 else:
                     exhausted_catalogue = True
-            
+
             if not upgraded_any or exhausted_catalogue:
                 last_error_msg = f"A estrutura apresentou instabilidade que impede o cálculo: {max_u_per_group['_ERROR_']}"
                 queue.put({"worker_id": worker_id, "message": last_error_msg})
@@ -117,7 +129,8 @@ def optimize_for_material_worker(
         # Justificativa: Corrigida indentação e lógica de validação do algoritmo guloso.
         # Todos os grupos devem ser validados (U <= 1.0) antes de marcar como solução válida.
         for g, u in max_u_per_group.items():
-            if g == "_ERROR_": continue
+            if g == "_ERROR_":
+                continue
             if u > 1.0:
                 all_ok = False
                 old_profile = profiles[current_profile_indices[g]]["Name"]
@@ -132,7 +145,7 @@ def optimize_for_material_worker(
                     last_error_msg = f"Os materiais disponíveis não são suficientes para suportar a carga exigida no grupo {g}."
                     queue.put({"worker_id": worker_id, "message": last_error_msg})
                     break
-        
+
         if exhausted_catalogue:
             break
 
@@ -146,7 +159,12 @@ def optimize_for_material_worker(
                 "members": members,
                 "nodes": nodes,
             }
-            queue.put({"worker_id": worker_id, "message": f"Cálculo concluído. Custo estimado: R$ {total_cost:.2f}"})
+            queue.put(
+                {
+                    "worker_id": worker_id,
+                    "message": f"Cálculo concluído. Custo estimado: R$ {total_cost:.2f}",
+                }
+            )
             break
 
         if not upgraded_any:
@@ -175,9 +193,18 @@ async def optimize_truss_use_case(
         num_materials = len(materials_catalog)
 
         if params.raw_truss:
-            groups = list(set(m.group for m in params.raw_truss.members if m.group)) or ["Padrão"]
+            groups = list(
+                set(m.group for m in params.raw_truss.members if m.group)
+            ) or ["Padrão"]
         else:
-            groups = ["Banzo Superior", "Banzo Inferior", "Montante", "Diagonal", "Transversal", "Contraventamento"]
+            groups = [
+                "Banzo Superior",
+                "Banzo Inferior",
+                "Montante",
+                "Diagonal",
+                "Transversal",
+                "Contraventamento",
+            ]
 
         manager = multiprocessing.Manager()
         queue = manager.Queue()
@@ -190,7 +217,17 @@ async def optimize_truss_use_case(
         params_dict = params.dict()
 
         for material in materials_catalog:
-            futures.append(executor.submit(optimize_for_material_worker, params_dict, profiles, material, groups, queue, cancel_event))
+            futures.append(
+                executor.submit(
+                    optimize_for_material_worker,
+                    params_dict,
+                    profiles,
+                    material,
+                    groups,
+                    queue,
+                    cancel_event,
+                )
+            )
 
         materials_completed = 0
         while materials_completed < num_materials:
@@ -206,14 +243,18 @@ async def optimize_truss_use_case(
                 try:
                     msg = queue.get_nowait()
                     current_logs[msg["worker_id"]] = msg["message"]
-                except: break
+                except:
+                    break
 
             done_count = sum(1 for f in futures if f.done())
             if done_count > materials_completed:
                 materials_completed = done_count
 
             if progress_callback:
-                await progress_callback(main_progress=(materials_completed / num_materials) * 100, current_logs=current_logs)
+                await progress_callback(
+                    main_progress=(materials_completed / num_materials) * 100,
+                    current_logs=current_logs,
+                )
 
             if materials_completed < num_materials:
                 await asyncio.sleep(0.5)
@@ -236,25 +277,44 @@ async def optimize_truss_use_case(
 
         if best_overall:
             return OptimizationResponse(
-                is_structurally_stable=True, status_message=f"A análise foi concluída com sucesso. O material otimizado para a estrutura é: {best_overall['material_name']}.",
-                total_weight=best_overall["weight"], total_cost=best_overall["cost"],
-                winning_material=best_overall["material_name"], members=best_overall["members"], nodes=best_overall["nodes"]
+                is_structurally_stable=True,
+                status_message=f"A análise foi concluída com sucesso. O material otimizado para a estrutura é: {best_overall['material_name']}.",
+                total_weight=best_overall["weight"],
+                total_cost=best_overall["cost"],
+                winning_material=best_overall["material_name"],
+                members=best_overall["members"],
+                nodes=best_overall["nodes"],
             )
-        return OptimizationResponse(is_structurally_stable=False, status_message=last_error, total_weight=0, members=[], nodes={})
+        return OptimizationResponse(
+            is_structurally_stable=False,
+            status_message=last_error,
+            total_weight=0,
+            members=[],
+            nodes={},
+        )
 
     except asyncio.CancelledError:
-        if cancel_event: cancel_event.set()
+        if cancel_event:
+            cancel_event.set()
         raise
     except Exception as e:
-        if cancel_event: cancel_event.set()
-        return OptimizationResponse(is_structurally_stable=False, status_message=f"Ocorreu um erro interno durante a análise estrutural: {str(e)}", total_weight=0, members=[], nodes={})
+        if cancel_event:
+            cancel_event.set()
+        return OptimizationResponse(
+            is_structurally_stable=False,
+            status_message=f"Ocorreu um erro interno durante a análise estrutural: {str(e)}",
+            total_weight=0,
+            members=[],
+            nodes={},
+        )
     finally:
         # Justificativa: Hard Kill de processos filhos para evitar zumbis DoS após shutdown.
         if executor:
             for pid in list(executor._processes.keys()):
                 try:
                     os.kill(pid, signal.SIGKILL)
-                except: pass
+                except:
+                    pass
             executor.shutdown(wait=False, cancel_futures=True)
         if manager:
             manager.shutdown()

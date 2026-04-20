@@ -230,7 +230,8 @@ export const useTrussStore = defineStore("truss", () => {
             // Purge da malha preliminar para liberar a heap; o renderer consome o grafo otimizado.
             rawTruss.value = null;
             addToast(
-              validatedData.status_message || "A análise foi concluída com sucesso. A estrutura dimensionada é segura.",
+              validatedData.status_message ||
+                "A análise foi concluída com sucesso. A estrutura dimensionada é segura.",
               "success",
             );
           } else {
@@ -244,10 +245,7 @@ export const useTrussStore = defineStore("truss", () => {
           loading.value = false;
           ws.value?.close();
         } else if (data.type === "error") {
-          addToast(
-            "Erro no cálculo: " + data.message,
-            "error",
-          );
+          addToast("Erro no cálculo: " + data.message, "error");
           cancelOptimization();
           ws.value?.close();
         }

@@ -14,7 +14,9 @@ SOIL_DATABASE = {
 }
 
 
-def calculate_max_utilization(force, profile, length, material, group_name="Padrão", l_effective=None):
+def calculate_max_utilization(
+    force, profile, length, material, group_name="Padrão", l_effective=None
+):
     """
     Determina a Taxa de Utilização (U) conforme NBR 8800.
     Justificativa: Métrica base para o algoritmo guloso de upscaling de seções no orquestrador.
@@ -24,11 +26,11 @@ def calculate_max_utilization(force, profile, length, material, group_name="Padr
     fy = (material["fy"] * 1e6) / gamma_a1
     E = material["E"] * 1e9
     A = profile["Area"]
-    
+
     # Justificativa: A flambagem ocorre no eixo de menor inércia.
     I_min = min(profile["Ix"], profile["Iy"])
     r_min = math.sqrt(I_min / A)
-    
+
     # L_k pode ser maior que o comprimento da barra para banzos sem travamento transversal.
     lk = l_effective if l_effective is not None else length
     slenderness = lk / r_min
@@ -118,7 +120,7 @@ def build_and_solve_truss(
         )
         mid_str = f"M{m_id}"
         model.add_member(mid_str, n1, n2, material["name"], profile["Name"])
-        
+
         # Justificativa: A liberação total em barras colineares (banzos) gera instabilidade de translação (mecanismo).
         # Mantemos a continuidade nos banzos para estabilizar nós intermediários e fixamos Rx para evitar instabilidade rotacional.
         if group in ["Banzo Superior", "Banzo Inferior"]:
@@ -146,40 +148,97 @@ def build_and_solve_truss(
         for m in params.raw_truss.members:
             n1, n2 = nodes_coords[m.node_start], nodes_coords[m.node_end]
             dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(n1, n2)))
-            if dist < 0.001: continue
+            if dist < 0.001:
+                continue
             add_truss_member_to_model(m.id, m.node_start, m.node_end, m.group, dist)
     else:
         L, H, W, n = params.length, params.height, params.width, params.divisions
         dx = L / n
         for i in range(n + 1):
             x = i * dx
-            model.add_node(f"FL{i}", x, 0, 0); nodes_coords[f"FL{i}"] = (x, 0, 0)
-            model.add_node(f"BL{i}", x, 0, W); nodes_coords[f"BL{i}"] = (x, 0, W)
-            model.add_node(f"FU{i}", x, H, 0); nodes_coords[f"FU{i}"] = (x, H, 0)
-            model.add_node(f"BU{i}", x, H, W); nodes_coords[f"BU{i}"] = (x, H, W)
+            model.add_node(f"FL{i}", x, 0, 0)
+            nodes_coords[f"FL{i}"] = (x, 0, 0)
+            model.add_node(f"BL{i}", x, 0, W)
+            nodes_coords[f"BL{i}"] = (x, 0, W)
+            model.add_node(f"FU{i}", x, H, 0)
+            nodes_coords[f"FU{i}"] = (x, H, 0)
+            model.add_node(f"BU{i}", x, H, W)
+            nodes_coords[f"BU{i}"] = (x, H, W)
 
         for i in range(n):
             for side in ["F", "B"]:
                 dist_h = dx
-                add_truss_member_to_model(len(members_to_analyze), f"{side}L{i}", f"{side}L{i+1}", "Banzo Inferior", dist_h)
-                add_truss_member_to_model(len(members_to_analyze), f"{side}U{i}", f"{side}U{i+1}", "Banzo Superior", dist_h)
-                add_truss_member_to_model(len(members_to_analyze), f"{side}L{i}", f"{side}U{i}", "Montante", H)
+                add_truss_member_to_model(
+                    len(members_to_analyze),
+                    f"{side}L{i}",
+                    f"{side}L{i+1}",
+                    "Banzo Inferior",
+                    dist_h,
+                )
+                add_truss_member_to_model(
+                    len(members_to_analyze),
+                    f"{side}U{i}",
+                    f"{side}U{i+1}",
+                    "Banzo Superior",
+                    dist_h,
+                )
+                add_truss_member_to_model(
+                    len(members_to_analyze), f"{side}L{i}", f"{side}U{i}", "Montante", H
+                )
                 dist_d = math.sqrt(dx**2 + H**2)
-                add_truss_member_to_model(len(members_to_analyze), f"{side}L{i}", f"{side}U{i+1}", "Diagonal", dist_d)
-            
+                add_truss_member_to_model(
+                    len(members_to_analyze),
+                    f"{side}L{i}",
+                    f"{side}U{i+1}",
+                    "Diagonal",
+                    dist_d,
+                )
+
             # Justificativa: Travamento transversal e Contraventamento em X para estabilidade 3D.
-            add_truss_member_to_model(len(members_to_analyze), f"FL{i}", f"BL{i}", "Transversal", W)
-            add_truss_member_to_model(len(members_to_analyze), f"FU{i}", f"BU{i}", "Transversal", W)
+            add_truss_member_to_model(
+                len(members_to_analyze), f"FL{i}", f"BL{i}", "Transversal", W
+            )
+            add_truss_member_to_model(
+                len(members_to_analyze), f"FU{i}", f"BU{i}", "Transversal", W
+            )
             # Diagonais de contraventamento (X-Bracing)
             dist_x = math.sqrt(dx**2 + W**2)
-            add_truss_member_to_model(len(members_to_analyze), f"FL{i}", f"BL{i+1}", "Contraventamento", dist_x)
-            add_truss_member_to_model(len(members_to_analyze), f"BL{i}", f"FL{i+1}", "Contraventamento", dist_x)
-            add_truss_member_to_model(len(members_to_analyze), f"FU{i}", f"BU{i+1}", "Contraventamento", dist_x)
-            add_truss_member_to_model(len(members_to_analyze), f"BU{i}", f"FU{i+1}", "Contraventamento", dist_x)
+            add_truss_member_to_model(
+                len(members_to_analyze),
+                f"FL{i}",
+                f"BL{i+1}",
+                "Contraventamento",
+                dist_x,
+            )
+            add_truss_member_to_model(
+                len(members_to_analyze),
+                f"BL{i}",
+                f"FL{i+1}",
+                "Contraventamento",
+                dist_x,
+            )
+            add_truss_member_to_model(
+                len(members_to_analyze),
+                f"FU{i}",
+                f"BU{i+1}",
+                "Contraventamento",
+                dist_x,
+            )
+            add_truss_member_to_model(
+                len(members_to_analyze),
+                f"BU{i}",
+                f"FU{i+1}",
+                "Contraventamento",
+                dist_x,
+            )
 
         # Fechamento do último quadro transversal.
-        add_truss_member_to_model(len(members_to_analyze), f"FL{n}", f"BL{n}", "Transversal", W)
-        add_truss_member_to_model(len(members_to_analyze), f"FU{n}", f"BU{n}", "Transversal", W)
+        add_truss_member_to_model(
+            len(members_to_analyze), f"FL{n}", f"BL{n}", "Transversal", W
+        )
+        add_truss_member_to_model(
+            len(members_to_analyze), f"FU{n}", f"BU{n}", "Transversal", W
+        )
 
         for bn in ["FL0", "BL0", f"FL{n}", f"BL{n}"]:
             model.def_support(bn, True, False, True, False, True, False)
@@ -190,7 +249,7 @@ def build_and_solve_truss(
     # Justificativa: Heurística de posição de carga baseada na tipologia (Bridge vs Roof).
     is_bridge = any("bridge" in (m["group"] or "").lower() for m in members_to_analyze)
     total_force_n = params.total_load * 9.81
-    
+
     if is_bridge:
         target_nodes = [n for n, c in nodes_coords.items() if c[1] < 0.05]
     else:
@@ -201,7 +260,9 @@ def build_and_solve_truss(
         # Justificativa: Rateio de cargas por área de influência.
         # Para treliças longitudinais (com banzos), os nós de extremidade recebem 50% simulando carga distribuída.
         # Para torres (sem banzos), a carga no topo é concentrada e rateada igualmente entre os montantes.
-        has_banzos = any("banzo" in (m["group"] or "").lower() for m in members_to_analyze)
+        has_banzos = any(
+            "banzo" in (m["group"] or "").lower() for m in members_to_analyze
+        )
         min_x = min(nodes_coords[n][0] for n in target_nodes)
         max_x = max(nodes_coords[n][0] for n in target_nodes)
         node_weights = {}
@@ -209,12 +270,14 @@ def build_and_solve_truss(
         for n in target_nodes:
             x = nodes_coords[n][0]
             if has_banzos:
-                weight = 0.5 if (abs(x - min_x) < 0.01 or abs(x - max_x) < 0.01) else 1.0
+                weight = (
+                    0.5 if (abs(x - min_x) < 0.01 or abs(x - max_x) < 0.01) else 1.0
+                )
             else:
                 weight = 1.0
             node_weights[n] = weight
             total_influence += weight
-        
+
         load_unit = total_force_n / total_influence
         for n, w in node_weights.items():
             model.add_node_load(n, "FY", -load_unit * w, case="External")
@@ -235,14 +298,21 @@ def build_and_solve_truss(
 
     try:
         model.analyze(check_statics=True, log=False)
-        
+
         # Justificativa: Falhas de solo (ks=0) podem não gerar matriz singular perfeita, mas causam deslocamentos astronômicos.
         for nid, node in model.nodes.items():
-            if hasattr(node, 'DY') and isinstance(node.DY, dict):
+            if hasattr(node, "DY") and isinstance(node.DY, dict):
                 dy = node.DY.get("LC1", 0)
                 if abs(dy) > 1.0:
-                    return [], {}, {"_ERROR_": f"A estrutura sofreu deslocamento excessivo no apoio ou nó {nid}."}, 0.0
-                    
+                    return (
+                        [],
+                        {},
+                        {
+                            "_ERROR_": f"A estrutura sofreu deslocamento excessivo no apoio ou nó {nid}."
+                        },
+                        0.0,
+                    )
+
     except Exception as e:
         return [], {}, {"_ERROR_": str(e)}, 0.0
 
@@ -258,7 +328,9 @@ def build_and_solve_truss(
     for m in members_to_analyze:
         if m["group"] in ["Banzo Superior", "Banzo Inferior"]:
             # Simplificação: se os dois nós estão travados, Lk = L. Caso contrário, busca-se o próximo travamento.
-            lk_map[m["id"]] = m["length"] # Heurística básica: assumindo travamento em cada nó após item 10.
+            lk_map[m["id"]] = m[
+                "length"
+            ]  # Heurística básica: assumindo travamento em cada nó após item 10.
         else:
             lk_map[m["id"]] = m["length"]
 
@@ -269,27 +341,47 @@ def build_and_solve_truss(
         f_max = model.members[mid_str].max_axial("LC1")
         f_min = model.members[mid_str].min_axial("LC1")
         axial_f = f_max if abs(f_max) > abs(f_min) else f_min
-        
+
         if math.isnan(axial_f) or math.isinf(axial_f):
-            return [], {}, {"_ERROR_": "Divergência numérica. O cálculo não conseguiu convergir para uma solução estável."}, 0.0
+            return (
+                [],
+                {},
+                {
+                    "_ERROR_": "Divergência numérica. O cálculo não conseguiu convergir para uma solução estável."
+                },
+                0.0,
+            )
 
         p_idx = profile_indices.get(m["group"], profile_indices.get("Padrão", 0))
         profile = profiles_catalog[p_idx]
-        u = calculate_max_utilization(axial_f, profile, m["length"], material, m["group"], lk_map[m["id"]])
-        
+        u = calculate_max_utilization(
+            axial_f, profile, m["length"], material, m["group"], lk_map[m["id"]]
+        )
+
         if m["group"] not in max_u_per_group or u > max_u_per_group[m["group"]]:
             max_u_per_group[m["group"]] = u
-            
-        member_results.append(MemberResult(
-            id=m["id"], node_start=m["node_start"], node_end=m["node_end"],
-            group=m["group"], profile=profile["Name"], axial_force=float(axial_f),
-            utilization=float(u), stress_type="Tração" if axial_f > 0 else "Compressão"
-        ))
+
+        member_results.append(
+            MemberResult(
+                id=m["id"],
+                node_start=m["node_start"],
+                node_end=m["node_end"],
+                group=m["group"],
+                profile=profile["Name"],
+                axial_force=float(axial_f),
+                utilization=float(u),
+                stress_type="Tração" if axial_f > 0 else "Compressão",
+            )
+        )
 
     nodes_results = {}
     for nid, c in nodes_coords.items():
         # Justificativa: O repasse explícito da condição de contorno (support) é indispensável para a correta renderização geométrica das sapatas na camada de visualização.
-        sup = params.raw_truss.nodes[nid].support if (params.raw_truss and nid in params.raw_truss.nodes) else "None"
+        sup = (
+            params.raw_truss.nodes[nid].support
+            if (params.raw_truss and nid in params.raw_truss.nodes)
+            else "None"
+        )
         nodes_results[nid] = NodeResult(id=nid, x=c[0], y=c[1], z=c[2], support=sup)
 
     return member_results, nodes_results, max_u_per_group, total_weight

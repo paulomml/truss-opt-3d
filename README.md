@@ -158,12 +158,14 @@ Em membros sob compressão ($N_{Ed} < 0$), a resistência é governada pela flam
 $$N_{Rd} = \frac{\chi \cdot A \cdot f_y}{\gamma_{a1}}$$
 
 O fator de redução $\chi$ é calculado via curvas de flambagem normativas, baseado no índice de esbeltez reduzido ($\lambda_0$):
+
 - Se $\lambda_0 \le 1,5$: $\chi = 0,658^{\lambda_0^2}$
 - Se $\lambda_0 > 1,5$: $\chi = \dfrac{0,877}{\lambda_0^2}$
 
 #### Limites de Esbeltez e Heurística de $L_k$
 
 O sistema impõe limites normativos rigorosos para evitar o uso de perfis excessivamente esbeltos, independentemente da carga:
+
 - **Compressão:** $\lambda = K \cdot L / r \le 200$
 - **Tração:** $\lambda = K \cdot L / r \le 300$
 
