@@ -35,7 +35,7 @@ const getStatusColor = (msg: string) => {
   const lowerMsg = String(msg).toLowerCase();
 
   // Status de Sucesso: Sinalização em verde estático para conclusão positiva do processamento.
-  if (lowerMsg.includes("finalizado"))
+  if (lowerMsg.includes("concluído"))
     return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
 
   // Status de Erro ou Inviabilidade: Alerta em vermelho para falhas de estabilidade ou limites de dimensionamento.

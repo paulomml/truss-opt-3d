@@ -58,6 +58,62 @@ def calculate_max_utilization(
     return abs(force) / capacity
 
 
+def calculate_lk_map(members_to_analyze, params):
+    """
+    Justificativa: Mapeamento do Comprimento Efetivo (Lk) para banzos considerando travamentos reais.
+    O algoritmo identifica nós com restrições laterais e calcula o vão contínuo destravado.
+    """
+    braced_nodes = set()
+    if params.raw_truss:
+        for nid, node in params.raw_truss.nodes.items():
+            if node.support != "None":
+                braced_nodes.add(nid)
+    else:
+        n = params.divisions
+        for bn in ["FL0", "BL0", f"FL{n}", f"BL{n}"]:
+            braced_nodes.add(bn)
+
+    for m in members_to_analyze:
+        if m["group"] in ["Transversal", "Contraventamento"]:
+            braced_nodes.add(m["node_start"])
+            braced_nodes.add(m["node_end"])
+
+    chord_graph = {}
+    for m in members_to_analyze:
+        if m["group"] in ["Banzo Superior", "Banzo Inferior"]:
+            n1, n2 = m["node_start"], m["node_end"]
+            if n1 not in chord_graph:
+                chord_graph[n1] = []
+            if n2 not in chord_graph:
+                chord_graph[n2] = []
+            chord_graph[n1].append((n2, m["length"]))
+            chord_graph[n2].append((n1, m["length"]))
+
+    lk_map = {}
+    for m in members_to_analyze:
+        if m["group"] in ["Banzo Superior", "Banzo Inferior"]:
+            total_lk = m["length"]
+            # Varredura bidirecional no grafo de adjacência do banzo.
+            for start_node, other_node in [
+                (m["node_start"], m["node_end"]),
+                (m["node_end"], m["node_start"]),
+            ]:
+                curr, prev = start_node, other_node
+                while curr not in braced_nodes:
+                    neighbors = [
+                        conn for conn in chord_graph.get(curr, []) if conn[0] != prev
+                    ]
+                    if not neighbors:
+                        break
+                    next_node, length = neighbors[0]
+                    total_lk += length
+                    prev, curr = curr, next_node
+            lk_map[m["id"]] = total_lk
+        else:
+            lk_map[m["id"]] = m["length"]
+    return lk_map
+
+
 def build_and_solve_truss(
     params: TrussRequest, profile_indices, profiles_catalog, material
 ):
@@ -316,23 +372,7 @@ def build_and_solve_truss(
     except Exception as e:
         return [], {}, {"_ERROR_": str(e)}, 0.0
 
-    # Heurística de Lk (Comprimento Efetivo) para banzos.
-    # Justificativa: O comprimento de flambagem no eixo fraco é a distância entre travamentos transversais.
-    lk_map = {}
-    transversal_nodes = set()
-    for m in members_to_analyze:
-        if m["group"] in ["Transversal", "Contraventamento"]:
-            transversal_nodes.add(m["node_start"])
-            transversal_nodes.add(m["node_end"])
-
-    for m in members_to_analyze:
-        if m["group"] in ["Banzo Superior", "Banzo Inferior"]:
-            # Simplificação: se os dois nós estão travados, Lk = L. Caso contrário, busca-se o próximo travamento.
-            lk_map[m["id"]] = m[
-                "length"
-            ]  # Heurística básica: assumindo travamento em cada nó após item 10.
-        else:
-            lk_map[m["id"]] = m["length"]
+    lk_map = calculate_lk_map(members_to_analyze, params)
 
     member_results = []
     max_u_per_group = {}
