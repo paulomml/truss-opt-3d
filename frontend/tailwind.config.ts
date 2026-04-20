@@ -63,15 +63,8 @@ export default {
         "4xl": ["2.25rem", { lineHeight: "2.5rem", fontWeight: "700" }],
       },
       fontFamily: {
-        sans: [
-          "-apple-system",
-          "BlinkMacSystemFont",
-          '"Segoe UI"',
-          "Roboto",
-          '"Helvetica Neue"',
-          "Arial",
-          "sans-serif",
-        ],
+        // Redefinição da família tipográfica padrão para Roboto, alinhando com a identidade visual do projeto.
+        sans: ["Roboto", "sans-serif"],
         mono: [
           '"JetBrains Mono"',
           '"Fira Code"',

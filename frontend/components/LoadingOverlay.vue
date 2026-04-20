@@ -38,22 +38,32 @@ onUnmounted(() => {
 });
 
 /**
- * Lógica de formatação dos logs.
- * Determina a cor indicativa do status baseada no conteúdo da mensagem de log recebida do backend.
+ * Heurística de cores para diferenciação semântica dos estados de processamento.
+ * Sendo assim, o sistema fornece feedback imediato sobre o sucesso, falha ou atividade do motor de cálculo.
  */
 const getStatusColor = (msg: string) => {
   const lowerMsg = String(msg).toLowerCase();
-  if (lowerMsg.includes("sucesso"))
+
+  // Status de Sucesso: Sinalização em verde estático para conclusão positiva do processamento.
+  if (lowerMsg.includes("finalizado"))
     return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
+
+  // Status de Erro ou Inviabilidade: Alerta em vermelho para falhas de estabilidade ou limites de dimensionamento.
   if (
     lowerMsg.includes("erro") ||
-    lowerMsg.includes("falhou") ||
+    lowerMsg.includes("falha") ||
     lowerMsg.includes("inviável") ||
+    lowerMsg.includes("insuficiente") ||
     lowerMsg.includes("resistência máxima")
   ) {
     return "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
   }
-  // Laranja pulsante significa que está processando/analisando ativamente.
+
+  // Status de Espera na Fila: Representação neutra para tarefas aguardando disponibilidade de núcleos de CPU.
+  if (lowerMsg.includes("aguardando"))
+    return "bg-gray-500 shadow-[0_0_8px_rgba(107,114,128,0.4)]";
+
+  // Status de Processamento Ativo: Sinalização pulsante em laranja para indicar análise estrutural em andamento.
   return "bg-orange-500 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.6)]";
 };
 
@@ -136,11 +146,13 @@ const parseMessage = (msg: string) => {
       </div>
 
       <!-- Botão de interrupção imediata e limpeza de memória. -->
+      <!-- Acionador para interrupção forçada do processo e liberação imediata dos recursos do servidor. -->
       <button
         @click="store.cancelOptimization"
         class="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-lg transition-all transform active:translate-y-0 text-sm"
+        title="Interromper imediatamente a análise atual e retornar ao painel de controle."
       >
-        Cancelar Otimização
+        Cancelar Análise
       </button>
     </div>
   </div>

@@ -61,8 +61,18 @@ export const useTrussStore = defineStore("truss", () => {
     selectedMember.value = null;
     mainProgress.value = 0;
     currentLogs.value = {};
+  };
 
-    addToast("Operação cancelada. Estado da aplicação redefinido.", "info");
+  /**
+   * Encapsulamento da lógica de interrupção voluntária pelo usuário.
+   * Portanto, além de cessar o processamento, o sistema notifica o reset do estado da aplicação.
+   */
+  const handleCancel = () => {
+    cancelOptimization();
+    addToast(
+      "O cálculo foi cancelado pelo usuário. Os parâmetros foram redefinidos para os valores padrão.",
+      "info",
+    );
   };
 
   const generateRawTruss = () => {
@@ -239,37 +249,48 @@ export const useTrussStore = defineStore("truss", () => {
           result.value = validatedData;
           if (validatedData.is_structurally_stable) {
             rawTruss.value = null;
-            addToast("Sucesso! Estrutura otimizada com sucesso.", "success");
+            addToast(
+              "Análise concluída. O dimensionamento estrutural foi concluído com sucesso.",
+              "success",
+            );
           } else {
             addToast(
               validatedData.status_message ||
-                "A estrutura não pôde ser otimizada.",
+                "A análise estrutural não pôde ser concluída com os parâmetros atuais.",
               "warning",
             );
+            // Reset automático em caso de falha estrutural (não estável)
+            cancelOptimization();
           }
           loading.value = false;
           ws.value?.close();
         } else if (data.type === "error") {
-          addToast("Erro ao otimizar: " + data.message, "error");
-          loading.value = false;
+          addToast(
+            "Falha no processamento da estrutura: " + data.message,
+            "error",
+          );
+          cancelOptimization();
           ws.value?.close();
         }
       };
 
       ws.value.onerror = (err) => {
         console.error("WebSocket error:", err);
-        addToast("Erro na conexão com o servidor de cálculo.", "error");
-        loading.value = false;
+        addToast(
+          "Falha na comunicação com o servidor de cálculo. Verifique a conexão de rede e tente novamente.",
+          "error",
+        );
+        cancelOptimization();
       };
 
       ws.value.onclose = () => {
         // Tratamento de Quedas Silenciosas (Toasts de Erro): se a conexão cair durante o cálculo, notificamos o usuário.
         if (loading.value) {
           addToast(
-            "A conexão com o servidor caiu durante o cálculo. Por favor, tente novamente.",
+            "A conexão com o servidor foi perdida durante o processamento. É necessário reiniciar o cálculo.",
             "error",
           );
-          loading.value = false;
+          cancelOptimization();
         }
         ws.value = null;
       };
@@ -277,8 +298,8 @@ export const useTrussStore = defineStore("truss", () => {
       result.value = null;
       console.error("Optimization error:", err);
       const msg = err.message || "Erro interno no servidor de cálculo";
-      addToast("Erro ao otimizar: " + msg, "error");
-      loading.value = false;
+      addToast("Falha no processamento da estrutura: " + msg, "error");
+      cancelOptimization();
     }
   };
 
@@ -296,7 +317,7 @@ export const useTrussStore = defineStore("truss", () => {
     selectedMember,
     showMobileMenu,
     showTimeoutWarning,
-    cancelOptimization,
+    cancelOptimization: handleCancel,
     setRawTruss,
     optimize,
     selectMember,

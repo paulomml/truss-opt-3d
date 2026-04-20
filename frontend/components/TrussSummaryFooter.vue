@@ -127,13 +127,17 @@ const toggleSummary = () => {
         </div>
 
         <!-- Painéis informativos com os indicadores de desempenho estrutural e econômico. -->
+        <!-- Sendo assim, o usuário obtém uma visão consolidada dos custos e quantitativos de materiais. -->
         <div
           :class="[
             'summary-cards mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4',
             { expanded: isExpanded, collapsed: !isExpanded },
           ]"
         >
-          <div class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4">
+          <div
+            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
+            title="O valor total estimado para a compra dos materiais da estrutura."
+          >
             <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
               Custo Estimado
             </p>
@@ -145,7 +149,10 @@ const toggleSummary = () => {
             </p>
           </div>
 
-          <div class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4">
+          <div
+            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
+            title="O peso total de toda a estrutura metálica após a montagem."
+          >
             <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
               Peso Total
             </p>
@@ -159,7 +166,10 @@ const toggleSummary = () => {
             </p>
           </div>
 
-          <div class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4">
+          <div
+            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
+            title="A soma do comprimento de todas as barras de metal utilizadas."
+          >
             <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
               Comprimento Total
             </p>
@@ -172,7 +182,10 @@ const toggleSummary = () => {
             </p>
           </div>
 
-          <div class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4">
+          <div
+            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
+            title="O número total de peças individuais que precisam ser fabricadas."
+          >
             <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
               Quantidade de Peças
             </p>

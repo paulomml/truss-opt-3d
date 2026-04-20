@@ -17,7 +17,8 @@ const corrosionInfo = computed(() => {
         time: "5 a 10 anos",
         color: "text-red-400",
         icon: "lucide:alert-triangle",
-        tip: "Exige fundações profundas e revestimento epóxi de alta espessura.",
+        // Orientações simplificadas sobre a agressividade ambiental para solos de baixa resistência.
+        tip: "Como o solo é agressivo, esta peça precisa de uma pintura especial super resistente para não enferrujar rápido.",
       };
     case "Argila Rija":
       return {
@@ -25,7 +26,7 @@ const corrosionInfo = computed(() => {
         time: "15 a 20 anos",
         color: "text-yellow-400",
         icon: "lucide:alert-circle",
-        tip: "Recomenda-se galvanização a fogo conforme NBR 6323.",
+        tip: "O solo pode causar ferrugem com o tempo. Recomenda-se usar metal com banho de zinco (galvanizado).",
       };
     case "Areia Fofa":
       return {
@@ -33,31 +34,31 @@ const corrosionInfo = computed(() => {
         time: "> 50 anos",
         color: "text-green-400",
         icon: "lucide:shield-check",
-        tip: "Pintura anticorrosiva convencional é satisfatória.",
+        tip: "O solo é amigável. Uma pintura comum de proteção já é suficiente para durar muitos anos.",
       };
     case "Areia Compacta":
       return {
-        level: "Controlado",
-        time: "30 a 50 anos",
-        color: "text-green-300",
-        icon: "lucide:shield",
-        tip: "Manutenção preventiva decenal para preservação da seção.",
+        level: "Mínimo",
+        time: "> 100 anos",
+        color: "text-blue-400",
+        icon: "lucide:check-circle",
+        tip: "Solo excelente. A estrutura estará muito bem protegida contra a corrosão natural da terra.",
       };
     case "Rocha":
       return {
-        level: "Inexpressivo",
-        time: "> 100 anos",
-        color: "text-blue-400",
+        level: "Imune",
+        time: "> 500 anos",
+        color: "text-blue-500",
         icon: "lucide:shield-check",
-        tip: "Proteção básica contra corrosão atmosférica padrão.",
+        tip: "A rocha é o melhor lugar para construir. Quase não existe umidade no solo que possa estragar o metal.",
       };
     default:
       return {
-        level: "Indeterminado",
-        time: "Variável",
+        level: "Normal",
+        time: "30 a 50 anos",
         color: "text-gray-400",
-        icon: "lucide:help-circle",
-        tip: "Consulte laudo geotécnico para análise de agressividade.",
+        icon: "lucide:info",
+        tip: "Siga o plano de manutenção preventiva padrão para garantir a longevidade da estrutura.",
       };
   }
 });

@@ -64,16 +64,20 @@ def optimize_for_material_worker(
     num_profiles = len(profiles)
     max_iter = 30
     current_profile_indices = {g: 0 for g in groups}
+    # Inicialização das variáveis de controle de iteração e persistência de dados.
     iteration = 0
-
     worker_id = material["name"]
     valid_for_material = False
     last_valid_result = None
-    last_error_msg = "Resistência máxima atingida."
+    # Mensagens de status e erro refinadas para melhor compreensão técnica pelo usuário final.
+    last_error_msg = "A resistência máxima dos materiais disponíveis foi atingida."
     upgrade_history = ""
 
     queue.put(
-        {"worker_id": worker_id, "message": "Iniciando estruturação dos dados..."}
+        {
+            "worker_id": worker_id,
+            "message": "Iniciando a preparação do modelo estrutural...",
+        }
     )
 
     while iteration < max_iter:
@@ -106,7 +110,7 @@ def optimize_for_material_worker(
         )
 
         if "_ERROR_" in max_u_per_group:
-            last_error_msg = f"Erro estrutural: {max_u_per_group['_ERROR_']}"
+            last_error_msg = f"Falha de estabilidade: A estrutura não é capaz de suportar as cargas aplicadas."
             queue.put({"worker_id": worker_id, "message": last_error_msg})
             break
 
@@ -129,9 +133,7 @@ def optimize_for_material_worker(
                     )
                 else:
                     all_ok = False
-                    last_error_msg = (
-                        f"Maior perfil ({old_profile}) falhou em {g}. Inviável."
-                    )
+                    last_error_msg = f"Dimensionamento inviável: O perfil de maior resistência ({old_profile}) foi insuficiente para o grupo {g}."
                     queue.put({"worker_id": worker_id, "message": last_error_msg})
                     break
 
@@ -148,7 +150,7 @@ def optimize_for_material_worker(
             queue.put(
                 {
                     "worker_id": worker_id,
-                    "message": f"Sucesso! Custo: R$ {total_cost:.2f}",
+                    "message": f"Processamento finalizado para este material. Custo estimado: R$ {total_cost:.2f}",
                 }
             )
             break
@@ -231,9 +233,10 @@ async def optimize_truss_use_case(
                     executor.shutdown(wait=False, cancel_futures=True)
                 if manager:
                     manager.shutdown()
+                # Interrupção preventiva por estouro de memória (OOM) para garantir a integridade do servidor.
                 return OptimizationResponse(
                     is_structurally_stable=False,
-                    status_message=f"Interrupção de segurança: Consumo de memória muito elevado ({memory_usage}%). Tente reduzir a complexidade da estrutura.",
+                    status_message=f"Processamento interrompido: O modelo estrutural excedeu o limite de memória do servidor. Recomenda-se reduzir as dimensões ou o número de seções.",
                     total_weight=0,
                     members=[],
                     nodes={},
@@ -268,7 +271,7 @@ async def optimize_truss_use_case(
         # Consolidação dos resultados e seleção da solução de menor custo global.
         best_overall = None
         min_cost = float("inf")
-        last_error = "Nenhuma solução válida encontrada."
+        last_error = "Não foi possível encontrar uma solução válida para os parâmetros informados."
 
         for future in futures:
             res = future.result()
@@ -282,7 +285,7 @@ async def optimize_truss_use_case(
         if best_overall:
             return OptimizationResponse(
                 is_structurally_stable=True,
-                status_message=f"O material {best_overall['material_name']} apresentou o melhor desempenho de custo para este projeto.",
+                status_message=f"Análise finalizada. O material {best_overall['material_name']} apresentou a solução mais econômica e segura.",
                 total_weight=best_overall["weight"],
                 total_cost=best_overall["cost"],
                 winning_material=best_overall["material_name"],
@@ -313,7 +316,7 @@ async def optimize_truss_use_case(
             manager.shutdown()
         return OptimizationResponse(
             is_structurally_stable=False,
-            status_message=f"Ocorreu um imprevisto durante o processamento: {str(e)}",
+            status_message=f"Erro interno durante a análise estrutural: {str(e)}",
             total_weight=0,
             members=[],
             nodes={},

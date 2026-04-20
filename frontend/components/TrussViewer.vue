@@ -247,14 +247,17 @@ const getSupportRotation = (node: RawNode) => {
         </template>
       </template>
     </TresCanvas>
+    <!-- Interface de orientação inicial: exibida quando nenhum modelo estrutural foi processado. -->
     <div
       v-else
       class="flex flex-col items-center justify-center h-full w-full bg-gray-900 text-white italic p-8 text-center"
+      title="Área de visualização tridimensional da estrutura."
     >
       <Icon name="lucide:building-2" class="w-16 h-16 mb-4 text-gray-500" />
       <p class="max-w-md text-gray-300">
-        Selecione um <b>Modelo de Estrutura</b> no painel esquerdo, defina os
-        parâmetros e clique em <b>Otimizar</b> para visualizar a treliça.
+        Selecione um <b>Tipo de Estrutura</b> no painel lateral, defina os
+        parâmetros desejados e clique em <b>Iniciar Análise Estrutural</b> para
+        visualizar o modelo.
       </p>
     </div>
   </div>
