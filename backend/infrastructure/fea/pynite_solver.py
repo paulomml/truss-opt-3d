@@ -233,6 +233,7 @@ def build_and_solve_truss(
         model.add_node_load(node, "FY", -weight * 9.81, case="Dead")
 
     # Superposição de efeitos (Combinação de Cargas). LC1 = Permanente (G) + Variável (Q).
+    model.add_load_combo("LC1", {"External": 1.0, "Dead": 1.0})
 
     try:
         model.analyze(check_statics=True, log=False)
