@@ -19,7 +19,7 @@ def calculate_max_utilization(
 ):
     """
     Determina a Taxa de Utilização (U) conforme NBR 8800.
-    Justificativa: Métrica base para o algoritmo guloso de upscaling de seções no orquestrador.
+    Métrica base para o algoritmo guloso de upscaling de seções no orquestrador.
     Inclui coeficientes de minoração da resistência e limites de esbeltez normativa.
     """
     gamma_a1 = 1.10  # Coeficiente de minoração da resistência ao escoamento (NBR 8800).
@@ -27,7 +27,7 @@ def calculate_max_utilization(
     E = material["E"] * 1e9
     A = profile["Area"]
 
-    # Justificativa: A flambagem ocorre no eixo de menor inércia.
+    # A flambagem ocorre no eixo de menor inércia.
     I_min = min(profile["Ix"], profile["Iy"])
     r_min = math.sqrt(I_min / A)
 
@@ -36,7 +36,7 @@ def calculate_max_utilization(
     slenderness = lk / r_min
 
     # Verificação de limites de esbeltez normativa (NBR 8800: item 5.2.8 e 5.3.4).
-    # Trade-off: Penalização severa (U=999) para forçar o upscaling imediato da seção.
+    # Penalização severa (U=999) para forçar o upscaling imediato da seção.
     if force < -0.01 and slenderness > 200:
         return 999.0  # Limite para compressão.
     if force >= -0.01 and slenderness > 300:
@@ -60,7 +60,7 @@ def calculate_max_utilization(
 
 def calculate_lk_map(members_to_analyze, params):
     """
-    Justificativa: Mapeamento do Comprimento Efetivo (Lk) para banzos considerando travamentos reais.
+    Mapeamento do Comprimento Efetivo (Lk) para banzos considerando travamentos reais.
     O algoritmo identifica nós com restrições laterais e calcula o vão contínuo destravado.
     """
     braced_nodes = set()
@@ -123,7 +123,7 @@ def build_and_solve_truss(
     """
     model = FEModel3D()
 
-    # Justificativa: G calculado via relação elástica isotrópica G = E / (2 * (1 + nu)).
+    # G calculado via relação elástica isotrópica G = E / (2 * (1 + nu)).
     nu = 0.3
     G = (material["E"] * 1e9) / (2 * (1 + nu))
     model.add_material(
@@ -177,7 +177,7 @@ def build_and_solve_truss(
         mid_str = f"M{m_id}"
         model.add_member(mid_str, n1, n2, material["name"], profile["Name"])
 
-        # Justificativa: A liberação total em barras colineares (banzos) gera instabilidade de translação (mecanismo).
+        # A liberação total em barras colineares (banzos) gera instabilidade de translação (mecanismo).
         # Mantemos a continuidade nos banzos para estabilizar nós intermediários e fixamos Rx para evitar instabilidade rotacional.
         if group in ["Banzo Superior", "Banzo Inferior"]:
             model.def_releases(mid_str, Ryi=False, Rzi=False, Ryj=True, Rzj=True)
@@ -195,7 +195,7 @@ def build_and_solve_truss(
                     model.def_support_spring(nid, "RX", K_theta_x)
                     model.def_support_spring(nid, "RZ", K_theta_z)
                 elif node.support == "Roller":
-                    # Justificativa: Roller deve permitir translação em X para evitar tensões parasitas.
+                    # Roller deve permitir translação em X para evitar tensões parasitas.
                     model.def_support(nid, False, False, True, False, True, False)
                     model.def_support_spring(nid, "DY", K_z)
                 elif node.support == "Fixed":
@@ -250,7 +250,7 @@ def build_and_solve_truss(
                     dist_d,
                 )
 
-            # Justificativa: Travamento transversal e Contraventamento em X para estabilidade 3D.
+            # Travamento transversal e Contraventamento em X para estabilidade 3D.
             add_truss_member_to_model(
                 len(members_to_analyze), f"FL{i}", f"BL{i}", "Transversal", W
             )
@@ -302,7 +302,7 @@ def build_and_solve_truss(
             model.def_support_spring(bn, "RX", K_theta_x)
             model.def_support_spring(bn, "RZ", K_theta_z)
 
-    # Justificativa: Heurística de posição de carga baseada na tipologia (Bridge vs Roof).
+    # Heurística de posição de carga baseada na tipologia (Bridge vs Roof).
     is_bridge = any("bridge" in (m["group"] or "").lower() for m in members_to_analyze)
     total_force_n = params.total_load * 9.81
 
@@ -313,7 +313,7 @@ def build_and_solve_truss(
         target_nodes = [n for n, c in nodes_coords.items() if c[1] >= max_y - 0.05]
 
     if target_nodes:
-        # Justificativa: Rateio de cargas por área de influência.
+        # Rateio de cargas por área de influência.
         # Para treliças longitudinais (com banzos), os nós de extremidade recebem 50% simulando carga distribuída.
         # Para torres (sem banzos), a carga no topo é concentrada e rateada igualmente entre os montantes.
         has_banzos = any(
@@ -349,13 +349,13 @@ def build_and_solve_truss(
     for node, weight in node_weights_dead.items():
         model.add_node_load(node, "FY", -weight * 9.81, case="Dead")
 
-    # Justificativa: Combinação de ELU conforme NBR 8800 (1.4 para ações permanentes e variáveis).
+    # Combinação de ELU conforme NBR 8800 (1.4 para ações permanentes e variáveis).
     model.add_load_combo("LC1", {"External": 1.4, "Dead": 1.4})
 
     try:
         model.analyze(check_statics=True, log=False)
 
-        # Justificativa: Falhas de solo (ks=0) podem não gerar matriz singular perfeita, mas causam deslocamentos astronômicos.
+        # Falhas de solo (ks=0) podem não gerar matriz singular perfeita, mas causam deslocamentos astronômicos.
         for nid, node in model.nodes.items():
             if hasattr(node, "DY") and isinstance(node.DY, dict):
                 dy = node.DY.get("LC1", 0)
@@ -416,7 +416,7 @@ def build_and_solve_truss(
 
     nodes_results = {}
     for nid, c in nodes_coords.items():
-        # Justificativa: O repasse explícito da condição de contorno (support) é indispensável para a correta renderização geométrica das sapatas na camada de visualização.
+        # O repasse explícito da condição de contorno (support) é indispensável para a correta renderização geométrica das sapatas na camada de visualização.
         sup = (
             params.raw_truss.nodes[nid].support
             if (params.raw_truss and nid in params.raw_truss.nodes)

@@ -151,7 +151,7 @@ export const useTrussStore = defineStore("truss", () => {
 
   const optimize = async () => {
     // Workflow de otimização estrutural.
-    // Justificativa: WebSockets eliminam o overhead de polling HTTP e mitigam timeouts em modelos CPU-bound.
+    // WebSockets eliminam o overhead de polling HTTP e mitigam timeouts em modelos CPU-bound.
     loading.value = true;
     mainProgress.value = 0;
     currentLogs.value = { Status: "Conectando ao servidor..." };
@@ -189,7 +189,7 @@ export const useTrussStore = defineStore("truss", () => {
       const host = window.location.host;
       const wsUrl = `${protocol}//${host}/api/ws/optimize`;
 
-      // Trade-off: Statefulness e complexidade de handshake em troca de latência mínima e streaming granular.
+      // Statefulness e complexidade de handshake em troca de latência mínima e streaming granular.
       ws.value = new WebSocket(wsUrl);
 
       ws.value.onopen = () => {
@@ -240,7 +240,7 @@ export const useTrussStore = defineStore("truss", () => {
                 "Aviso: A estrutura atual não suporta a carga informada.",
               "warning",
             );
-            // Justificativa: Não chamamos cancelOptimization() aqui para manter o result.value acessível na UI (ex: Sidebar).
+            // Não chamamos cancelOptimization() aqui para manter o result.value acessível na UI (ex: Sidebar).
           }
           loading.value = false;
           ws.value?.close();
