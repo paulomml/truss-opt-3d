@@ -35,7 +35,7 @@ function addMember(
 
 /**
  * Extrusão 3D via duplicação de malha e injeção de X-bracing.
- * Justificativa: Transforma grafos planares em estruturas espacialmente estáveis contra flambagem global e torção.
+ * Transforma grafos planares em estruturas espacialmente estáveis contra flambagem global e torção.
  */
 function extrude3D(planar: RawTruss, width: number): RawTruss {
   if (width <= 0) return planar;

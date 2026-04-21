@@ -13,7 +13,7 @@ from domain.models import TrussRequest, OptimizationResponse
 def load_materials():
     """
     Carrega propriedades mecânicas e custos estruturais via CSV.
-    Trade-off: I/O síncrono no startup. O cache em memória mitiga gargalos durante as iterações do solver.
+    I/O síncrono no startup. O cache em memória mitiga gargalos durante as iterações do solver.
     """
     csv_path = os.path.join(
         os.path.dirname(__file__), "..", "infrastructure", "data", "materials.csv"
@@ -50,8 +50,8 @@ def optimize_for_material_worker(
 ) -> dict:
     """
     Offload da busca heurística para um worker isolado via multiprocessing.
-    Justificativa: O solver FEA é CPU-bound. Executar na thread principal bloquearia o event loop do FastAPI.
-    Trade-off: Aumenta o footprint de memória devido ao IPC (Pickling), mas garante estabilidade na API sob concorrência.
+    O solver FEA é CPU-bound. Executar na thread principal bloquearia o event loop do FastAPI.
+    Aumenta o footprint de memória devido ao IPC (Pickling), mas garante estabilidade na API sob concorrência.
     """
     # Importação local para o worker multiprocessado.
     from infrastructure.fea.pynite_solver import build_and_solve_truss
@@ -73,7 +73,7 @@ def optimize_for_material_worker(
     queue.put({"worker_id": worker_id, "message": "Preparando o modelo estrutural..."})
 
     while iteration < max_iter:
-        # Justificativa: Verificação atômica de cancelamento para evitar processamento inútil (Zombie Avoidance).
+        # Verificação atômica de cancelamento para evitar processamento inútil (Zombie Avoidance).
         if cancel_event.is_set():
             return {
                 "success": False,
@@ -110,7 +110,7 @@ def optimize_for_material_worker(
         exhausted_catalogue = False
 
         if "_ERROR_" in max_u_per_group:
-            # Justificativa: Erros numéricos (divergência/singularidade) costumam ser resolvidos com maior rigidez.
+            # Erros numéricos (divergência/singularidade) costumam ser resolvidos com maior rigidez.
             # Forçamos o upgrade de todos os grupos para tentar estabilizar a matriz na próxima iteração.
             all_ok = False
             for g in current_profile_indices:
@@ -126,7 +126,7 @@ def optimize_for_material_worker(
                 break
             continue
 
-        # Justificativa: Corrigida indentação e lógica de validação do algoritmo guloso.
+        # Corrigida indentação e lógica de validação do algoritmo guloso.
         # Todos os grupos devem ser validados (U <= 1.0) antes de marcar como solução válida.
         for g, u in max_u_per_group.items():
             if g == "_ERROR_":
@@ -140,7 +140,7 @@ def optimize_for_material_worker(
                     upgraded_any = True
                     upgrade_msgs.append(f"{old_profile} em {g} (U={u:.2f})")
                 else:
-                    # Justificativa: Fuga completa do laço quando o catálogo se esgota (CPU Waste Prevention).
+                    # Fuga completa do laço quando o catálogo se esgota (CPU Waste Prevention).
                     exhausted_catalogue = True
                     last_error_msg = f"Os materiais disponíveis não são suficientes para suportar a carga exigida no grupo {g}."
                     queue.put({"worker_id": worker_id, "message": last_error_msg})
@@ -208,7 +208,7 @@ async def optimize_truss_use_case(
 
         manager = multiprocessing.Manager()
         queue = manager.Queue()
-        # Justificativa: Evento para sinalização atômica de cancelamento entre processos.
+        # Evento para sinalização atômica de cancelamento entre processos.
         cancel_event = manager.Event()
         executor = ProcessPoolExecutor(max_workers=os.cpu_count())
 
@@ -308,7 +308,7 @@ async def optimize_truss_use_case(
             nodes={},
         )
     finally:
-        # Justificativa: Hard Kill de processos filhos para evitar zumbis DoS após shutdown.
+        # Hard Kill de processos filhos para evitar zumbis DoS após shutdown.
         if executor:
             for pid in list(executor._processes.keys()):
                 try:
