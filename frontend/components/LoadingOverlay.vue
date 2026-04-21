@@ -34,27 +34,29 @@ onUnmounted(() => {
 const getStatusColor = (msg: string) => {
   const lowerMsg = String(msg).toLowerCase();
 
-  // Status de Sucesso: Sinalização em verde estático para conclusão positiva do processamento.
-  if (lowerMsg.includes("concluído"))
-    return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
+  // Status de Sucesso: Sinalização pulsante em verde para conclusão positiva do processamento.
+  if (lowerMsg.includes("concluído") || lowerMsg.includes("cálculo concluído"))
+    return "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]";
 
-  // Status de Erro ou Inviabilidade: Alerta em vermelho para falhas de estabilidade ou limites de dimensionamento.
+  // Status de Erro ou Inviabilidade: Alerta pulsante em vermelho para falhas de estabilidade ou limites de dimensionamento.
   if (
     lowerMsg.includes("erro") ||
     lowerMsg.includes("falha") ||
     lowerMsg.includes("inviável") ||
     lowerMsg.includes("insuficiente") ||
-    lowerMsg.includes("resistência máxima")
+    lowerMsg.includes("resistência máxima") ||
+    lowerMsg.includes("instabilidade") ||
+    lowerMsg.includes("impede o cálculo")
   ) {
-    return "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]";
+    return "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]";
   }
 
-  // Status de Espera na Fila: Representação neutra para tarefas aguardando disponibilidade de núcleos de CPU.
+  // Status de Espera na Fila: Representação neutra estática para tarefas aguardando disponibilidade de núcleos de CPU.
   if (lowerMsg.includes("aguardando"))
     return "bg-gray-500 shadow-[0_0_8px_rgba(107,114,128,0.4)]";
 
-  // Status de Processamento Ativo: Sinalização pulsante em laranja para indicar análise estrutural em andamento.
-  return "bg-orange-500 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.6)]";
+  // Status de Processamento Ativo: Sinalização pulsante em amarelo para indicar análise estrutural em andamento.
+  return "bg-yellow-500 animate-pulse shadow-[0_0_8px_rgba(234,179,8,0.6)]";
 };
 
 const parseMessage = (msg: string) => {
