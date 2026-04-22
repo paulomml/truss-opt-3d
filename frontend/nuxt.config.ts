@@ -6,6 +6,10 @@ export default defineNuxtConfig({
 
   compatibilityDate: "2024-04-03",
 
+  head: {
+    title: "TRUSS-OPT 3D",
+  },
+
   modules: ["@nuxtjs/tailwindcss", "@tresjs/nuxt", "@pinia/nuxt", "@nuxt/icon"],
 
   components: [
