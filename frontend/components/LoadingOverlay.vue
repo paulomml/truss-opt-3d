@@ -34,9 +34,9 @@ onUnmounted(() => {
 const getStatusColor = (msg: string) => {
   const lowerMsg = String(msg).toLowerCase();
 
-  // Status de Sucesso: Sinalização pulsante em verde para conclusão positiva do processamento.
+  // Status de Sucesso: Sinalização estática em verde para conclusão positiva do processamento.
   if (lowerMsg.includes("concluído") || lowerMsg.includes("cálculo concluído"))
-    return "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]";
+    return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
 
   // Status de Erro ou Inviabilidade: Alerta pulsante em vermelho para falhas de estabilidade ou limites de dimensionamento.
   if (

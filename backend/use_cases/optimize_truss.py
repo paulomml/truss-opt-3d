@@ -126,7 +126,7 @@ def optimize_for_material_worker(
                 break
             continue
 
-        # Corrigida indentação e lógica de validação do algoritmo guloso.
+        # Validação iterativa de dimensionamento via algoritmo guloso.
         # Todos os grupos devem ser validados (U <= 1.0) antes de marcar como solução válida.
         for g, u in max_u_per_group.items():
             if g == "_ERROR_":
