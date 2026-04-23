@@ -206,7 +206,7 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
             class="text-xs text-white opacity-80 mt-1 uppercase tracking-wider"
             title="Realiza o cálculo e a otimização de estruturas metálicas."
           >
-            Dimensionamento Estrutural
+            Otimizador de Treliças 3D
           </p>
           <p class="text-[10px] text-blue-400/80 mt-1 font-medium">
             Desenvolvido por

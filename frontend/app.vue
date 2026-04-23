@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from "vue";
 
+useHead({
+  titleTemplate: (titleChunk) => {
+    return titleChunk || "TRUSS-OPT 3D - Otimizador de Treliças 3D";
+  },
+});
+
 let healthInterval: any;
 
 onMounted(() => {
