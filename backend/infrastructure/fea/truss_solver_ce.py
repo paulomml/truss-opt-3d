@@ -4,8 +4,8 @@ truss_solver_ce.py
 Solver FEA para treliças metálicas otimizado para o estado do Ceará.
 
 Perfis e materiais são carregados de arquivos CSV externos:
-  data/perfis.csv    — catálogo de seções comerciais (Ue, L, RHS)
-  data/materiais.csv — propriedades dos materiais estruturais
+  data/profiles.csv    — catálogo de seções comerciais (Ue, L, RHS)
+  data/materials.csv — propriedades dos materiais estruturais
 
 Referências normativas:
   NBR 8800  — Projeto de estruturas de aço
@@ -30,8 +30,8 @@ from domain.models import MemberResult, NodeResult, TrussRequest
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _DATA_DIR = os.path.join(_HERE, "data")
 
-PROFILES_CSV  = os.path.join(_DATA_DIR, "perfis.csv")
-MATERIALS_CSV = os.path.join(_DATA_DIR, "materiais.csv")
+PROFILES_CSV  = os.path.join(_DATA_DIR, "profiles.csv")
+MATERIALS_CSV = os.path.join(_DATA_DIR, "materials.csv")
 
 # ==============================================================================
 # LEITURA DOS CATÁLOGOS CSV
@@ -39,7 +39,7 @@ MATERIALS_CSV = os.path.join(_DATA_DIR, "materiais.csv")
 
 def _load_profiles(path: str = PROFILES_CSV) -> list[dict]:
     """
-    Lê data/perfis.csv e retorna lista de dicionários prontos para o modelo FEA.
+    Lê data/profiles.csv e retorna lista de dicionários prontos para o modelo FEA.
 
     Colunas obrigatórias: Name, Area_m2, Ix_m4, Iy_m4, J_m4
     Colunas opcionais:    Familia, Uso_recomendado (usadas apenas para filtragem/relatório)
@@ -67,7 +67,7 @@ def _load_profiles(path: str = PROFILES_CSV) -> list[dict]:
 
 def _load_materials(path: str = MATERIALS_CSV) -> dict[str, dict]:
     """
-    Lê data/materiais.csv e retorna dicionário indexado pelo campo 'name'.
+    Lê data/materials.csv e retorna dicionário indexado pelo campo 'name'.
 
     Campos retornados (unidades internas do solver):
       E   → GPa   (float)
@@ -94,7 +94,7 @@ def _load_materials(path: str = MATERIALS_CSV) -> dict[str, dict]:
                 "rho":  float(row["rho_kg_m3"]),
             }
     if not materials:
-        raise ValueError(f"Catálogo de materiais vazio ou não encontrado: {path}")
+        raise ValueError(f"Catálogo de  vazio ou não encontrado: {path}")
     return materials
 
 
