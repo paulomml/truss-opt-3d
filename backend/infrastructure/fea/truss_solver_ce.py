@@ -4,7 +4,7 @@ truss_solver_ce.py
 Solver FEA para treliças metálicas otimizado para o estado do Ceará.
 
 Perfis e materiais são carregados de arquivos CSV externos:
-  data/profiles.csv    — catálogo de seções comerciais (Ue, L, RHS)
+  data/profiles.csv  — catálogo de seções comerciais (Ue, L, RHS)
   data/materials.csv — propriedades dos materiais estruturais
 
 Referências normativas:
@@ -12,6 +12,18 @@ Referências normativas:
   NBR 6120  — Cargas para o cálculo de estruturas de edificações
   NBR 6123  — Forças devidas ao vento em edificações
   NBR 14762 — Dimensionamento de estruturas de aço constituídas por perfis formados a frio
+
+Correções aplicadas (v2):
+  [C1] Carregamento lazy dos catálogos CSV (evita falha na importação)
+  [C2] max_x / min_x movidos para dentro do bloco correto (evita NameError)
+  [C3] combos definido antes do try/except (evita NameError no pós-processamento)
+  [C4] LC2 inclui carga External com fator 1.0 (NBR 8800 combinação com vento)
+  [C5] Fator rho corrigido para kg/m³ sem escalonamento indevido
+  [C6] profile_indices com validação de bounds (evita IndexError)
+  [C7] Limite de deslocamento baseado em L/300 (NBR 8800) em vez de 1 m fixo
+  [C8] commercial_bar_waste corrigido para peças longas (emenda em vez de descarte)
+  [C9] Tabela S2 estendida até 30 m para coberturas industriais altas
+  [C10] CP_SUCAO_BARLAVENTO parametrizado por inclinação de cobertura
 """
 
 import csv
@@ -34,8 +46,13 @@ PROFILES_CSV  = os.path.join(_DATA_DIR, "profiles.csv")
 MATERIALS_CSV = os.path.join(_DATA_DIR, "materials.csv")
 
 # ==============================================================================
-# LEITURA DOS CATÁLOGOS CSV
+# LEITURA DOS CATÁLOGOS CSV — [C1] Carregamento lazy
 # ==============================================================================
+
+# Variáveis internas; acesse sempre via get_profiles_catalog() / get_materials_catalog()
+_PROFILES_CATALOG: list[dict] | None = None
+_MATERIALS_CATALOG: dict[str, dict] | None = None
+
 
 def _load_profiles(path: str = PROFILES_CSV) -> list[dict]:
     """
@@ -45,6 +62,11 @@ def _load_profiles(path: str = PROFILES_CSV) -> list[dict]:
     Colunas opcionais:    Familia, Uso_recomendado (usadas apenas para filtragem/relatório)
     Linhas iniciadas com '#' são ignoradas (comentários de cabeçalho).
     """
+    if not os.path.isfile(path):
+        raise FileNotFoundError(
+            f"Catálogo de perfis não encontrado: {path}\n"
+            f"Certifique-se de que 'profiles.csv' está em '{_DATA_DIR}'."
+        )
     profiles = []
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(row for row in f if not row.startswith("#"))
@@ -61,7 +83,7 @@ def _load_profiles(path: str = PROFILES_CSV) -> list[dict]:
                 }
             )
     if not profiles:
-        raise ValueError(f"Catálogo de perfis vazio ou não encontrado: {path}")
+        raise ValueError(f"Catálogo de perfis vazio: {path}")
     return profiles
 
 
@@ -79,6 +101,11 @@ def _load_materials(path: str = MATERIALS_CSV) -> dict[str, dict]:
 
     Linhas iniciadas com '#' são ignoradas.
     """
+    if not os.path.isfile(path):
+        raise FileNotFoundError(
+            f"Catálogo de materiais não encontrado: {path}\n"
+            f"Certifique-se de que 'materials.csv' está em '{_DATA_DIR}'."
+        )
     materials = {}
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(row for row in f if not row.startswith("#"))
@@ -94,26 +121,39 @@ def _load_materials(path: str = MATERIALS_CSV) -> dict[str, dict]:
                 "rho":  float(row["rho_kg_m3"]),
             }
     if not materials:
-        raise ValueError(f"Catálogo de  vazio ou não encontrado: {path}")
+        raise ValueError(f"Catálogo de materiais vazio: {path}")
     return materials
 
 
-# Catálogos carregados uma única vez na importação do módulo
-PROFILES_CATALOG: list[dict] = _load_profiles()
-MATERIALS_CATALOG: dict[str, dict] = _load_materials()
+# [C1] Funções de acesso lazy — os CSVs só são lidos na primeira chamada
+def get_profiles_catalog() -> list[dict]:
+    """Retorna o catálogo de perfis, carregando do CSV se necessário."""
+    global _PROFILES_CATALOG
+    if _PROFILES_CATALOG is None:
+        _PROFILES_CATALOG = _load_profiles()
+    return _PROFILES_CATALOG
+
+
+def get_materials_catalog() -> dict[str, dict]:
+    """Retorna o catálogo de materiais, carregando do CSV se necessário."""
+    global _MATERIALS_CATALOG
+    if _MATERIALS_CATALOG is None:
+        _MATERIALS_CATALOG = _load_materials()
+    return _MATERIALS_CATALOG
 
 
 def get_material(name: str) -> dict:
     """Retorna material pelo nome; lança KeyError descritivo se não encontrado."""
-    if name not in MATERIALS_CATALOG:
-        available = ", ".join(MATERIALS_CATALOG.keys())
+    catalog = get_materials_catalog()
+    if name not in catalog:
+        available = ", ".join(catalog.keys())
         raise KeyError(f"Material '{name}' não encontrado. Disponíveis: {available}")
-    return MATERIALS_CATALOG[name]
+    return catalog[name]
 
 
 def get_profiles_by_family(family: str) -> list[dict]:
     """Filtra perfis pelo campo Familia (ex.: 'Ue', 'L', 'RHS')."""
-    return [p for p in PROFILES_CATALOG if p["Familia"] == family]
+    return [p for p in get_profiles_catalog() if p["Familia"] == family]
 
 
 # ==============================================================================
@@ -143,13 +183,37 @@ WIND_V0_CE = {
 S1 = 1.0   # Terreno plano — conservador para galpões industriais
 S3 = 1.0   # Grupo 2 — estruturas industriais correntes
 
-# Fator S2: rugosidade categoria II, classe B — NBR 6123, Tab. 1
-# Interpolado linearmente por altura do nó mais alto
-_S2_CAT_II_B = {10: 0.98, 15: 1.05, 20: 1.10}
+# [C9] Fator S2: rugosidade categoria II, classe B — NBR 6123, Tab. 1
+# Tabela estendida até 30 m para coberturas industriais altas
+_S2_CAT_II_B = {10: 0.98, 15: 1.05, 20: 1.10, 25: 1.13, 30: 1.16}
 
-# Coeficientes externos de pressão para cobertura — NBR 6123, Anexo A
-# Sucção de barlavento (θ < 10°): Cp = –1.0 (conservador)
-CP_SUCAO_BARLAVENTO = 1.0   # módulo; sinal positivo → força para cima
+# [C10] Coeficientes externos de pressão para cobertura — NBR 6123, Anexo A
+# Indexado pelo ângulo de inclinação da cobertura (graus)
+# Sucção de barlavento: negativo (força para cima); valor em módulo
+CP_SUCAO_POR_ANGULO = {
+    0:  1.0,   # θ = 0°  (cobertura plana ou θ < 5°) — sucção máxima
+    10: 0.9,
+    20: 0.5,
+    30: 0.0,   # θ ≥ 30° — pressão positiva; sem sucção de barlavento
+}
+
+def get_cp_sucao(roof_angle_deg: float = 0.0) -> float:
+    """
+    Interpola o Cp de sucção de barlavento pelo ângulo da cobertura [graus].
+    Retorna valor em módulo (sempre ≥ 0).
+    """
+    angles = sorted(CP_SUCAO_POR_ANGULO)
+    cps    = [CP_SUCAO_POR_ANGULO[a] for a in angles]
+    if roof_angle_deg <= angles[0]:
+        return cps[0]
+    if roof_angle_deg >= angles[-1]:
+        return cps[-1]
+    for i in range(len(angles) - 1):
+        if angles[i] <= roof_angle_deg <= angles[i + 1]:
+            t = (roof_angle_deg - angles[i]) / (angles[i + 1] - angles[i])
+            return cps[i] + t * (cps[i + 1] - cps[i])
+    return cps[-1]
+
 
 # Cargas de cobertura características gk [kN/m²] — NBR 6120, Tab. 3
 COVER_LOADS = {
@@ -197,11 +261,18 @@ def compute_wind_pressure(v0: float, height: float) -> float:
 
 def commercial_bar_waste(length: float, bar_length: float = COMMERCIAL_BAR_LENGTH) -> float:
     """
-    Percentual de retalho ao cortar uma barra comercial em peças de `length` metros.
-    Retorna valor em [0, 1]; 0 = desperdício zero.
+    [C8] Percentual de retalho ao cortar uma barra comercial em peças de `length` metros.
+
+    Para peças maiores que uma barra comercial, considera emenda (múltiplos inteiros
+    de barras comerciais). Retorna valor em [0, 1]; 0 = desperdício zero.
     """
-    if length <= 0 or length > bar_length:
+    if length <= 0:
         return 1.0
+    if length > bar_length:
+        # Peça longa: calcula quantas barras inteiras são necessárias e o retalho final
+        bars_needed = math.ceil(length / bar_length)
+        total_bought = bars_needed * bar_length
+        return (total_bought - length) / total_bought
     cuts = math.floor(bar_length / length)
     return (bar_length - cuts * length) / bar_length
 
@@ -307,6 +378,7 @@ def build_and_solve_truss(
     wind_region: str = "Interior",
     roof_span: float | None = None,
     include_wind: bool = True,
+    roof_angle_deg: float = 0.0,   # [C10] ângulo da cobertura em graus
 ):
     """
     Formulação FEA via Matriz de Rigidez Direta.
@@ -315,21 +387,23 @@ def build_and_solve_truss(
     automaticamente (comportamento padrão recomendado).
 
     Combinações ELU aplicadas (NBR 8800 + NBR 6120 + NBR 6123):
-      LC1 — Gravitação máxima : 1,4·Dead + 1,4·Cover + 1,4·Live
-      LC2 — Vento de sucção   : 1,4·Dead + 1,4·Cover + 1,4·Wind
+      LC1 — Gravitação máxima : 1,4·Dead + 1,4·Cover + 1,4·Live + 1,4·External
+      LC2 — Vento de sucção   : 1,0·External + 1,4·Dead + 1,4·Cover + 1,4·Wind
              (governa inversão de esforços — banzo inferior em compressão)
     """
-    # ── Catálogos padrão (CSV) ────────────────────────────────────────────────
+    # ── Catálogos padrão (CSV) — [C1] lazy ───────────────────────────────────
     if profiles_catalog is None:
-        profiles_catalog = PROFILES_CATALOG
+        profiles_catalog = get_profiles_catalog()
     if material is None:
         material = get_material("MR250")   # aço nacional mais comum no CE
 
     # ── Modelo FEA ────────────────────────────────────────────────────────────
     model = FEModel3D()
     nu = material["nu"]
-    G  = material["G"] * 1e9
-    model.add_material(material["name"], material["E"] * 1e9, G, nu, material["rho"] * 1e-9)
+    G  = material["G"] * 1e9   # Pa
+
+    # [C5] rho em kg/m³ — sem fator de escala adicional (Pynite usa SI: kg, m, N)
+    model.add_material(material["name"], material["E"] * 1e9, G, nu, material["rho"])
 
     for p in profiles_catalog:
         if p["Name"] not in model.sections:
@@ -360,6 +434,8 @@ def build_and_solve_truss(
     # ── Helper interno ────────────────────────────────────────────────────────
     def add_member(m_id, n1, n2, group, length):
         p_idx   = profile_indices.get(group, profile_indices.get("Padrão", 0))
+        # [C6] Validação de bounds para evitar IndexError
+        p_idx   = max(0, min(p_idx, len(profiles_catalog) - 1))
         profile = profiles_catalog[p_idx]
         members_to_analyze.append(
             {
@@ -371,7 +447,7 @@ def build_and_solve_truss(
                 "profile":     profile["Name"],
                 "area":        profile["Area"],
                 "unit_weight": profile["Area"] * material["rho"],
-                "bar_waste":   commercial_bar_waste(length),
+                "bar_waste":   commercial_bar_waste(length),   # [C8]
             }
         )
         mid = f"M{m_id}"
@@ -444,6 +520,11 @@ def build_and_solve_truss(
 
     node_weights: dict[str, float] = {}
     total_influence = 0.0
+
+    # [C2] min_x / max_x definidos antes do uso em span_x
+    min_x = 0.0
+    max_x = 0.0
+
     if target_nodes:
         min_x = min(nodes_coords[nd][0] for nd in target_nodes)
         max_x = max(nodes_coords[nd][0] for nd in target_nodes)
@@ -469,8 +550,10 @@ def build_and_solve_truss(
     for nd, wt in node_dead.items():
         model.add_node_load(nd, "FY", -wt * 9.81, case="Dead")
 
-    # ── Carga permanente de cobertura (Cover) — NBR 6120 ─────────────────────
+    # [C2] span_x calculado com min_x / max_x sempre definidos
     span_x = (max_x - min_x) if (target_nodes and max_x > min_x) else 1.0
+
+    # ── Carga permanente de cobertura (Cover) — NBR 6120 ─────────────────────
     if target_nodes and not is_bridge:
         gk = COVER_LOADS.get(cover_type, COVER_LOADS["fibrocimento"])["gk"]
         cover_unit_n = (gk * span_x * trib_width * 1000) / total_influence
@@ -487,25 +570,41 @@ def build_and_solve_truss(
     if include_wind and target_nodes and not is_bridge:
         max_h = max(c[1] for c in nodes_coords.values())
         v0    = WIND_V0_CE.get(wind_region, WIND_V0_CE["Interior"])
-        q     = compute_wind_pressure(v0, max_h)          # kN/m²
-        wind_unit_n = (q * CP_SUCAO_BARLAVENTO * span_x * trib_width * 1000) / total_influence
+        q     = compute_wind_pressure(v0, max_h)             # kN/m²
+        cp    = get_cp_sucao(roof_angle_deg)                  # [C10]
+        wind_unit_n = (q * cp * span_x * trib_width * 1000) / total_influence
         for nd, w in node_weights.items():
             model.add_node_load(nd, "FY", +wind_unit_n * w, case="Wind")
 
     # ── Combinações ELU — NBR 8800 §7 ────────────────────────────────────────
     model.add_load_combo("LC1", {"External": 1.4, "Dead": 1.4, "Cover": 1.4, "Live": 1.4})
     if include_wind:
-        model.add_load_combo("LC2", {"Dead": 1.4, "Cover": 1.4, "Wind": 1.4})
+        # [C4] LC2 inclui External com fator 1.0 (carga permanente na combinação de vento)
+        model.add_load_combo("LC2", {"External": 1.0, "Dead": 1.4, "Cover": 1.4, "Wind": 1.4})
+
+    # [C3] combos definido ANTES do try/except para garantir acesso no pós-processamento
+    combos = ["LC1", "LC2"] if include_wind else ["LC1"]
+
+    # ── [C7] Limite de deslocamento baseado em L/300 — NBR 8800 ──────────────
+    span_ref  = getattr(params, "length", 1.0) or 1.0
+    desl_lim  = span_ref / 300.0
 
     # ── Análise ───────────────────────────────────────────────────────────────
     try:
         model.analyze(check_statics=True, log=False)
-        combos = ["LC1", "LC2"] if include_wind else ["LC1"]
         for nid_chk, node_chk in model.nodes.items():
             if hasattr(node_chk, "DY") and isinstance(node_chk.DY, dict):
                 for combo in combos:
-                    if abs(node_chk.DY.get(combo, 0)) > 1.0:
-                        return ([], {}, {"_ERROR_": f"Deslocamento excessivo no nó {nid_chk} ({combo})."}, 0.0)
+                    dy = node_chk.DY.get(combo, 0)
+                    if abs(dy) > desl_lim:
+                        return (
+                            [], {}, 
+                            {"_ERROR_": (
+                                f"Deslocamento excessivo no nó {nid_chk} ({combo}): "
+                                f"{abs(dy)*1000:.1f} mm > L/300 = {desl_lim*1000:.1f} mm."
+                            )},
+                            0.0,
+                        )
     except Exception as exc:
         return [], {}, {"_ERROR_": str(exc)}, 0.0
 
@@ -529,6 +628,7 @@ def build_and_solve_truss(
             return ([], {}, {"_ERROR_": "Divergência numérica na análise."}, 0.0)
 
         p_idx   = profile_indices.get(m["group"], profile_indices.get("Padrão", 0))
+        p_idx   = max(0, min(p_idx, len(profiles_catalog) - 1))   # [C6]
         profile = profiles_catalog[p_idx]
         u = calculate_max_utilization(axial_f, profile, m["length"], material, m["group"], lk_map[m["id"]])
         if m["group"] not in max_u_per_group or u > max_u_per_group[m["group"]]:
