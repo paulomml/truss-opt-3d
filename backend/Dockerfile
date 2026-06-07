@@ -17,3 +17,6 @@ COPY . .
 EXPOSE 8000
 
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips='*'"]
+
+COPY backend/infrastructure/fea/profiles.csv /app/backend/infrastructure/fea/profiles.csv
+COPY backend/infrastructure/fea/materials.csv /app/backend/infrastructure/fea/materials.csv
