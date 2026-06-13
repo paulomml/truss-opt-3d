@@ -28,7 +28,7 @@ from domain.models import MemberResult, NodeResult, TrussRequest
 # ==============================================================================
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_DATA_DIR = os.path.join(_HERE, "..", "infrastructure", "fea")
+_DATA_DIR = os.path.join(_HERE, "data")
 
 PROFILES_CSV  = os.path.join(_DATA_DIR, "profiles.csv")
 MATERIALS_CSV = os.path.join(_DATA_DIR, "materials.csv")
