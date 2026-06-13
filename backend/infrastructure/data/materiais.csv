@@ -1,7 +1,21 @@
+# Catálogo de Materiais Estruturais
+# Referência normativa: ABNT NBR 8800 (aço estrutural) | NBR 6118 (concreto — referência)
+# Unidades: E [GPa] | G [GPa] | fy [MPa] | fu [MPa] | rho [kg/m³] | nu [adimensional]
+#
+# Campos:
+#   name        → identificador usado no modelo FEA
+#   E_GPa       → Módulo de elasticidade longitudinal
+#   G_GPa       → Módulo de elasticidade transversal  (G = E / 2(1+ν))
+#   nu          → Coeficiente de Poisson
+#   fy_MPa      → Resistência ao escoamento (limite de escoamento)
+#   fu_MPa      → Resistência à ruptura
+#   rho_kg_m3   → Densidade (massa específica)
+#   norma_ref   → Norma de referência do material
+#   observacao  → Notas de aplicação
 name,E_GPa,G_GPa,nu,fy_MPa,fu_MPa,rho_kg_m3,norma_ref,observacao
 A36,200.0,76.9,0.30,250,400,7850,ASTM A36,Aço carbono laminado — perfis L e U importados
 A572-Gr50,200.0,76.9,0.30,345,450,7850,ASTM A572 Gr.50,Alta resistência — tubos e perfis especiais
 MR250,200.0,76.9,0.30,250,400,7850,NBR 8800 / NBR 7007,Aço carbono — equivalente nacional ao A36; Gerdau MR250
 MR350,200.0,76.9,0.30,350,450,7850,NBR 8800 / NBR 7007,Alta resistência — Gerdau MR350; recomendado para banzos
 SAC300,200.0,76.9,0.30,300,420,7850,NBR 8800,Aço para construção civil — perfis formados a frio (Ue / RHS)
-SAC350,200.0,76.9,0.30,350,420,7850,NBR 8800,Perfis formados a frio alta resistência (Ue espessura ≥ 2,65 mm)
+SAC350,200.0,76.9,0.30,350,420,7850,NBR 8800,Perfis formados a frio alta resistência (Ue espessura ≥ 2.65 mm)
