@@ -12,6 +12,7 @@
 #   rho_kg_m3   → Densidade (massa específica)
 #   norma_ref   → Norma de referência do material
 #   observacao  → Notas de aplicação
+#
 name,E_GPa,G_GPa,nu,fy_MPa,fu_MPa,rho_kg_m3,norma_ref,observacao
 A36,200.0,76.9,0.30,250,400,7850,ASTM A36,Aço carbono laminado — perfis L e U importados
 A572-Gr50,200.0,76.9,0.30,345,450,7850,ASTM A572 Gr.50,Alta resistência — tubos e perfis especiais
