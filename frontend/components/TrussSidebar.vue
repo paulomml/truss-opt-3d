@@ -87,9 +87,12 @@ const structuralSafetyAlerts = computed(() => {
     height,
     width,
     divisions,
-    total_load,
+    dead_load,
+    live_load,
     soil_type,
   } = form.value;
+
+  const current_total_load = (dead_load || 0) + (live_load || 0);
 
   // 1. Aviso de Proporção (Vão vs. Altura)
   if (selectedTemplate.includes("roof") && height > 0 && length / height > 10) {
@@ -134,7 +137,7 @@ const structuralSafetyAlerts = computed(() => {
 
   // 4. Aviso de Fundação (Solo vs. Carga)
   if (
-    total_load > 30000 &&
+    current_total_load > 30000 &&
     (soil_type === "Areia Fofa" || soil_type === "Argila Mole")
   ) {
     alerts.push({
@@ -145,7 +148,7 @@ const structuralSafetyAlerts = computed(() => {
   }
 
   // Regra Legada de Segurança
-  if (total_load > 20000 && height < 1.5 && alerts.length === 0) {
+  if (current_total_load > 20000 && height < 1.5 && alerts.length === 0) {
     alerts.push({
       message:
         "Identificamos que a altura definida é reduzida para a carga informada. Recomendamos aumentar a altura da estrutura para garantir uma melhor distribuição do peso.",
@@ -168,7 +171,9 @@ const resetParameters = () => {
   store.form.height = 2.5;
   store.form.width = 2.0;
   store.form.divisions = 6;
-  store.form.total_load = 10000.0;
+  store.form.dead_load = 2000.0;
+  store.form.live_load = 5000.0;
+  store.form.water_lamina = 0.0;
   store.form.topWidth = 1.0;
   store.form.sections = 5;
   store.form.soil_type = "Rocha";
@@ -420,21 +425,58 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
           </div>
 
           <!-- Carregamento de Projeto -->
-          <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
-            <label
-              class="block text-sm font-semibold text-gray-200 mb-2"
-              title="Define o peso total que a estrutura vai suportar em quilogramas (kgf)."
-              >Carga Aplicada na Estrutura (kgf)</label
-            >
-            <input
-              v-model.number="store.form.total_load"
-              @blur="sanitizeInput('total_load', 1)"
-              :disabled="store.loading"
-              type="number"
-              step="100"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
-              title="Insira o peso total previsto para o projeto."
-            />
+          <div class="pt-2 border-t border-gray-700 mt-2 space-y-4">
+            <h3 class="text-xs font-bold text-blue-400 uppercase">
+              Carregamento Gravitacional
+            </h3>
+
+            <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
+              <label
+                class="block text-sm font-semibold text-gray-200 mb-2"
+                title="Cargas permanentes como telhas, forros e acessórios (kgf)."
+                >Carga Permanente - G (kgf)</label
+              >
+              <input
+                v-model.number="store.form.dead_load"
+                @blur="sanitizeInput('dead_load', 0)"
+                :disabled="store.loading"
+                type="number"
+                step="100"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
+              />
+            </div>
+
+            <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
+              <label
+                class="block text-sm font-semibold text-gray-200 mb-2"
+                title="Cargas variáveis de uso e manutenção (kgf)."
+                >Sobrecarga de Utilização - Q (kgf)</label
+              >
+              <input
+                v-model.number="store.form.live_load"
+                @blur="sanitizeInput('live_load', 0)"
+                :disabled="store.loading"
+                type="number"
+                step="100"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
+              />
+            </div>
+
+            <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
+              <label
+                class="block text-sm font-semibold text-gray-200 mb-2"
+                title="Lâmina d'água excepcional por entupimento (mm)."
+                >Lâmina d'Água (mm)</label
+              >
+              <input
+                v-model.number="store.form.water_lamina"
+                @blur="sanitizeInput('water_lamina', 0)"
+                :disabled="store.loading"
+                type="number"
+                step="10"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
+              />
+            </div>
           </div>
 
           <!-- Configuração da Interação Solo-Estrutura (ISE) -->

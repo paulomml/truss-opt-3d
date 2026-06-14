@@ -1,5 +1,7 @@
-Material,fy_MPa,fu_MPa,E_GPa,density_kgm3,cost_BRL_kg
-Aço A36,250,400,200,7850,8.45
-Aço A572 G50,345,450,200,7850,12.95
-Aço Corten,300,400,200,7850,10.00
-Alumínio 6061-T6,240,290,70,2800,65.00
+name,E_GPa,G_GPa,nu,fy_MPa,fu_MPa,rho_kg_m3,norma_ref,observacao
+A36,200.0,76.9,0.30,250,400,7850,ASTM A36,Aço carbono laminado — perfis L e U importados
+A572-Gr50,200.0,76.9,0.30,345,450,7850,ASTM A572 Gr.50,Alta resistência — tubos e perfis especiais
+MR250,200.0,76.9,0.30,250,400,7850,NBR 8800 / NBR 7007,Aço carbono — equivalente nacional ao A36; Gerdau MR250
+MR350,200.0,76.9,0.30,350,450,7850,NBR 8800 / NBR 7007,Alta resistência — Gerdau MR350; recomendado para banzos
+SAC300,200.0,76.9,0.30,300,420,7850,NBR 8800,Aço para construção civil — perfis formados a frio (Ue / RHS)
+SAC350,200.0,76.9,0.30,350,420,7850,NBR 8800,Perfis formados a frio alta resistência (Ue espessura ≥ 2.65 mm)
