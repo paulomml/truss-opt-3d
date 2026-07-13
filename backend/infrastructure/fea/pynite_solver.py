@@ -113,7 +113,7 @@ def calculate_max_utilization(
     # -------------------------------------------------------------------------
     # Aproximação elástica: M_rd = W * fy / gamma_a1.
     W_z = profile["Ix_m4"] / (b_val / 2)
-    W_y = profile["Iy_m4"] / (b_val / 2)
+    W_y = profile["Iy_m4"] / (bf_mm / 1000.0 / 2)
     M_zrd, M_yrd = W_z * fy, W_y * fy
     M_zsd, M_ysd = abs(mz), abs(my)
 

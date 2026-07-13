@@ -55,12 +55,9 @@ async def test_els_deflection_rejection_and_upscale():
         ]
     )
     
-    # A treliça de 25m com apenas 0.5m de altura terá uma rigidez flexural baixíssima.
     response = await optimize_truss_use_case(params)
     
     assert response.is_structurally_stable == True
-    # Validamos que o perfil escolhido NÃO é o menor do catálogo (SHS 40x40).
-    # O orquestrador deve ter avançado nos índices para reduzir a flecha.
     for m in response.members:
         if "Banzo" in m.group:
-            assert m.profile != "SHS 40x40x2.5"
+            assert m.profile != "L19x3.18"

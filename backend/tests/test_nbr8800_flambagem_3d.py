@@ -37,7 +37,7 @@ def test_buckling_lkx_not_equal_lky(sample_material, profiles_catalog):
         ]
     )
     # Perfil Ue (Ix != Iy). A esbeltez em X (Lkx/rx) será comparada com a de Y.
-    profile_indices = {"Padrão": 10} 
+    profile_indices = {"Padrão": 7} 
     
     res = build_and_solve_truss(params, profile_indices, profiles_catalog, sample_material)
     member_results, nodes_results, max_u, total_weight, max_flecha, real_span, max_precamber = res

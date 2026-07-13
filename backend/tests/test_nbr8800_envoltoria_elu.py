@@ -37,7 +37,7 @@ def test_elu_combinations_precision(sample_material, profiles_catalog):
             LoadCase(type="Q", direction="FY", value=-1000.0)  # Q
         ]
     )
-    profile_indices = {"Padrão": 11} # Ue100x40x15x3.00
+    profile_indices = {"Padrão": 24} # RHS100x100x3.00 (ry=39.6mm, Lk_max=7.9m)
     
     res = build_and_solve_truss(params, profile_indices, profiles_catalog, sample_material)
     member_results, nodes_results, max_u, total_weight, max_flecha, real_span, max_precamber = res

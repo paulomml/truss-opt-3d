@@ -65,6 +65,27 @@ def optimize_for_material_worker(
     # Reconstrução do pydantic model a partir do dict (Pickle limitation do multiprocessing).
     params = TrussRequest(**params_dict)
 
+    # Validação prévia de esbeltez (NBR 8800 Item 5.3.4.1: lambda <= 200 para compressão).
+    max_ry = max((p["Iy_m4"] / p["Area_m2"]) ** 0.5 for p in profiles)
+    if params.raw_truss:
+        max_bar_length = max(
+            ((params.raw_truss.nodes[m.node_start].x - params.raw_truss.nodes[m.node_end].x) ** 2
+             + (params.raw_truss.nodes[m.node_start].y - params.raw_truss.nodes[m.node_end].y) ** 2
+             + (params.raw_truss.nodes[m.node_start].z - params.raw_truss.nodes[m.node_end].z) ** 2) ** 0.5
+            for m in params.raw_truss.members
+        )
+    else:
+        dx = params.length / params.divisions
+        max_bar_length = max(dx, params.height, (dx**2 + params.height**2) ** 0.5)
+    if max_bar_length / max_ry > 200:
+        return {
+            "success": False,
+            "error": (f"A estrutura possui barras de até {max_bar_length:.2f}m, mas o maior raio de giração "
+                      f"disponível é de apenas {max_ry*1000:.1f}mm (Lk_max = {200*max_ry:.2f}m). "
+                      f"Expanda o catálogo de perfis ou reduza as dimensões da treliça."),
+            "material_name": material["name"],
+        }
+
     num_profiles = len(profiles)
     max_iter = 30
     current_profile_indices = {g: 0 for g in groups}

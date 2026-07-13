@@ -63,7 +63,7 @@ def test_precamber_calculation(sample_material, profiles_catalog):
             LoadCase(type="Q", direction="FY", value=-5000.0)
         ]
     )
-    profile_indices = {"Padrão": 4}
+    profile_indices = {"Padrão": 15}
     
     res = build_and_solve_truss(params, profile_indices, profiles_catalog, sample_material)
     member_results, nodes_results, max_u, total_weight, max_flecha, real_span, max_precamber = res
