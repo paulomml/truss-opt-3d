@@ -13,7 +13,10 @@ export const useTrussStore = defineStore("truss", () => {
     height: 2.5,
     width: 2.0,
     divisions: 6,
-    total_load: 10000.0,
+    load_cases: [],
+    water_lamina: 0.0,
+    dead_load: 2000.0,
+    live_load: 5000.0,
     topWidth: 1.0,
     sections: 5,
     selectedTemplate: "pratt_roof",
@@ -183,6 +186,17 @@ export const useTrussStore = defineStore("truss", () => {
         payload.custom_ks = undefined;
       }
 
+      // Converte atalhos de UI em LoadCases formais exigidos pelo motor NBR 6120/8800.
+      // Cargas são enviadas como negativas (FY para baixo) para o solver.
+      payload.load_cases = [
+        { type: "G", direction: "FY", value: -(payload.dead_load || 0) },
+        { type: "Q", direction: "FY", value: -(payload.live_load || 0) },
+      ];
+
+      // Remove campos utilitários da UI antes do envio para manter o schema do backend limpo.
+      delete payload.dead_load;
+      delete payload.live_load;
+
       // Configuração de URL unificada que utiliza o proxy do Nuxt (Dev) ou Nginx (Prod).
       // Isso resolve problemas de CORS/Auth em ambientes como GitHub Codespaces.
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -216,6 +230,7 @@ export const useTrussStore = defineStore("truss", () => {
             total_weight: Number(resultData?.total_weight || 0),
             total_cost: Number(resultData?.total_cost || 0),
             winning_material: String(resultData?.winning_material || "N/A"),
+            precamber: Number(resultData?.precamber || 0),
             members: Array.isArray(resultData?.members)
               ? resultData.members
               : [],

@@ -58,6 +58,7 @@ const totalLength = computed(() => {
 
 const totalWeight = computed(() => trussResult.value?.total_weight ?? 0);
 const totalCost = computed(() => trussResult.value?.total_cost ?? 0);
+const precamber = computed(() => trussResult.value?.precamber ?? 0);
 const winningMaterial = computed(
   () => trussResult.value?.winning_material ?? "Aço",
 );
@@ -69,6 +70,7 @@ const hasData = computed(
 
 const formattedLength = computed(() => totalLength.value.toFixed(2));
 const formattedWeight = computed(() => totalWeight.value.toFixed(2));
+const formattedPrecamber = computed(() => (precamber.value * 1000).toFixed(1));
 const formattedCost = computed(() =>
   totalCost.value.toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
@@ -126,7 +128,7 @@ const toggleSummary = () => {
 
         <div
           :class="[
-            'summary-cards mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4',
+            'summary-cards mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5',
             { expanded: isExpanded, collapsed: !isExpanded },
           ]"
         >
@@ -191,6 +193,22 @@ const toggleSummary = () => {
             </p>
             <p class="mt-2 text-sm text-gray-400">
               Total de peças para fabricação.
+            </p>
+          </div>
+
+          <div
+            class="rounded-lg border border-blue-900/50 bg-blue-900/10 px-4 py-4"
+            title="Valor recomendado de contra-flecha para fabricação para compensar cargas permanentes (NBR 8800)."
+          >
+            <p class="text-xs uppercase tracking-[0.2em] text-blue-400">
+              Contra-flecha (Sug.)
+            </p>
+            <p class="mt-3 text-2xl font-semibold text-blue-400">
+              {{ formattedPrecamber }}
+              <span class="text-base font-normal text-blue-400/70">mm</span>
+            </p>
+            <p class="mt-2 text-sm text-gray-400">
+              Curvatura recomendada para montagem.
             </p>
           </div>
         </div>

@@ -13,7 +13,7 @@ from domain.models import TrussRequest, OptimizationResponse
 def load_materials():
     """
     Carrega propriedades mecânicas e custos estruturais via CSV.
-    I/O síncrono no startup. O cache em memória mitiga gargalos durante as iterações do solver.
+    Suporta o novo esquema de cabeçalhos (name, E_GPa, fy_MPa, rho_kg_m3).
     """
     csv_path = os.path.join(
         os.path.dirname(__file__), "..", "infrastructure", "data", "materials.csv"
@@ -23,12 +23,12 @@ def load_materials():
     for _, row in df.iterrows():
         materials.append(
             {
-                "name": row["Material"],
+                "name": row["name"],
                 "fy": row["fy_MPa"],
                 "fu": row["fu_MPa"],
                 "E": row["E_GPa"],
-                "rho": row["density_kgm3"],
-                "cost_kg": row["cost_BRL_kg"],
+                "rho": row["rho_kg_m3"],
+                "cost_kg": row.get("cost_kg", 8.5),  # Fallback caso custo não venha no CSV
             }
         )
     return materials
@@ -49,9 +49,14 @@ def optimize_for_material_worker(
     params_dict: dict, profiles: list, material: dict, groups: list, queue, cancel_event
 ) -> dict:
     """
-    Offload da busca heurística para um worker isolado via multiprocessing.
-    O solver FEA é CPU-bound. Executar na thread principal bloquearia o event loop do FastAPI.
-    Aumenta o footprint de memória devido ao IPC (Pickling), mas garante estabilidade na API sob concorrência.
+    Executa a busca heurística pelo conjunto de perfis ideal para um material específico.
+
+    O algoritmo opera de forma 'gulosa' (greedy): inicia com os perfis mais leves
+    e realiza upgrades graduais nos grupos que falham nas verificações normativas
+    (ELU por esforço combinado ou ELS por flecha excessiva).
+
+    Este processo é executado em um worker isolado para não bloquear o event loop da API.
+    Aumenta o footprint de memória devido ao IPC (Pickling), mas garante estabilidade sob concorrência.
     """
     # Importação local para o worker multiprocessado.
     from infrastructure.fea.pynite_solver import build_and_solve_truss
@@ -59,6 +64,27 @@ def optimize_for_material_worker(
 
     # Reconstrução do pydantic model a partir do dict (Pickle limitation do multiprocessing).
     params = TrussRequest(**params_dict)
+
+    # Validação prévia de esbeltez (NBR 8800 Item 5.3.4.1: lambda <= 200 para compressão).
+    max_ry = max((p["Iy_m4"] / p["Area_m2"]) ** 0.5 for p in profiles)
+    if params.raw_truss:
+        max_bar_length = max(
+            ((params.raw_truss.nodes[m.node_start].x - params.raw_truss.nodes[m.node_end].x) ** 2
+             + (params.raw_truss.nodes[m.node_start].y - params.raw_truss.nodes[m.node_end].y) ** 2
+             + (params.raw_truss.nodes[m.node_start].z - params.raw_truss.nodes[m.node_end].z) ** 2) ** 0.5
+            for m in params.raw_truss.members
+        )
+    else:
+        dx = params.length / params.divisions
+        max_bar_length = max(dx, params.height, (dx**2 + params.height**2) ** 0.5)
+    if max_bar_length / max_ry > 200:
+        return {
+            "success": False,
+            "error": (f"A estrutura possui barras de até {max_bar_length:.2f}m, mas o maior raio de giração "
+                      f"disponível é de apenas {max_ry*1000:.1f}mm (Lk_max = {200*max_ry:.2f}m). "
+                      f"Expanda o catálogo de perfis ou reduza as dimensões da treliça."),
+            "material_name": material["name"],
+        }
 
     num_profiles = len(profiles)
     max_iter = 30
@@ -100,7 +126,7 @@ def optimize_for_material_worker(
 
         queue.put({"worker_id": worker_id, "message": status_msg})
 
-        members, nodes, max_u_per_group, total_weight = build_and_solve_truss(
+        members, nodes, max_u_per_group, total_weight, max_flecha, real_span, max_precamber = build_and_solve_truss(
             params, current_profile_indices, profiles, material
         )
 
@@ -111,7 +137,6 @@ def optimize_for_material_worker(
 
         if "_ERROR_" in max_u_per_group:
             # Erros numéricos (divergência/singularidade) costumam ser resolvidos com maior rigidez.
-            # Forçamos o upgrade de todos os grupos para tentar estabilizar a matriz na próxima iteração.
             all_ok = False
             for g in current_profile_indices:
                 if current_profile_indices[g] < num_profiles - 1:
@@ -126,7 +151,32 @@ def optimize_for_material_worker(
                 break
             continue
 
-        # Validação iterativa de dimensionamento via algoritmo guloso.
+        # Verificação de Estado Limite de Serviço (ELS) - Flecha Máxima L/250.
+        flecha_limite = real_span / 250
+        if max_flecha > flecha_limite:
+            all_ok = False
+            upgrade_msgs.append(f"Flecha excessiva ({max_flecha:.3f}m > {flecha_limite:.3f}m)")
+            # Forçamos o upgrade de banzos para aumentar a rigidez global.
+            for g in current_profile_indices:
+                if "Banzo" in g and current_profile_indices[g] < num_profiles - 1:
+                    current_profile_indices[g] += 1
+                    upgraded_any = True
+            
+            # Se não houver banzos ou banzos esgotados, tenta upscale de tudo.
+            if not upgraded_any:
+                for g in current_profile_indices:
+                    if current_profile_indices[g] < num_profiles - 1:
+                        current_profile_indices[g] += 1
+                        upgraded_any = True
+            
+            if not upgraded_any:
+                exhausted_catalogue = True
+                last_error_msg = f"Flecha excessiva ({max_flecha:.3f}m) e catálogo esgotado."
+                queue.put({"worker_id": worker_id, "message": last_error_msg})
+                break
+            continue
+
+        # Validação iterativa de dimensionamento via algoritmo guloso (ELU).
         # Todos os grupos devem ser validados (U <= 1.0) antes de marcar como solução válida.
         for g, u in max_u_per_group.items():
             if g == "_ERROR_":
@@ -153,9 +203,11 @@ def optimize_for_material_worker(
             valid_for_material = True
             total_cost = total_weight * material["cost_kg"]
             last_valid_result = {
+                "success": True,
                 "weight": total_weight,
                 "cost": total_cost,
                 "material_name": material["name"],
+                "precamber": max_precamber,
                 "members": members,
                 "nodes": nodes,
             }
@@ -182,7 +234,14 @@ async def optimize_truss_use_case(
     params: TrussRequest, request: Request = None, progress_callback=None
 ) -> OptimizationResponse:
     """
-    Coordena a execução concorrente do solver para múltiplos materiais.
+    Orquestrador principal do caso de uso de otimização de treliça.
+
+    Responsabilidades:
+    1. Carregar catálogos de perfis e materiais.
+    2. Identificar grupos de barras para otimização (Banzos, Montantes, etc).
+    3. Disparar a execução concorrente para múltiplos materiais (Aço, Alumínio, etc).
+    4. Coletar e comparar os resultados, elegendo a solução de menor custo global.
+    5. Retornar a envoltória de resultados e recomendações normativas (Precamber).
     """
     manager = None
     executor = None
@@ -282,6 +341,7 @@ async def optimize_truss_use_case(
                 total_weight=best_overall["weight"],
                 total_cost=best_overall["cost"],
                 winning_material=best_overall["material_name"],
+                precamber=best_overall.get("precamber", 0.0),
                 members=best_overall["members"],
                 nodes=best_overall["nodes"],
             )
