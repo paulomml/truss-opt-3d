@@ -1,6 +1,11 @@
-node_modules
-.nuxt
-.output
-.git
-.env
-dist
+# .dockerignore — frontend
+node_modules/
+.nuxt/
+.output/
+.nitro/
+.cache/
+dist/
+*.log
+.env.local
+.idea/
+.vscode/

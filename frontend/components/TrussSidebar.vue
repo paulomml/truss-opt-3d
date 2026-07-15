@@ -3,12 +3,22 @@ import { useTrussStore } from "@/stores/useTrussStore";
 import { storeToRefs } from "pinia";
 import HelpModal from "./HelpModal.vue";
 import AboutModal from "./AboutModal.vue";
+import InfoTooltip from "./InfoTooltip.vue";
 
 const store = useTrussStore();
-const { form, loading, showMobileMenu } = storeToRefs(store);
+const { form, loading, showMobileMenu, materiais, perfis, restricoes, parametrosVento, modoDesempenho } =
+  storeToRefs(store);
 
 const showHelpModal = ref(false);
 const showAboutModal = ref(false);
+const showRestricoesAvancadas = ref(false);
+const showVentoAvancado = ref(false);
+
+// Carrega catálogos na montagem.
+onMounted(() => {
+  store.carregarMateriais();
+  store.carregarPerfis();
+});
 
 const templateCategories = [
   {
@@ -42,21 +52,14 @@ const templateCategories = [
   },
 ];
 
-const isSpanActive = computed(() => {
-  return !form.value.selectedTemplate.includes("tower");
+const familiasDisponiveis = computed(() => {
+  return [...new Set(perfis.value.map((p) => p.familia))].sort();
 });
 
-const isPanelsActive = computed(() => {
-  return !form.value.selectedTemplate.includes("fink");
-});
-
-const isTopWidthActive = computed(() => {
-  return form.value.selectedTemplate.includes("tower");
-});
-
-const isSectionsActive = computed(() => {
-  return form.value.selectedTemplate.includes("tower");
-});
+const isSpanActive = computed(() => !form.value.selectedTemplate.includes("tower"));
+const isPanelsActive = computed(() => !form.value.selectedTemplate.includes("fink"));
+const isTopWidthActive = computed(() => form.value.selectedTemplate.includes("tower"));
+const isSectionsActive = computed(() => form.value.selectedTemplate.includes("tower"));
 
 const isMobile = ref(false);
 onMounted(() => {
@@ -69,89 +72,43 @@ onMounted(() => {
 const structuralSafetyAlerts = computed(() => {
   const alerts: Array<{ message: string; type: "warning" | "danger" }> = [];
 
-  // Integração de erros estruturais críticos vindos do backend (PyNite/NBR 8800).
-  if (
-    store.result &&
-    !store.result.is_structurally_stable &&
-    store.result.status_message
-  ) {
-    alerts.push({
-      message: store.result.status_message,
-      type: "danger",
-    });
+  if (store.result && !store.result.is_structurally_stable && store.result.status_message) {
+    alerts.push({ message: store.result.status_message, type: "danger" });
   }
 
-  const {
-    selectedTemplate,
-    length,
-    height,
-    width,
-    divisions,
-    dead_load,
-    live_load,
-    soil_type,
-  } = form.value;
+  const formAny = form.value as any;
+  const { selectedTemplate, length, height, width, divisions, soil_type } = formAny;
+  const dead_load = formAny.dead_load || 0;
+  const live_load = formAny.live_load || 0;
+  const current_total_load = dead_load + live_load;
 
-  const current_total_load = (dead_load || 0) + (live_load || 0);
-
-  // 1. Aviso de Proporção (Vão vs. Altura)
   if (selectedTemplate.includes("roof") && height > 0 && length / height > 10) {
     alerts.push({
-      message:
-        "Identificamos que o comprimento da estrutura está muito grande para a altura atual, o que pode causar o envergamento excessivo do telhado. Recomendamos aumentar a altura.",
-      type: "warning",
-    });
-  } else if (
-    selectedTemplate.includes("bridge") &&
-    height > 0 &&
-    length / height > 20
-  ) {
-    alerts.push({
-      message:
-        "Identificamos que o vão da ponte está longo demais para a sua altura, o que pode causar vibrações severas. Recomendamos aumentar a altura.",
+      message: "Comprimento muito grande para a altura — risco de envergamento excessivo.",
       type: "warning",
     });
   }
-
-  // 2. Aviso de Estabilidade (Tombamento de Torres)
+  if (selectedTemplate.includes("bridge") && height > 0 && length / height > 20) {
+    alerts.push({
+      message: "Vão longo para a altura — risco de vibrações severas.",
+      type: "warning",
+    });
+  }
   if (selectedTemplate.includes("tower") && width > 0 && height / width > 10) {
     alerts.push({
-      message:
-        "Identificamos que a torre está muito alta para uma base muito estreita, o que eleva o risco de tombamento. Recomendamos aumentar a largura da base.",
+      message: "Torre muito alta para a base — risco de tombamento.",
       type: "danger",
     });
   }
-
-  // 3. Aviso de Divisões (Flambagem de Barras)
-  if (
-    !selectedTemplate.includes("tower") &&
-    divisions > 0 &&
-    length / divisions > 4
-  ) {
+  if (!selectedTemplate.includes("tower") && divisions > 0 && length / divisions > 4) {
     alerts.push({
-      message:
-        "Identificamos que o espaçamento entre as divisões internas está muito longo, o que pode fazer as barras dobrarem com facilidade. Recomendamos aumentar o número de divisões.",
+      message: "Painéis muito longos — risco de flambagem das barras.",
       type: "warning",
     });
   }
-
-  // 4. Aviso de Fundação (Solo vs. Carga)
-  if (
-    current_total_load > 30000 &&
-    (soil_type === "Areia Fofa" || soil_type === "Argila Mole")
-  ) {
+  if (current_total_load > 30000 && (soil_type === "Areia Fofa" || soil_type === "Argila Mole")) {
     alerts.push({
-      message:
-        "Identificamos que a carga aplicada é muito elevada para um solo do tipo mole ou fofo, o que pode causar o afundamento da base. Recomendamos aumentar as dimensões da sapata ou selecionar um solo mais firme.",
-      type: "warning",
-    });
-  }
-
-  // Regra Legada de Segurança
-  if (current_total_load > 20000 && height < 1.5 && alerts.length === 0) {
-    alerts.push({
-      message:
-        "Identificamos que a altura definida é reduzida para a carga informada. Recomendamos aumentar a altura da estrutura para garantir uma melhor distribuição do peso.",
+      message: "Carga elevada para solo mole — risco de recalque. Aumente a sapata.",
       type: "warning",
     });
   }
@@ -161,34 +118,47 @@ const structuralSafetyAlerts = computed(() => {
 
 const optimizeAndCloseMobile = () => {
   store.optimize();
-  if (isMobile.value) {
-    store.showMobileMenu = false;
+  if (isMobile.value) store.showMobileMenu = false;
+};
+
+const sanitizeInput = (field: string, min: number) => {
+  const formAny = form.value as any;
+  const value = formAny[field];
+  if (typeof value === "number") {
+    formAny[field] = Math.max(min, value);
   }
 };
 
-const resetParameters = () => {
-  store.form.length = 12.0;
-  store.form.height = 2.5;
-  store.form.width = 2.0;
-  store.form.divisions = 6;
-  store.form.dead_load = 2000.0;
-  store.form.live_load = 5000.0;
-  store.form.water_lamina = 0.0;
-  store.form.topWidth = 1.0;
-  store.form.sections = 5;
-  store.form.soil_type = "Rocha";
-  store.form.custom_ks = 80000;
-  store.form.footing_b = 0.6;
-  store.form.footing_l = 0.6;
+// Toggle de materiais permitidos.
+const toggleMaterialPermitido = (nome: string) => {
+  if (!restricoes.value.materiais_permitidos) {
+    restricoes.value.materiais_permitidos = [nome];
+    return;
+  }
+  const idx = restricoes.value.materiais_permitidos.indexOf(nome);
+  if (idx >= 0) {
+    restricoes.value.materiais_permitidos.splice(idx, 1);
+    if (restricoes.value.materiais_permitidos.length === 0) {
+      restricoes.value.materiais_permitidos = null;
+    }
+  } else {
+    restricoes.value.materiais_permitidos.push(nome);
+  }
 };
 
-/**
- * Garante que valores críticos nunca fiquem fora dos limites de segurança.
- */
-const sanitizeInput = (field: keyof typeof store.form, min: number) => {
-  const value = store.form[field];
-  if (typeof value === "number") {
-    store.form[field] = Math.max(min, value) as any;
+const toggleFamiliaPermitida = (familia: string) => {
+  if (!restricoes.value.familias_permitidas) {
+    restricoes.value.familias_permitidas = [familia];
+    return;
+  }
+  const idx = restricoes.value.familias_permitidas.indexOf(familia);
+  if (idx >= 0) {
+    restricoes.value.familias_permitidas.splice(idx, 1);
+    if (restricoes.value.familias_permitidas.length === 0) {
+      restricoes.value.familias_permitidas = null;
+    }
+  } else {
+    restricoes.value.familias_permitidas.push(familia);
   }
 };
 </script>
@@ -196,473 +166,430 @@ const sanitizeInput = (field: keyof typeof store.form, min: number) => {
 <template>
   <aside
     :class="[
-      'fixed inset-y-0 left-0 z-50 w-full md:w-80 bg-gray-800 border-r border-gray-700 shadow-2xl transition-transform duration-300 ease-in-out md:translate-x-0 md:static',
+      'fixed inset-y-0 left-0 z-50 w-full md:w-80 bg-gray-800 border-r border-gray-700 shadow-2xl transition-transform duration-300 ease-in-out md:translate-x-0 md:static overflow-y-auto',
       showMobileMenu ? 'translate-x-0' : '-translate-x-full',
     ]"
   >
     <div class="h-full flex flex-col">
       <!-- Cabeçalho -->
-      <div
-        class="relative p-6 border-b border-gray-700 bg-gray-900/50 flex flex-col items-center justify-center text-center"
-      >
-        <div>
-          <h1 class="text-xl font-bold text-white">TRUSS-OPT 3D</h1>
-          <p
-            class="text-xs text-white opacity-80 mt-1 uppercase tracking-wider"
-            title="Realiza o cálculo e a otimização de estruturas metálicas."
-          >
-            Otimizador de Treliças 3D
-          </p>
-          <p class="text-[10px] text-blue-400/80 mt-1 font-medium">
-            Desenvolvido por
-            <a
-              href="https://github.com/paulomml/truss-opt-3d"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="hover:underline text-blue-400"
-              title="Acessa o repositório no GitHub."
-            >
-              Paulo Raí Lopes de Melo
-            </a>
-          </p>
-          <!-- Ajuda e Sobre -->
-          <div class="flex gap-2 mt-3 justify-center w-full">
-            <button
-              @click="showHelpModal = true"
-              class="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md text-[10px] font-bold text-gray-300 transition-colors group"
-              title="Abre o manual de instruções."
-            >
-              <Icon
-                name="lucide:help-circle"
-                class="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition-transform"
-              />
-              AJUDA
-            </button>
-            <button
-              @click="showAboutModal = true"
-              class="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md text-[10px] font-bold text-gray-300 transition-colors group"
-              title="Exibe informações sobre o projeto."
-            >
-              <Icon
-                name="lucide:info"
-                class="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition-transform"
-              />
-              SOBRE
-            </button>
-          </div>
+      <div class="relative p-4 border-b border-gray-700 bg-gray-900/50 text-center">
+        <h1 class="text-xl font-bold text-white">TRUSS-OPT 3D</h1>
+        <p class="text-xs text-blue-400/80 mt-1 font-medium uppercase tracking-wider">
+          Dimensionamento e Otimização Paramétrica de Treliças Espaciais
+        </p>
+        <div class="flex gap-2 mt-3 justify-center">
+          <button @click="showHelpModal = true" class="flex-1 py-1.5 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md text-[10px] font-bold text-gray-300">
+            AJUDA
+          </button>
+          <button @click="showAboutModal = true" class="flex-1 py-1.5 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md text-[10px] font-bold text-gray-300">
+            SOBRE
+          </button>
         </div>
-        <button
-          v-if="isMobile"
-          @click="showMobileMenu = false"
-          class="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition"
-        >
-          <Icon name="lucide:x" class="w-6 h-6" />
-        </button>
       </div>
-      <!-- Entrada de Parâmetros -->
-      <div class="p-4 md:p-6 space-y-4 flex-grow overflow-y-auto">
-        <!-- Tipo de Estrutura -->
-        <div>
-          <label
-            class="block text-sm font-semibold text-gray-200 mb-2"
-            title="Selecione o formato da estrutura."
-            >Tipo de Estrutura</label
-          >
-          <select
-            v-model="store.form.selectedTemplate"
-            :disabled="store.loading"
-            class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-white disabled:opacity-50"
-            title="Escolha um dos modelos para iniciar."
-          >
-            <optgroup
-              v-for="cat in templateCategories"
-              :key="cat.label"
-              :label="cat.label"
-            >
-              <option
-                v-for="opt in cat.options"
-                :key="opt.value"
-                :value="opt.value"
-              >
-                {{ opt.label }}
-              </option>
-            </optgroup>
-          </select>
-        </div>
 
-        <!-- Definição de Dimensões Reais -->
-        <div class="grid grid-cols-1 gap-4">
-          <!-- Vão Livre -->
-          <div
-            :class="{
-              'opacity-50 pointer-events-none': !isSpanActive || store.loading,
-            }"
-          >
-            <label
-              class="block text-sm font-semibold text-gray-200 mb-2"
-              title="Define a distância horizontal total que a estrutura vai cobrir."
-            >
-              Comprimento do Vão (m)
-            </label>
-            <input
-              v-model.number="store.form.length"
-              @blur="sanitizeInput('length', 0.1)"
-              :disabled="!isSpanActive || store.loading"
-              type="number"
-              step="0.5"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
-              title="Insira o comprimento total em metros."
-            />
-          </div>
+      <!-- Formulário -->
+      <div class="p-4 space-y-4 flex-grow">
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SEÇÃO 1: GEOMETRIA                         -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="pt-1">
+          <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">
+            1. Geometria
+          </h3>
 
-          <!-- Altura Estrutural -->
-          <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
-            <label
-              class="block text-sm font-semibold text-gray-200 mb-2"
-              title="Define a altura máxima da estrutura."
-              >Altura da Estrutura (m)</label
-            >
-            <input
-              v-model.number="store.form.height"
-              @blur="sanitizeInput('height', 0.1)"
-              :disabled="store.loading"
-              type="number"
-              step="0.1"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
-              title="Insira a altura total em metros."
-            />
-          </div>
-
-          <!-- Largura da Seção Transversal -->
-          <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
-            <label
-              class="block text-sm font-semibold text-gray-200 mb-2"
-              title="Define a largura da estrutura. Use 0 para uma análise plana (2D)."
-              >Largura da Estrutura (m)
-              <span class="text-xs text-blue-400 font-normal"
-                >(0 = Análise 2D)</span
-              ></label
-            >
-            <input
-              v-model.number="store.form.width"
-              @blur="sanitizeInput('width', 0)"
-              :disabled="store.loading"
-              type="number"
-              step="0.1"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
-              title="Insira a largura em metros. Use 0 para modelos planos."
-            />
-          </div>
-
-          <!-- Geometria Variável para Torres -->
-          <div
-            :class="{
-              'opacity-50 pointer-events-none':
-                !isTopWidthActive || store.loading,
-            }"
-          >
-            <label
-              class="block text-sm font-semibold text-gray-200 mb-2"
-              title="Define a largura do topo para modelos de torre."
-              >Largura da Parte Superior (m)</label
-            >
-            <input
-              v-model.number="store.form.topWidth"
-              @blur="sanitizeInput('topWidth', 0.01)"
-              :disabled="!isTopWidthActive || store.loading"
-              type="number"
-              step="0.1"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
-              title="Insira a largura do topo em metros."
-            />
-          </div>
-
-          <!-- Divisões -->
-          <div
-            :class="{
-              'opacity-50 pointer-events-none':
-                !isPanelsActive || store.loading,
-            }"
-          >
-            <label
-              class="block text-sm font-semibold text-gray-200 mb-2"
-              title="Define a quantidade de divisões internas da estrutura."
-              >Painéis do Vão (Telhados/Pontes)</label
-            >
-            <input
-              v-model.number="store.form.divisions"
-              @blur="sanitizeInput('divisions', 2)"
-              :disabled="!isPanelsActive || store.loading"
-              type="number"
-              min="2"
-              max="20"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
-              title="Insira em quantas partes a estrutura será dividida."
-            />
-          </div>
-
-          <div
-            :class="{
-              'opacity-50 pointer-events-none':
-                !isSectionsActive || store.loading,
-            }"
-          >
-            <label
-              class="block text-sm font-semibold text-gray-200 mb-2"
-              title="Define o número de andares para modelos de torre."
-              >Andares (Torres)</label
-            >
-            <input
-              v-model.number="store.form.sections"
-              @blur="sanitizeInput('sections', 1)"
-              :disabled="!isSectionsActive || store.loading"
-              type="number"
-              min="1"
-              max="20"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
-              title="Insira a quantidade de níveis verticais."
-            />
-          </div>
-
-          <!-- Carregamento de Projeto -->
-          <div class="pt-2 border-t border-gray-700 mt-2 space-y-4">
-            <h3 class="text-xs font-bold text-blue-400 uppercase">
-              Carregamento Gravitacional
-            </h3>
-
-            <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
-              <label
-                class="block text-sm font-semibold text-gray-200 mb-2"
-                title="Cargas permanentes como telhas, forros e acessórios (kgf)."
-                >Carga Permanente - G (kgf)</label
-              >
-              <input
-                v-model.number="store.form.dead_load"
-                @blur="sanitizeInput('dead_load', 0)"
-                :disabled="store.loading"
-                type="number"
-                step="100"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
-              />
-            </div>
-
-            <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
-              <label
-                class="block text-sm font-semibold text-gray-200 mb-2"
-                title="Cargas variáveis de uso e manutenção (kgf)."
-                >Sobrecarga de Utilização - Q (kgf)</label
-              >
-              <input
-                v-model.number="store.form.live_load"
-                @blur="sanitizeInput('live_load', 0)"
-                :disabled="store.loading"
-                type="number"
-                step="100"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
-              />
-            </div>
-
-            <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
-              <label
-                class="block text-sm font-semibold text-gray-200 mb-2"
-                title="Lâmina d'água excepcional por entupimento (mm)."
-                >Lâmina d'Água (mm)</label
-              >
-              <input
-                v-model.number="store.form.water_lamina"
-                @blur="sanitizeInput('water_lamina', 0)"
-                :disabled="store.loading"
-                type="number"
-                step="10"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white placeholder-gray-500 disabled:opacity-50"
-              />
-            </div>
-          </div>
-
-          <!-- Configuração da Interação Solo-Estrutura (ISE) -->
-          <div class="pt-2 border-t border-gray-700 mt-2">
-            <h3 class="text-xs font-bold text-blue-400 uppercase mb-3">
-              Fundação e Solo
-            </h3>
-
-            <div
-              class="mb-3"
-              :class="{ 'opacity-50 pointer-events-none': store.loading }"
-            >
-              <label
-                class="block text-sm font-semibold text-gray-200 mb-2"
-                title="Seleciona o tipo de solo. Isso afeta a estabilidade da fundação."
-                >Tipo de Solo (Fundação)</label
-              >
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-semibold text-gray-200 mb-2">
+                Tipo de Estrutura
+                <InfoTooltip text="Define a topologia da treliça. Pratt, Howe e Fink distribuem as diagonais de formas diferentes, afetando a rigidez e a eficiência sob carga. Veja o diagrama 3D ao lado." />
+              </label>
               <select
-                v-model="store.form.soil_type"
-                :disabled="store.loading"
-                class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-white disabled:opacity-50"
-                title="Escolha o tipo de terreno predominante na obra."
+                v-model="(form as any).selectedTemplate"
+                :disabled="loading"
+                class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
               >
-                <option value="Areia Fofa">Areia Fofa</option>
-                <option value="Areia Compacta">Areia Compacta</option>
-                <option value="Argila Mole">Argila Mole</option>
-                <option value="Argila Rija">Argila Rija</option>
-                <option value="Rocha">Rocha (Rígido)</option>
-                <option value="Customizado">Customizado...</option>
+                <optgroup v-for="cat in templateCategories" :key="cat.label" :label="cat.label">
+                  <option v-for="opt in cat.options" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </optgroup>
               </select>
             </div>
 
-            <div
-              v-if="store.form.soil_type === 'Customizado'"
-              class="mb-3"
-              :class="{ 'opacity-50 pointer-events-none': store.loading }"
-            >
-              <label
-                class="block text-sm font-semibold text-gray-200 mb-2"
-                title="Define a resistência técnica específica do solo."
-                >Resistência Estimada do Solo (kN/m³)</label
-              >
-              <input
-                v-model.number="store.form.custom_ks"
-                @blur="sanitizeInput('custom_ks', 1000)"
-                :disabled="store.loading"
-                type="number"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white disabled:opacity-50"
-                title="Insira o valor da resistência do solo em kN/m³."
-              />
+            <div :class="{ 'opacity-50 pointer-events-none': !isSpanActive || loading }">
+              <label class="block text-sm font-semibold text-gray-200 mb-1">
+                Vão (m)
+                <InfoTooltip text="Distância entre os apoios, em metros. Quanto maior o vão, maiores os esforços internos. Típico: 10–30 m para coberturas." />
+              </label>
+              <input v-model.number="form.length" @blur="sanitizeInput('length', 0.1)" :disabled="!isSpanActive || loading" type="number" step="0.5" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
-                <label
-                  class="block text-sm font-semibold text-gray-200 mb-2"
-                  title="Define a largura da base de concreto (sapata) que apoia a estrutura."
-                  >Largura da Sapata (m)</label
-                >
-                <input
-                  v-model.number="store.form.footing_b"
-                  @blur="sanitizeInput('footing_b', 0.3)"
-                  :disabled="store.loading"
-                  type="number"
-                  step="0.1"
-                  min="0.3"
-                  class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white disabled:opacity-50"
-                  title="Insira a largura da sapata em metros."
-                />
+            <div :class="{ 'opacity-50 pointer-events-none': loading }">
+              <label class="block text-sm font-semibold text-gray-200 mb-1">
+                Altura (m)
+                <InfoTooltip text="Altura total da treliça. Uma altura maior reduz as forças nas barras mas aumenta o custo. Relação vão/altura ideal: 4 a 8." />
+              </label>
+              <input v-model.number="form.height" @blur="sanitizeInput('height', 0.1)" :disabled="loading" type="number" step="0.1" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+            </div>
+
+            <div :class="{ 'opacity-50 pointer-events-none': loading }">
+              <label class="block text-sm font-semibold text-gray-200 mb-1">
+                Largura (m)
+                <span class="text-xs text-blue-400">(0 = 2D)</span>
+                <InfoTooltip text="Largura transversal da treliça. Use 0 para análise 2D (plana). Para treliças espaciais 3D, informe a largura real em metros." />
+              </label>
+              <input v-model.number="form.width" @blur="sanitizeInput('width', 0)" :disabled="loading" type="number" step="0.1" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+            </div>
+
+            <div :class="{ 'opacity-50 pointer-events-none': !isTopWidthActive || loading }">
+              <label class="block text-sm font-semibold text-gray-200 mb-1">
+                Largura do Topo (m)
+                <InfoTooltip text="Largura do topo da torre (só para torres). Uma base mais larga que o topo melhora a estabilidade lateral." />
+              </label>
+              <input v-model.number="(form as any).topWidth" @blur="sanitizeInput('topWidth', 0.01)" :disabled="!isTopWidthActive || loading" type="number" step="0.1" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+            </div>
+
+            <div :class="{ 'opacity-50 pointer-events-none': !isPanelsActive || loading }">
+              <label class="block text-sm font-semibold text-gray-200 mb-1">
+                Painéis
+                <InfoTooltip text="Subdivisões do vão. Mais painéis = distribuição de cargas mais refinada, porém mais barras e juntas. Típico: 4–12." />
+              </label>
+              <input v-model.number="form.divisions" @blur="sanitizeInput('divisions', 2)" :disabled="!isPanelsActive || loading" type="number" min="2" max="20" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+            </div>
+
+            <div :class="{ 'opacity-50 pointer-events-none': !isSectionsActive || loading }">
+              <label class="block text-sm font-semibold text-gray-200 mb-1">
+                Andares (Torres)
+                <InfoTooltip text="Módulos verticais da torre (só para torres). Cada andar representa uma seção repetitiva da estrutura." />
+              </label>
+              <input v-model.number="(form as any).sections" @blur="sanitizeInput('sections', 1)" :disabled="!isSectionsActive || loading" type="number" min="1" max="20" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SEÇÃO 2: CARREGAMENTO                       -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="pt-3 border-t border-gray-700 space-y-3">
+          <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider">
+            2. Carregamento <span class="text-gray-500 font-normal">(NBR 6120)</span>
+          </h3>
+
+          <div :class="{ 'opacity-50 pointer-events-none': loading }">
+            <label class="block text-sm font-semibold text-gray-200 mb-1">
+              Carga Permanente G (kgf)
+              <InfoTooltip text="Peso próprio dos elementos construtivos sobre a treliça: telhas, terças, forro, instalações. Valor típico: 1.000–3.000 kgf por nó do banzo superior." />
+            </label>
+            <input v-model.number="(form as any).dead_load" @blur="sanitizeInput('dead_load', 0)" :disabled="loading" type="number" step="100" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+          </div>
+
+          <div :class="{ 'opacity-50 pointer-events-none': loading }">
+            <label class="block text-sm font-semibold text-gray-200 mb-1">
+              Sobrecarga Q (kgf)
+              <InfoTooltip text="Carga variável por uso (NBR 6120): pessoas, móveis, equipamentos. Para coberturas sem acesso, a norma recomenda mínimo de 25 kgf/m² de projeção horizontal." />
+            </label>
+            <input v-model.number="(form as any).live_load" @blur="sanitizeInput('live_load', 0)" :disabled="loading" type="number" step="100" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+          </div>
+
+          <div :class="{ 'opacity-50 pointer-events-none': loading }">
+            <label class="block text-sm font-semibold text-gray-200 mb-1">
+              Lâmina d'Água (mm)
+              <InfoTooltip text="Altura da lâmina de água acumulada na cobertura, simulando chuva intensa. Consulte a NBR 6120 item 6.3 para valores mínimos de projeto." />
+            </label>
+            <input v-model.number="form.water_lamina" @blur="sanitizeInput('water_lamina', 0)" :disabled="loading" type="number" step="10" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+          </div>
+
+          <!-- Vento (NBR 6123) — expansível -->
+          <div class="pt-1">
+            <button
+              @click="showVentoAvancado = !showVentoAvancado"
+              class="w-full flex items-center justify-between text-xs font-bold text-gray-400 hover:text-blue-400 transition-colors uppercase"
+            >
+              <span>Vento (NBR 6123)</span>
+              <Icon :name="showVentoAvancado ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="w-4 h-4" />
+            </button>
+
+            <div v-if="showVentoAvancado" class="mt-3 space-y-3">
+              <div>
+                <label class="block text-xs text-gray-300 mb-1">
+                  V₀ (m/s)
+                  <InfoTooltip text="Velocidade básica do vento na região, conforme mapa eólico da NBR 6123. No Brasil, varia de 30 a 50 m/s dependendo da localidade." />
+                </label>
+                <input v-model.number="parametrosVento.v0_mps" type="number" step="1" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
               </div>
-              <div :class="{ 'opacity-50 pointer-events-none': store.loading }">
-                <label
-                  class="block text-sm font-semibold text-gray-200 mb-2"
-                  title="Define o comprimento da base de concreto (sapata) que apoia a estrutura."
-                  >Comprimento da Sapata (m)</label
-                >
-                <input
-                  v-model.number="store.form.footing_l"
-                  @blur="sanitizeInput('footing_l', 0.3)"
-                  :disabled="store.loading"
-                  type="number"
-                  step="0.1"
-                  min="0.3"
-                  class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm text-white disabled:opacity-50"
-                  title="Insira o comprimento da sapata em metros."
-                />
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-xs text-gray-300 mb-1">
+                    S₁
+                    <InfoTooltip text="Fator topográfico da NBR 6123. Considera se a edificação está em topo de morro, vale ou terreno plano. Varia de 0,85 a 1,15." />
+                  </label>
+                  <input v-model.number="parametrosVento.s1" type="number" step="0.05" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-300 mb-1">
+                    S₂
+                    <InfoTooltip text="Fator de rugosidade do terreno da NBR 6123. Considera obstáculos (prédios, árvores) e altura da edificação. Varia conforme a categoria do terreno." />
+                  </label>
+                  <input v-model.number="parametrosVento.s2" type="number" step="0.05" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-300 mb-1">
+                    S₃
+                    <InfoTooltip text="Fator estatístico da NBR 6123. Baseado na vida útil e probabilidade de ocorrência do vento máximo. Edificações comuns usam S₃ = 1,00." />
+                  </label>
+                  <input v-model.number="parametrosVento.s3" type="number" step="0.05" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-300 mb-1">Direção (graus)</label>
+                <input v-model.number="parametrosVento.direcao_vento_graus" type="number" step="15" min="0" max="345" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs text-gray-300 mb-1">
+                    Ce (externo)
+                    <InfoTooltip text="Coeficiente de pressão externa da NBR 6123. Determina a sucção ou pressão do vento nas faces externas da edificação." />
+                  </label>
+                  <input v-model.number="parametrosVento.ce_externo" type="number" step="0.1" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-300 mb-1">
+                    Ci (interno)
+                    <InfoTooltip text="Coeficiente de pressão interna da NBR 6123. Depende da permeabilidade das vedações (paredes, janelas). Edificações fechadas usam Ci próximo de 0." />
+                  </label>
+                  <input v-model.number="parametrosVento.ci_interno" type="number" step="0.1" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                </div>
+              </div>
+              <div class="text-[10px] text-gray-400 italic">
+                Vk = V₀·S₁·S₂·S₃ = {{ (parametrosVento.v0_mps * parametrosVento.s1 * parametrosVento.s2 * parametrosVento.s3).toFixed(1) }} m/s
+                | q = 0,613·Vk² = {{ (0.613 * Math.pow(parametrosVento.v0_mps * parametrosVento.s1 * parametrosVento.s2 * parametrosVento.s3, 2)).toFixed(1) }} N/m²
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SEÇÃO 3: FUNDAÇÃO                           -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="pt-3 border-t border-gray-700 space-y-3">
+          <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider">
+            3. Fundação
+          </h3>
+
+          <div :class="{ 'opacity-50 pointer-events-none': loading }">
+            <label class="block text-sm font-semibold text-gray-200 mb-1">
+              Tipo de Solo
+              <InfoTooltip text="Classificação do solo de apoio. Determina o coeficiente de reação do subleito (ks) usado nos apoios elásticos (Modelo de Winkler). Solos moles geram maiores recalques." />
+            </label>
+            <select v-model="form.soil_type" :disabled="loading" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white">
+              <option>Areia Fofa</option>
+              <option>Areia Compacta</option>
+              <option>Argila Mole</option>
+              <option>Argila Rija</option>
+              <option>Rocha</option>
+              <option>Customizado</option>
+            </select>
+          </div>
+
+          <div v-if="form.soil_type === 'Customizado'" :class="{ 'opacity-50 pointer-events-none': loading }">
+            <label class="block text-sm font-semibold text-gray-200 mb-1">
+              ks (kN/m³)
+              <InfoTooltip text="Coeficiente de reação do subleito. Só usado quando Tipo de Solo = Customizado. Valores típicos: areia fofa ~8.000, rocha ~100.000 kN/m³." />
+            </label>
+            <input v-model.number="form.custom_ks" type="number" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div :class="{ 'opacity-50 pointer-events-none': loading }">
+              <label class="block text-sm font-semibold text-gray-200 mb-1">
+                Sapata B (m)
+                <InfoTooltip text="Dimensão da base da sapata no eixo X. Usada no cálculo da rigidez rotacional dos apoios. Sapatas maiores reduzem recalques." />
+              </label>
+              <input v-model.number="form.footing_b" @blur="sanitizeInput('footing_b', 0.3)" :disabled="loading" type="number" step="0.1" min="0.3" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+            </div>
+            <div :class="{ 'opacity-50 pointer-events-none': loading }">
+              <label class="block text-sm font-semibold text-gray-200 mb-1">
+                Sapata L (m)
+                <InfoTooltip text="Dimensão da base da sapata no eixo Z. Junto com B, define a rigidez rotacional dos apoios. Sapatas maiores reduzem recalques." />
+              </label>
+              <input v-model.number="form.footing_l" @blur="sanitizeInput('footing_l', 0.3)" :disabled="loading" type="number" step="0.1" min="0.3" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- SEÇÃO 4: OTIMIZADOR                         -->
+        <!-- ═══════════════════════════════════════════ -->
+        <div class="pt-3 border-t border-gray-700 space-y-3">
+          <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider">
+            4. Otimizador
+          </h3>
+
+          <!-- Modo de Desempenho -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-200 mb-1">
+              Modo de Desempenho
+              <InfoTooltip text="Controla a velocidade × qualidade da otimização. Rápido: 5 gerações (testes rápidos). Normal: 25 gerações (padrão). Preciso: 50 gerações (máxima qualidade). Customizado: você define gerações e população manualmente." />
+            </label>
+            <select
+              v-model="store.modoDesempenho"
+              :disabled="loading"
+              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+            >
+              <option value="rapido">Rápido (teste)</option>
+              <option value="normal">Normal (padrão)</option>
+              <option value="preciso">Preciso (qualidade)</option>
+              <option value="customizado">Customizado</option>
+            </select>
+          </div>
+
+          <!-- Sliders (só quando customizado) -->
+          <div v-if="store.modoDesempenho === 'customizado'" class="space-y-3">
+            <div :class="{ 'opacity-50 pointer-events-none': loading }">
+              <label class="block text-sm font-semibold text-gray-200 mb-1">
+                Gerações: {{ form.ag_geracoes }}
+                <InfoTooltip text="Número de iterações do Algoritmo Genético. Mais gerações = solução mais otimizada, porém maior tempo de processamento. Típico: 5–100." />
+              </label>
+              <input v-model.number="form.ag_geracoes" :disabled="loading" type="range" min="1" max="200" class="w-full accent-blue-500" />
+              <div class="flex justify-between text-[10px] text-gray-500">
+                <span>1</span><span>50</span><span>100</span><span>200</span>
+              </div>
+            </div>
+            <div :class="{ 'opacity-50 pointer-events-none': loading }">
+              <label class="block text-sm font-semibold text-gray-200 mb-1">
+                População: {{ form.ag_populacao }}
+                <InfoTooltip text="Número de soluções candidatas por geração. Populações maiores exploram melhor o espaço de busca, mas cada geração demora mais. Típico: 10–100." />
+              </label>
+              <input v-model.number="form.ag_populacao" :disabled="loading" type="range" min="4" max="200" class="w-full accent-blue-500" />
+              <div class="flex justify-between text-[10px] text-gray-500">
+                <span>4</span><span>50</span><span>100</span><span>200</span>
               </div>
             </div>
           </div>
 
-          <!-- Sistema de Avisos de Segurança Inteligentes -->
-          <TransitionGroup name="list" tag="div" class="space-y-3">
-            <div
-              v-for="(alert, idx) in structuralSafetyAlerts"
-              :key="idx"
-              :class="[
-                'p-4 rounded-lg border transition-all duration-300 shadow-lg',
-                alert.type === 'danger'
-                  ? 'bg-red-900/20 border-red-700/50'
-                  : 'bg-yellow-900/20 border-yellow-700/50',
-              ]"
+          <!-- Restrições Avançadas — expansível -->
+          <div class="pt-1">
+            <button
+              @click="showRestricoesAvancadas = !showRestricoesAvancadas"
+              class="w-full flex items-center justify-between text-xs font-bold text-gray-400 hover:text-blue-400 transition-colors uppercase"
             >
-              <div class="flex items-start gap-3">
-                <Icon
-                  :name="
-                    alert.type === 'danger'
-                      ? 'lucide:alert-octagon'
-                      : 'lucide:alert-triangle'
-                  "
-                  :class="[
-                    'w-5 h-5 shrink-0 mt-0.5',
-                    alert.type === 'danger'
-                      ? 'text-red-400'
-                      : 'text-yellow-400',
-                  ]"
-                />
-                <p class="text-xs leading-relaxed text-gray-200">
-                  {{ alert.message }}
+              <span>Restrições Avançadas</span>
+              <Icon :name="showRestricoesAvancadas ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="w-4 h-4" />
+            </button>
+
+            <div v-if="showRestricoesAvancadas" class="mt-3 space-y-3">
+              <!-- Materiais -->
+              <div>
+                <label class="block text-xs text-gray-300 mb-1">
+                  Materiais Permitidos
+                  <InfoTooltip text="Seleciona quais aços estruturais o GA pode usar (A36, MR250, SAC300…). Cada um tem resistência (fy) e custo diferentes. O otimizador escolhe o de melhor custo-benefício. Vazio = todos disponíveis." />
+                </label>
+                <div class="space-y-1 max-h-32 overflow-y-auto">
+                  <label
+                    v-for="mat in materiais"
+                    :key="mat.id"
+                    class="flex items-center gap-2 text-xs text-gray-200 cursor-pointer hover:bg-gray-700/50 px-2 py-1 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      :checked="restricoes.materiais_permitidos?.includes(mat.nome) || false"
+                      @change="toggleMaterialPermitido(mat.nome)"
+                      class="rounded"
+                    />
+                    <span>{{ mat.nome }} <span class="text-gray-500">({{ mat.fy_mpa }} MPa · R$ {{ mat.custo_kg.toFixed(2) }}/kg)</span></span>
+                  </label>
+                </div>
+                <p v-if="!restricoes.materiais_permitidos" class="text-[10px] text-gray-500 italic mt-1">
+                  Vazio = todos os materiais
                 </p>
               </div>
+
+              <!-- Famílias -->
+              <div>
+                <label class="block text-xs text-gray-300 mb-1">
+                  Famílias de Perfis
+                  <InfoTooltip text="Restringe as famílias de perfis disponíveis: L (cantoneiras), RHS (tubos retangulares), Ue (U enrijecido). Menos famílias = busca mais rápida. Vazio = todas disponíveis." />
+                </label>
+                <div class="flex flex-wrap gap-2">
+                  <label
+                    v-for="fam in familiasDisponiveis"
+                    :key="fam"
+                    class="flex items-center gap-1 text-xs text-gray-200 cursor-pointer bg-gray-700 px-2 py-1 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      :checked="restricoes.familias_permitidas?.includes(fam) || false"
+                      @change="toggleFamiliaPermitida(fam)"
+                    />
+                    {{ fam }}
+                  </label>
+                </div>
+                <p v-if="!restricoes.familias_permitidas" class="text-[10px] text-gray-500 italic mt-1">
+                  Vazio = todas as famílias
+                </p>
+              </div>
+
+              <!-- Penalidade de diversidade -->
+              <label class="flex items-center gap-2 text-xs text-gray-200 cursor-pointer">
+                <input type="checkbox" v-model="restricoes.usar_penalidade_diversidade" />
+                <span>
+                  Penalizar muitos perfis distintos
+                  <InfoTooltip text="Ativa penalidade no GA para soluções com muitos tipos de perfis diferentes. Incentiva a padronização, reduzindo complexidade e custo de fabricação." />
+                </span>
+              </label>
+              <p class="text-[10px] text-gray-500 italic">
+                Reduz complexidade de fabricação limitando perfis distintos.
+              </p>
             </div>
-          </TransitionGroup>
+          </div>
         </div>
 
-        <!-- Comandos de Execução do Solver -->
-        <div class="pt-4 space-y-3">
-          <button
-            @click="optimizeAndCloseMobile"
-            :disabled="store.loading"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-all transform active:translate-y-0 disabled:bg-gray-600 text-base"
-            title="Inicia o processo de análise e dimensionamento da estrutura."
+        <!-- ═══════════════════════════════════════════ -->
+        <!-- ALERTAS DE SEGURANÇA                        -->
+        <!-- ═══════════════════════════════════════════ -->
+        <TransitionGroup name="list" tag="div" class="space-y-2">
+          <div
+            v-for="(alert, idx) in structuralSafetyAlerts"
+            :key="idx"
+            :class="[
+              'p-3 rounded-lg border',
+              alert.type === 'danger' ? 'bg-red-900/20 border-red-700/50' : 'bg-yellow-900/20 border-yellow-700/50',
+            ]"
           >
-            {{
-              store.loading
-                ? "Analisando Estrutura..."
-                : "Iniciar Análise Estrutural"
-            }}
-          </button>
+            <div class="flex items-start gap-2">
+              <Icon
+                :name="alert.type === 'danger' ? 'lucide:alert-octagon' : 'lucide:alert-triangle'"
+                :class="['w-4 h-4 shrink-0 mt-0.5', alert.type === 'danger' ? 'text-red-400' : 'text-yellow-400']"
+              />
+              <p class="text-xs leading-relaxed text-gray-200">{{ alert.message }}</p>
+            </div>
+          </div>
+        </TransitionGroup>
+      </div>
 
-          <button
-            @click="resetParameters"
-            :disabled="store.loading"
-            class="w-full bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 font-medium py-2 rounded-lg transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Retorna todos os campos para os valores padrão."
-          >
-            Resetar Valores
-          </button>
-        </div>
+      <!-- Botões -->
+      <div class="p-4 border-t border-gray-700 space-y-2">
+        <button
+          @click="optimizeAndCloseMobile"
+          :disabled="loading"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg disabled:bg-gray-600 text-base"
+        >
+          {{ loading ? "Analisando..." : "Iniciar Análise Estrutural" }}
+        </button>
+        <button
+          @click="store.resetParameters()"
+          :disabled="loading"
+          class="w-full bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 font-medium py-2 rounded-lg text-sm disabled:opacity-50"
+        >
+          Resetar Valores
+        </button>
       </div>
     </div>
   </aside>
 
-  <!-- Overlay para dispositivos móveis -->
-  <div
-    v-if="showMobileMenu"
-    @click="showMobileMenu = false"
-    class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
-  ></div>
+  <!-- Overlay mobile -->
+  <div v-if="showMobileMenu" @click="showMobileMenu = false" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"></div>
 
-  <!-- Modais de Informação -->
   <HelpModal :show="showHelpModal" @close="showHelpModal = false" />
   <AboutModal :show="showAboutModal" @close="showAboutModal = false" />
 </template>
-
-<style scoped>
-.slide-enter-active,
-.slide-leave-active {
-  transition: transform 0.3s ease-in-out;
-}
-.slide-enter-from {
-  transform: translateX(-100%);
-}
-.slide-leave-to {
-  transform: translateX(-100%);
-}
-
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.4s ease;
-}
-.list-enter-from {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-.list-leave-to {
-  opacity: 0;
-  transform: scale(0.9);
-}
-</style>

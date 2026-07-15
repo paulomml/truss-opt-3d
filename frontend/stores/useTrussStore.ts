@@ -1,261 +1,270 @@
+// stores/useTrussStore.ts — Store Pinia central do frontend.
 import { defineStore } from "pinia";
 import type {
-  TrussRequest,
-  OptimizationResponse,
-  MemberResult,
-  RawTruss,
+  RequisicaoOtimizacao,
+  RespostaOtimizacao,
+  BarraResultado,
+  TrelicaBruta,
+  RestricoesOtimizacao,
+  ParametrosVento,
+  Material,
+  Perfil,
+  StatusTarefa,
 } from "@/types/truss";
+import { watch } from "vue";
 import * as generators from "@/utils/trussGenerators";
 
 export const useTrussStore = defineStore("truss", () => {
-  const form = reactive<TrussRequest>({
+  // ----------------------------------------------------------
+  // Estado do formulário
+  // ----------------------------------------------------------
+  const form = reactive<RequisicaoOtimizacao>({
     length: 12.0,
     height: 2.5,
     width: 2.0,
     divisions: 6,
     load_cases: [],
-    water_lamina: 0.0,
-    dead_load: 2000.0,
-    live_load: 5000.0,
-    topWidth: 1.0,
-    sections: 5,
-    selectedTemplate: "pratt_roof",
     soil_type: "Rocha",
+    water_lamina: 0.0,
+    custom_ks: 80000,
     footing_b: 0.6,
     footing_l: 0.6,
-    custom_ks: 80000,
+    raw_truss: null,
+    ag_geracoes: 25,
+    ag_populacao: 30,
+    // Campos extras (não enviados ao backend).
+    ...( {
+      dead_load: 2000.0,
+      live_load: 5000.0,
+      topWidth: 1.0,
+      sections: 5,
+      selectedTemplate: "pratt_roof",
+    } as any),
   });
 
-  const result = ref<OptimizationResponse | null>(null);
-  const rawTruss = ref<RawTruss | null>(null);
+  // Parâmetros de vento (NBR 6123).
+  const parametrosVento = reactive<ParametrosVento>({
+    v0_mps: 40.0,
+    s1: 1.0,
+    s2: 1.0,
+    s3: 1.0,
+    direcao_vento_graus: 0.0,
+    ce_externo: 0.8,
+    ci_interno: 0.0,
+  });
+
+  // Restrições do espaço de busca do GA.
+  const restricoes = reactive<RestricoesOtimizacao>({
+    materiais_permitidos: null,
+    familias_permitidas: null,
+    perfis_permitidos: null,
+    perfis_excluidos: null,
+    usar_penalidade_diversidade: true,
+  });
+
+  // Modo de desempenho do GA (frontend-only, não enviado ao backend).
+  const modoDesempenho = ref<"rapido" | "normal" | "preciso" | "customizado">("normal");
+
+  // Sincroniza presets com os campos do formulário.
+  watch(modoDesempenho, (modo) => {
+    switch (modo) {
+      case "rapido":
+        form.ag_geracoes = 5;
+        form.ag_populacao = 10;
+        break;
+      case "normal":
+        form.ag_geracoes = 25;
+        form.ag_populacao = 30;
+        break;
+      case "preciso":
+        form.ag_geracoes = 50;
+        form.ag_populacao = 50;
+        break;
+    }
+  });
+
+  // ----------------------------------------------------------
+  // Estado da aplicação
+  // ----------------------------------------------------------
+  const result = ref<RespostaOtimizacao | null>(null);
+  const rawTruss = ref<TrelicaBruta | null>(null);
   const loading = ref(false);
-  const selectedMember = ref<MemberResult | null>(null);
+  const selectedMember = ref<BarraResultado | null>(null);
   const showMobileMenu = ref(false);
-
-  // WebSocket lifecycle e tracking de progresso multiprocessado.
   const mainProgress = ref(0);
-  const currentLogs = ref<Record<string, string>>({});
-  const ws = ref<WebSocket | null>(null);
-
-  // Controle de cancelamento e integridade do estado da aplicação.
-  const abortController = ref<AbortController | null>(null);
+  const taskId = ref<string | null>(null);
   const showTimeoutWarning = ref(false);
+
+  // Logs acumulados em texto (bruto, multi-linha, com prefixos [Material]).
+  const logsTexto = ref("");
+  // Metadados estruturados vindos do backend via WebSocket.
+  const dadosProgresso = ref<Record<string, any>>({});
+  // Timestamp de início da otimização (epoch ms).
+  const tempoInicio = ref(0);
+
+  // Catálogos carregados do backend.
+  const materiais = ref<Material[]>([]);
+  const perfis = ref<Perfil[]>([]);
+
+  // WebSocket para streaming.
+  const ws = ref<WebSocket | null>(null);
 
   const { addToast } = useToast();
 
+  // ----------------------------------------------------------
+  // Ações
+  // ----------------------------------------------------------
   const cancelOptimization = () => {
-    // Force close do stream e sinalização de aborto para tasks assíncronas.
     if (ws.value) {
       ws.value.close();
       ws.value = null;
     }
-    if (abortController.value) {
-      abortController.value.abort();
-      abortController.value = null;
-    }
-
-    // Cleanup do estado para prevenir memory leaks e inconsistência visual (stale state).
     loading.value = false;
     rawTruss.value = null;
-    result.value = null;
     selectedMember.value = null;
     mainProgress.value = 0;
-    currentLogs.value = {};
+    taskId.value = null;
+    logsTexto.value = "";
+    dadosProgresso.value = {};
+    tempoInicio.value = 0;
   };
 
   const handleCancel = () => {
     cancelOptimization();
     addToast(
-      "A operação foi cancelada. Os parâmetros retornaram aos valores iniciais.",
+      "Operação cancelada. Os parâmetros foram preservados.",
       "info",
     );
   };
 
-  const generateRawTruss = () => {
-    // Graph factory: Converte parâmetros reativos em topologia nodal e de membros.
-    let truss: RawTruss | null = null;
-    const {
-      length,
-      height,
-      width,
-      divisions,
-      topWidth,
-      sections,
-      selectedTemplate,
-    } = form;
+  const generateRawTruss = (): TrelicaBruta | null => {
+    const { length: L, height: H, width: W, divisions: D, ...formExtra } =
+      form as any;
+    const { topWidth, sections, selectedTemplate } = formExtra;
 
     switch (selectedTemplate) {
       case "pratt_roof":
-        truss = generators.generatePrattRoof(length, height, width, divisions);
-        break;
+        return generators.generatePrattRoof(L, H, W, D);
       case "howe_roof":
-        truss = generators.generateHoweRoof(length, height, width, divisions);
-        break;
+        return generators.generateHoweRoof(L, H, W, D);
       case "fink_roof":
-        truss = generators.generateFinkRoof(length, height, width);
-        break;
+        return generators.generateFinkRoof(L, H, W);
       case "warren_bridge":
-        truss = generators.generateWarrenBridge(
-          length,
-          height,
-          width,
-          divisions,
-        );
-        break;
+        return generators.generateWarrenBridge(L, H, W, D);
       case "pratt_bridge":
-        truss = generators.generatePrattBridge(
-          length,
-          height,
-          width,
-          divisions,
-        );
-        break;
+        return generators.generatePrattBridge(L, H, W, D);
       case "square_tower":
-        truss = generators.generateSquareTower(
-          height,
-          width,
-          topWidth,
-          sections,
-        );
-        break;
+        return generators.generateSquareTower(H, W, topWidth, sections);
       case "triangular_tower":
-        truss = generators.generateTriangularTower(
-          height,
-          width,
-          topWidth,
-          sections,
-        );
-        break;
+        return generators.generateTriangularTower(H, W, topWidth, sections);
       case "cantilever_pratt":
-        truss = generators.generateCantileverPratt(
-          length,
-          height,
-          width,
-          divisions,
-        );
-        break;
+        return generators.generateCantileverPratt(L, H, W, D);
       case "cantilever_warren":
-        truss = generators.generateCantileverWarren(
-          length,
-          height,
-          width,
-          divisions,
-        );
-        break;
+        return generators.generateCantileverWarren(L, H, W, D);
+      default:
+        return null;
     }
-    return truss;
   };
 
-  const setRawTruss = (truss: RawTruss) => {
+  const setRawTruss = (truss: TrelicaBruta) => {
     rawTruss.value = truss;
     result.value = null;
     selectedMember.value = null;
   };
 
   const optimize = async () => {
-    // Workflow de otimização estrutural.
-    // WebSockets eliminam o overhead de polling HTTP e mitigam timeouts em modelos CPU-bound.
     loading.value = true;
     mainProgress.value = 0;
-    currentLogs.value = { Status: "Conectando ao servidor..." };
+    logsTexto.value = "Status: Conectando ao servidor...";
+    dadosProgresso.value = {};
+    tempoInicio.value = Date.now();
     showTimeoutWarning.value = false;
 
     try {
-      let generated;
-      try {
-        generated = generateRawTruss();
-      } catch (genErr: any) {
-        throw new Error(
-          "Erro na geração da geometria: " +
-            (genErr.message || "parâmetros inválidos"),
-        );
-      }
-
-      if (!generated) throw new Error("Falha ao gerar geometria");
+      const generated = generateRawTruss();
+      if (!generated) throw new Error("Falha ao gerar geometria.");
 
       form.raw_truss = generated;
       rawTruss.value = generated;
 
-      const payload = { ...form };
-      if (
-        payload.custom_ks === "" ||
-        payload.custom_ks === null ||
-        (typeof payload.custom_ks === "string" &&
-          isNaN(Number(payload.custom_ks)))
-      ) {
-        payload.custom_ks = undefined;
-      }
+      // Constrói payload limpo.
+      const formAny = form as any;
+      const payload: RequisicaoOtimizacao = {
+        length: form.length,
+        height: form.height,
+        width: form.width,
+        divisions: form.divisions,
+        soil_type: form.soil_type,
+        water_lamina: form.water_lamina,
+        custom_ks: form.custom_ks ?? undefined,
+        footing_b: form.footing_b,
+        footing_l: form.footing_l,
+        raw_truss: generated,
+        load_cases: [
+          { type: "G", direction: "FY", value: -(formAny.dead_load || 0) },
+          { type: "Q", direction: "FY", value: -(formAny.live_load || 0) },
+        ],
+        parametros_vento: { ...parametrosVento },
+        restricoes: { ...restricoes },
+        ag_geracoes: form.ag_geracoes,
+        ag_populacao: form.ag_populacao,
+      };
 
-      // Converte atalhos de UI em LoadCases formais exigidos pelo motor NBR 6120/8800.
-      // Cargas são enviadas como negativas (FY para baixo) para o solver.
-      payload.load_cases = [
-        { type: "G", direction: "FY", value: -(payload.dead_load || 0) },
-        { type: "Q", direction: "FY", value: -(payload.live_load || 0) },
-      ];
-
-      // Remove campos utilitários da UI antes do envio para manter o schema do backend limpo.
-      delete payload.dead_load;
-      delete payload.live_load;
-
-      // Configuração de URL unificada que utiliza o proxy do Nuxt (Dev) ou Nginx (Prod).
-      // Isso resolve problemas de CORS/Auth em ambientes como GitHub Codespaces.
+      // Configura WebSocket (proxy do Nuxt em dev ou Nginx em prod).
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/api/ws/optimize`;
+      const wsUrl = `${protocol}//${host}/api/ws/otimizar`;
 
-      // Statefulness e complexidade de handshake em troca de latência mínima e streaming granular.
       ws.value = new WebSocket(wsUrl);
 
       ws.value.onopen = () => {
-        // Injeção do payload estrutural assim que o canal de sinalização é aberto.
         ws.value?.send(JSON.stringify(payload));
       };
 
       ws.value.onmessage = (event) => {
-        // Stream de eventos de progresso e persistência dos resultados.
         const data = JSON.parse(event.data);
 
         if (data.type === "progress") {
-          const payload = data.data;
-          mainProgress.value = payload.main_progress || 0;
-          currentLogs.value = payload.current_logs || {};
+          const p = data.data;
+          taskId.value = p.task_id;
+          mainProgress.value = p.progress || 0;
+          logsTexto.value = p.logs || "";
+          if (p.material_atual) {
+            dadosProgresso.value = { ...p };
+          }
+          tempoInicio.value = tempoInicio.value || Date.now();
         } else if (data.type === "result") {
-          // Commit do resultado final e validação de estabilidade estrutural.
-          const resultData = data.data;
-          const validatedData: OptimizationResponse = {
-            is_structurally_stable: Boolean(resultData?.is_structurally_stable),
-            status_message: String(
-              resultData?.status_message || "Resposta desconhecida",
-            ),
-            total_weight: Number(resultData?.total_weight || 0),
-            total_cost: Number(resultData?.total_cost || 0),
-            winning_material: String(resultData?.winning_material || "N/A"),
-            precamber: Number(resultData?.precamber || 0),
-            members: Array.isArray(resultData?.members)
-              ? resultData.members
-              : [],
-            nodes:
-              resultData?.nodes && typeof resultData.nodes === "object"
-                ? resultData.nodes
-                : {},
+          const r = data.data;
+          const validated: RespostaOtimizacao = {
+            is_structurally_stable: Boolean(r?.is_structurally_stable),
+            status_message: String(r?.status_message || "Concluído"),
+            total_weight: Number(r?.total_weight || 0),
+            total_cost: Number(r?.total_cost || 0),
+            winning_material: String(r?.winning_material || "N/A"),
+            precamber: Number(r?.precamber || 0),
+            max_deflection: Number(r?.max_deflection || 0),
+            real_span: Number(r?.real_span || 0),
+            max_utilization: Number(r?.max_utilization || 0),
+            num_perfis_distintos: Number(r?.num_perfis_distintos || 0),
+            geracoes_executadas: Number(r?.geracoes_executadas || 0),
+            tempo_execucao_segundos: Number(r?.tempo_execucao_segundos || 0),
+            members: Array.isArray(r?.members) ? r.members : [],
+            nodes: r?.nodes && typeof r.nodes === "object" ? r.nodes : {},
+            logs: Array.isArray(r?.logs) ? r.logs : [],
           };
 
-          result.value = validatedData;
-          if (validatedData.is_structurally_stable) {
-            // Purge da malha preliminar para liberar a heap; o renderer consome o grafo otimizado.
+          result.value = validated;
+          if (validated.is_structurally_stable) {
             rawTruss.value = null;
             addToast(
-              validatedData.status_message ||
-                "A análise foi concluída com sucesso. A estrutura dimensionada é segura.",
+              validated.status_message || "Análise concluída com sucesso.",
               "success",
             );
           } else {
             addToast(
-              validatedData.status_message ||
-                "Aviso: A estrutura atual não suporta a carga informada.",
+              validated.status_message || "Estrutura não suporta a carga.",
               "warning",
             );
-            // Não chamamos cancelOptimization() aqui para manter o result.value acessível na UI (ex: Sidebar).
           }
           loading.value = false;
           ws.value?.close();
@@ -266,52 +275,122 @@ export const useTrussStore = defineStore("truss", () => {
         }
       };
 
-      ws.value.onerror = (err) => {
-        console.error("WebSocket error:", err);
-        addToast(
-          "Não foi possível conectar ao servidor. Por favor, verifique sua conexão com a rede.",
-          "error",
-        );
+      ws.value.onerror = () => {
+        addToast("Erro de conexão com o servidor.", "error");
         cancelOptimization();
       };
 
       ws.value.onclose = () => {
-        // Watcher para quedas silenciosas de socket durante processos CPU-bound no backend.
         if (loading.value) {
-          addToast(
-            "Conexão perdida. Por favor, tente calcular novamente.",
-            "error",
-          );
+          addToast("Conexão perdida. Tente novamente.", "error");
           cancelOptimization();
         }
         ws.value = null;
       };
     } catch (err: any) {
       result.value = null;
-      console.error("Optimization error:", err);
-      const msg = err.message || "Erro interno no servidor de cálculo";
-      addToast("Erro no cálculo: " + msg, "error");
+      addToast("Erro: " + (err.message || "interno"), "error");
       cancelOptimization();
     }
   };
 
-  const selectMember = (member: MemberResult | null) => {
+  const selectMember = (member: BarraResultado | null) => {
     selectedMember.value = member;
   };
 
+  const resetParameters = () => {
+    const formAny = form as any;
+    formAny.length = 12.0;
+    formAny.height = 2.5;
+    formAny.width = 2.0;
+    formAny.divisions = 6;
+    formAny.dead_load = 2000.0;
+    formAny.live_load = 5000.0;
+    form.water_lamina = 0.0;
+    formAny.topWidth = 1.0;
+    formAny.sections = 5;
+    formAny.selectedTemplate = "pratt_roof";
+    form.soil_type = "Rocha";
+    form.custom_ks = 80000;
+    form.footing_b = 0.6;
+    form.footing_l = 0.6;
+    form.ag_geracoes = 25;
+    form.ag_populacao = 30;
+    modoDesempenho.value = "normal";
+  };
+
+  // ----------------------------------------------------------
+  // Catálogos
+  // ----------------------------------------------------------
+  const carregarMateriais = async () => {
+    try {
+      const resp = await $fetch<Material[]>("/api/materiais");
+      materiais.value = resp;
+    } catch (e) {
+      console.error("Erro ao carregar materiais:", e);
+    }
+  };
+
+  const carregarPerfis = async () => {
+    try {
+      const resp = await $fetch<Perfil[]>("/api/perfis");
+      perfis.value = resp;
+    } catch (e) {
+      console.error("Erro ao carregar perfis:", e);
+    }
+  };
+
+  const baixarMemorial = async (formato: "pdf" | "docx") => {
+    if (!taskId.value) {
+      addToast("Nenhuma tarefa concluída para gerar memorial.", "warning");
+      return;
+    }
+    try {
+      const blob = await $fetch<Blob>(
+        `/api/tarefas/${taskId.value}/memorial/${formato}`,
+        { responseType: "blob" },
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `memorial_tarefa_${taskId.value}.${formato}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      addToast(`Memorial ${formato.toUpperCase()} baixado.`, "success");
+    } catch (e: any) {
+      addToast("Erro ao gerar memorial: " + (e.message || ""), "error");
+    }
+  };
+
   return {
+    // Estado
     form,
+    parametrosVento,
+    restricoes,
     result,
     rawTruss,
     loading,
     mainProgress,
-    currentLogs,
+    taskId,
     selectedMember,
     showMobileMenu,
     showTimeoutWarning,
+    logsTexto,
+    dadosProgresso,
+    tempoInicio,
+    modoDesempenho,
+    materiais,
+    perfis,
+    // Ações
     cancelOptimization: handleCancel,
     setRawTruss,
     optimize,
     selectMember,
+    resetParameters,
+    carregarMateriais,
+    carregarPerfis,
+    baixarMemorial,
   };
 });

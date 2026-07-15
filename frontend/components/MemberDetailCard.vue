@@ -92,7 +92,7 @@ const close = () => {
   <div>
     <div
       v-if="isMobile && store.selectedMember"
-      class="fixed inset-0 z-[1050] flex items-end"
+      class="fixed inset-0 z-[9999] flex items-end"
     >
       <Transition
         enter-active-class="transition-opacity duration-500 ease-out"
@@ -239,7 +239,7 @@ const close = () => {
     <Transition name="fade">
       <div
         v-if="store.selectedMember && !isMobile"
-        class="fixed top-8 right-8 w-80 bg-gray-800/90 backdrop-blur shadow-2xl rounded-lg border border-gray-700 p-6 z-[1050] hidden lg:block"
+        class="fixed top-8 right-8 w-80 bg-gray-800/90 backdrop-blur shadow-2xl rounded-lg border border-gray-700 p-6 z-[9999] hidden lg:block"
       >
         <div class="flex justify-between items-start mb-4">
           <h3 class="font-bold text-white text-lg">Detalhes do Elemento</h3>

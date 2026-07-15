@@ -1,329 +1,571 @@
 # TRUSS-OPT 3D: Sistema Computacional para Dimensionamento e Otimização Paramétrica de Treliças Espaciais
 
 > **Instituição:** Universidade Estadual Vale do Acaraú (UVA)
->
 > **Curso:** Bacharelado em Engenharia Civil
->
 > **Disciplina:** Métodos Numéricos
->
 > **Autor:** Paulo Raí Lopes de Melo
->
 > **Professor:** Prof. Audelis Marcelo
->
-> **Período:** 2026.1
+> **Semestre:** 2026/01
 
-## 1. Visão Geral do Software
+O TRUSS-OPT 3D (Truss Optimizer 3D, Otimizador de Treliças 3D) é um sistema computacional voltado à engenharia civil, focado no dimensionamento e na otimização paramétrica de treliças espaciais via Algoritmo Genético Memético, com verificação automática das normas brasileiras NBR 8800:2008 (estruturas de aço), NBR 6120 (cargas em edificações) e NBR 6123:1988 (vento em edificações). O sistema foi desenvolvido para resolver um problema clássico de engenharia: encontrar o equilíbrio ideal entre a segurança estrutural e a viabilidade econômica, minimizando o custo total de fabricação por meio da seleção automatizada da seção transversal mais leve e mais barata que consiga resistir às cargas solicitantes, sem violar os limites normativos de resistência e estabilidade.
 
-O **TRUSS-OPT 3D** (Truss Optimizer 3D, ou Otimizador de Treliças 3D) é um sistema computacional desenvolvido para calcular, dimensionar e otimizar estruturas metálicas do tipo treliça espacial. A partir da definição geométrica e dos carregamentos pelo usuário, o software executa análises estruturais sucessivas para encontrar a combinação de perfis metálicos que atenda aos requisitos normativos de segurança (NBR 8800) com o menor peso e custo de fabricação possível.
+> **Aviso legal:** Esta ferramenta é destinada a fins educacionais e de pré-dimensionamento. Projetos reais devem ser validados por engenheiro civil habilitado e seguem os textos originais das normas ABNT.
 
-O dimensionamento tradicional de estruturas reticuladas frequentemente envolve um processo manual e iterativo de verificação de perfis comerciais, o que demanda tempo e pode resultar em estruturas superdimensionadas. Para solucionar esse problema, o TRUSS-OPT 3D automatiza o ciclo de dimensionamento, mesclando fundamentos de cálculo estrutural, métodos numéricos avançados e engenharia de software.
+## Sumário
 
-A plataforma utiliza algoritmos de busca e multiprocessamento para analisar catálogos reais de materiais, como aço e alumínio. A cada iteração, o sistema examina os esforços axiais por meio do Método dos Elementos Finitos (MEF) e verifica a instabilidade elástica. O resultado final entregue ao usuário é um projeto estrutural tecnicamente viável, que garante uma excelente relação de custo-benefício, respeitando as exigências técnicas vigentes.
+- [1. Descrição Geral](#1-descricao-geral)
+- [2. Fundamentação Teórica e Modelagem Estrutural](#2-fundamentacao-teorica-e-modelagem-estrutural)
+  - [2.1 Método dos Elementos Finitos (MEF)](#21-metodo-dos-elementos-finitos-mef)
+  - [2.2 Verificações Normativas](#22-verificacoes-normativas)
+  - [2.3 Interação Solo-Estrutura (ISE)](#23-interacao-solo-estrutura-ise)
+  - [2.4 Algoritmo Genético Memético](#24-algoritmo-genetico-memetico)
+- [3. Arquitetura do Sistema e Stack Tecnológico](#3-arquitetura-do-sistema-e-stack-tecnologico)
+- [4. Catálogo de Materiais e Perfis](#4-catalogo-de-materiais-e-perfis)
+- [5. API REST](#5-api-rest)
+- [6. Frontend](#6-frontend)
+- [7. Memorial de Cálculo](#7-memorial-de-calculo)
+- [8. Cenários de Simulação e Validação](#8-cenarios-de-simulacao-e-validacao)
+- [9. Instalação e Execução](#9-instalacao-e-execucao)
+- [10. Variáveis de Ambiente](#10-variaveis-de-ambiente)
+- [11. Testes](#11-testes)
+- [12. Licença](#12-licenca)
+- [13. Referências](#13-referencias)
 
-**Nota sobre Abstração de Interface:** Embora o motor matemático (Backend) opere sobre o rigor técnico do Método dos Elementos Finitos (MEF) e das normas brasileiras, a Interface Gráfica (Frontend) nesta versão foi intencionalmente abstraída para usuários leigos. Esta decisão visa democratizar o acesso ao pré-dimensionamento estrutural e servir como uma ferramenta educacional intuitiva, mitigando a barreira imposta pelos jargões complexos da Engenharia Civil, sem comprometer a integridade dos resultados gerados pelo solver.
+## 1. Descrição Geral
 
-## 2. Funcionalidades da Plataforma
+O software permite ao usuário:
 
-A interface da plataforma foi projetada para oferecer controle preciso sobre a modelagem estrutural. A seguir, detalham-se as principais operações que o usuário pode realizar no software:
+- Selecionar entre 9 topologias paramétricas de treliça (Pratt, Howe, Fink, Warren, torres quadradas e triangulares, balanços Pratt e Warren).
+- Definir vão, altura, largura, número de painéis e carregamentos gravitacionais.
+- Configurar parâmetros de vento conforme NBR 6123 (V0, S1, S2, S3, Ce, Ci).
+- Restringir o espaço de busca do otimizador (materiais, famílias de perfis, perfis específicos).
+- Executar a otimização assíncrona (Celery + Redis) sem bloquear a interface.
+- Visualizar a estrutura 3D com heatmap de tensões e deformada amplificada.
+- Inspecionar cada barra individualmente (força axial, taxa de utilização, fator chi, fator Q, índice de esbeltez).
+- Exportar memorial de cálculo em PDF ou DOCX com referências às equações NBR utilizadas.
 
-### 2.1. Modelagem Paramétrica e Topologias
+### 1.1 Características Técnicas
 
-- **Seleção de Tipologias Estruturais:** É possível gerar modelos instantaneamente a partir de configurações pré-programadas:
-  - _Coberturas:_ Tesouras Pratt, Howe e Fink.
-  - _Pontes:_ Modelos de ponte Warren e Pratt.
-  - _Torres:_ Torres autoportantes de seção quadrada ou triangular.
-  - _Balanços:_ Estruturas engastadas (marquises) nos padrões Pratt e Warren.
-- **Controle Geométrico 3D:** O usuário pode ajustar continuamente as dimensões globais da treliça:
-  - **Vão Livre ($L$):** Distância longitudinal entre os apoios.
-  - **Altura ($H$):** Altura máxima do pórtico ou flecha da cobertura.
-  - **Largura Transversal ($W$):** Profundidade tridimensional da estrutura. Caso o valor inserido seja zero, o software realiza uma análise bidimensional plana.
-  - **Largura do Topo:** Recurso exclusivo para torres, permitindo a redução da seção transversal na parte superior para a criação de geometrias tronco-piramidais.
-- **Discretização da Malha:**
-  - **Número de Painéis/Divisões:** Ajuste da quantidade de subdivisões longitudinais. Isso redistribui automaticamente os nós, montantes e diagonais, alterando o comprimento livre de flambagem de cada elemento.
-  - **Número de Seções (Torres):** Controle da quantidade de módulos verticais na montagem de torres de transmissão ou suporte.
+- **Design paramétrico e customizado:** Geração topológica flexível, adaptando dimensões (vão, altura, largura e número de divisões) para a formulação de pórticos reticulados e treliças, além de suportar geometrias personalizadas via coordenadas individuais dos nós.
+- **Visualização 3D de esforços e tensões em tempo real:** A interface reativa renderiza o modelo tridimensional com mapeamento em gradiente contínuo (azul para verde, amarelo e vermelho), destacando peças sob tração e compressão para facilitar a análise visual do comportamento elástico.
+- **Otimização baseada em catálogo discreto:** O núcleo do software utiliza um Algoritmo Genético Memético para iterar sobre um banco de dados real de perfis comerciais (cantoneiras L, tubos RHS, perfis U enrijecido Ue), refinando a estrutura grupo a grupo até alcançar a eficiência máxima de custo.
 
-### 2.2. Condições de Contorno e Interação Geotécnica
+## 2. Fundamentação Teórica e Modelagem Estrutural
 
-- **Carregamento Externo:** O sistema permite a inserção da carga total de projeto em quilogramas-força (kgf). Internamente, o valor é convertido para Newtons ($F_N = F_{kgf} \times 9,81$) e rateado como carga nodal ao longo do banzo superior da estrutura. Os esforços resultantes são reportados ao usuário em quilonewtons (kN).
-- **Cálculo de Peso Próprio:** Durante a otimização, o software contabiliza automaticamente o peso dinâmico de cada peça metálica e o converte em cargas gravitacionais nos nós correspondentes. Esse peso é calculado como o produto da área transversal do perfil ($A$), da densidade do material ($\rho$) e do comprimento do elemento.
-- **Interação Solo-Estrutura (ISE):**
-  - **Seleção de Perfil de Solo:** O usuário pode selecionar o tipo de fundação a partir de um catálogo integrado (Rocha, Areia Fofa, Areia Compacta, Argila Mole e Argila Rija).
-  - **Coeficiente Personalizado:** Permite a entrada manual do coeficiente de reação do subleito ($k_{s1}$), caso dados específicos de sondagem de solo estejam disponíveis.
-  - **Geometria da Sapata:** É possível informar as dimensões da base ($B$) e do comprimento ($L$) da fundação isolada. O sistema utiliza essas medidas para corrigir os recalques previstos e calcular as constantes das molas elásticas verticais e rotacionais, conforme detalhado na Seção 4.3.
+### 2.1 Método dos Elementos Finitos (MEF)
 
-### 2.3. Visualização 3D e Inspeção de Dados
+O núcleo de cálculo é fundamentado em princípios da mecânica dos sólidos e cálculo numérico. A matriz de rigidez global da estrutura é montada e invertida computacionalmente para a obtenção dos deslocamentos nodais e, consequentemente, das reações e esforços axiais internos de cada membro.
 
-- **Renderização Espacial Interativa:** O modelo calculado é exibido em um ambiente 3D interativo, no qual o usuário pode rotacionar, aproximar e investigar os detalhes geométricos, incluindo os contraventamentos transversais.
-- **Mapa de Cores para Taxa de Utilização:** A estrutura renderizada emprega um espectro cromático contínuo para representar graficamente o nível de solicitação de cada peça.
-  - A coloração das barras varia progressivamente do **Azul** ao **Vermelho**, indicando desde os membros com baixa porcentagem de utilização até aqueles que operam próximos ao limite de sua capacidade resistente (Taxa de Utilização $U \approx 1.0$).
-- **Inspeção Detalhada por Peça:** Ao clicar em qualquer barra do modelo renderizado, um painel lateral exibe dados específicos daquele elemento:
-  - Força axial atuante (em kN).
-  - Perfil comercial atribuído pelo algoritmo (ex.: tubo quadrado 100x100x5.0).
-  - Taxa de Utilização ($U$), indicando o nível de solicitação da peça frente à sua resistência nominal.
-  - Tipo de esforço predominante.
+$$[K]\{D\} = \{F\}$$
 
-### 2.4. Feedback de Otimização e Resultados
+Os nós são submetidos a restrições que simulam os apoios físicos, permitindo graus de liberdade para translação e rotação. O sistema suporta apoios rotulados (Pinned), engastes perfeitos (Fixed), apoios de rolete (Roller) e apoios elásticos (modelo de Winkler). O cálculo de superposição considera o somatório da carga permanente (peso próprio distribuído em todos os nós baseado no comprimento e densidade do perfil) e do carregamento externo variável, distribuído nas faces superiores da treliça.
 
-- **Alertas de Inconsistência:** O sistema emite alertas preventivos caso as dimensões propostas gerem esbeltezes excessivas ou relações geométricas inviáveis.
-- **Acompanhamento de Processamento:** Durante o cálculo, o usuário visualiza na tela o registro (log) de testes em tempo real, podendo observar quais materiais estão sendo avaliados e quais perfis foram descartados por não atenderem às normas.
-- **Resumo Econômico:** Ao final do processamento, a plataforma exibe o material que resultou no melhor custo-benefício, o peso total da treliça otimizada (em kg) e o custo estimado para a aquisição do material estrutural.
+### 2.2 Verificações Normativas
 
-## 3. Arquitetura de Software e Tecnologias Adotadas
+A avaliação do Estado Limite Último (ELU) determina a taxa de utilização U, garantindo U <= 1.0 para todas as combinações de carregamento.
 
-A plataforma adota uma arquitetura orientada a serviços, separando o gerenciamento da interface do usuário da carga de processamento numérico, o que confere maior robustez e escalabilidade.
+#### NBR 8800:2008 (Estruturas de Aço)
 
-### 3.1. Servidor de Cálculo Numérico (Backend)
+**Esbeltez máxima:** O índice de esbeltez λ é limitado a 200 para peças comprimidas (Item 5.3.4.1) e 300 para peças tracionadas (Item 5.2.8.1). O comprimento de flambagem Lk é obtido por varredura de grafo, diferenciando o plano da treliça (Lk = L) do plano fora da treliça (Lk = L para banzos).
 
-- **Linguagem e Framework:** O backend é desenvolvido em Python 3.11+, operando sobre o framework web assíncrono FastAPI. A validação estruturada das requisições e a modelagem de dados são asseguradas pela biblioteca Pydantic.
-- **Solver Estrutural:** O cálculo dos esforços e deslocamentos é executado via **PyNite FEA**. Diferente de modelos de pórtico rígido, o sistema aplica liberações de momentos fletores (`model.def_releases`) em ambas as extremidades de todas as barras, garantindo o comportamento mecânico de treliça rotulada pura.
-- **Otimização Concorrente Segura:** A arquitetura utiliza o módulo `multiprocessing` para testar múltiplas ligas metálicas simultaneamente. Para prevenir ataques de Negação de Serviço (DoS) e vazamentos de memória (Memory Leaks) causados por processos órfãos, implementou-se uma dupla camada de segurança:
-  - **Graceful Shutdown:** Sinalização atômica via `multiprocessing.Event` para interrupção controlada de iterações.
-  - **Hard Kill:** Extermínio forçado de PIDs via `os.kill(pid, SIGKILL)` para limpar workers que permaneçam bloqueados em cálculos matriciais intensos.
-- **Comunicação Assíncrona:** A transmissão dos logs de progresso do servidor para o cliente ocorre através de conexões WebSocket.
-- **Gerenciamento de Recursos:** O código possui rotinas internas (via biblioteca `psutil`) que encerram precocemente o processamento caso a memória RAM exceda 90%.
+**Flambagem local (Fator Q):** Conforme Anexo F da NBR 8800, para seções com relação b/t superior ao limite λr, aplica-se o fator de redução Q obtido pelo método da largura efetiva.
 
-### 3.2. Interface e Renderização (Frontend)
+**Flambagem global (Fator χ):** A força axial resistente de compressão é calculada por:
 
-- **Framework Web:** O cliente atua como uma _Single Page Application_ (SPA) construída em Nuxt 4 e Vue.js 3, empregando a _Composition API_ para proporcionar transições fluidas e estado reativo.
-- **Gerenciamento de Estado:** A biblioteca Pinia é utilizada para centralizar as variáveis geométricas e as configurações de carregamento, fornecendo um fluxo de dados limpo para os componentes de visualização.
-- **Renderizador 3D:** A exibição espacial da treliça é delegada à biblioteca TresJS, que funciona como um encapsulador declarativo e reativo para o motor WebGL Three.js.
-- **Design de Interface:** O estilo visual foi construído sobre a estrutura CSS Tailwind, assegurando a adaptação automática do layout tanto para monitores convencionais quanto para dispositivos móveis.
+$$N_{c,Rd} = \frac{\chi \cdot Q \cdot A \cdot f_y}{\gamma_{a1}}$$
 
-### 3.3. Diagrama de Arquitetura
+O índice de esbeltez reduzido λ0 é:
 
-```mermaid
-graph TD
-  subgraph Client_Side [Frontend: Nuxt 4]
-    UI[Painel de Controles] --> Store[Estado Global: Pinia]
-    Store --> 3DViewer[Visualizador 3D: TresJS]
-    Store --> WebSocketClient[Recepção de Logs]
-  end
+$$\lambda_0 = \sqrt{\frac{Q \cdot A \cdot f_y}{N_e}}$$
 
-  subgraph Gateway [Rede e Roteamento]
-    Nginx[Proxy Reverso Nginx]
-  end
+Com N_e = min(N_ex, N_ey) sendo a carga crítica de Euler no menor eixo de inércia:
 
-  subgraph Server_Side [Backend: FastAPI]
-    Endpoint[API REST] --> Orquestrador[Módulo de Otimização]
-    Orquestrador --> Pool[Processamento Paralelo]
+$$N_{ex} = \frac{\pi^2 E I_x}{(k_x L_x)^2} \qquad N_{ey} = \frac{\pi^2 E I_y}{(k_y L_y)^2}$$
 
-    subgraph Processos_Workers [Workers por Material -> 4 processos simultâneos]
-      Pool --> W_A36[Aço A36]
-      Pool --> W_A572[Aço A572 G50]
-      Pool --> W_Corten[Aço Corten]
-      Pool --> W_Alu[Alumínio 6061-T6]
-    end
+O fator de redução χ é obtido por:
 
-    W_A36 & W_A572 & W_Corten & W_Alu --> Solver[Motor de Elementos Finitos: PyNite]
-    W_A36 & W_A572 & W_Corten & W_Alu --> Data[(Bancos de Dados CSV)]
-  end
+$$\chi = 0{,}658^{\lambda_0^2} \quad \text{se } \lambda_0 \leq 1{,}5$$
 
-  UI <-->|JSON Payload| Nginx
-  WebSocketClient <-->|Streaming via WebSocket| Nginx
-  Nginx <--> Endpoint
+$$\chi = \frac{0{,}877}{\lambda_0^2} \quad \text{se } \lambda_0 > 1{,}5$$
+
+**Força axial resistente à tração:**
+
+$$N_{t,Rd} = \frac{A \cdot f_y}{\gamma_{a1}}$$
+
+**Momento fletor resistente (regime elástico):**
+
+$$M_{Rd} = \frac{W \cdot f_y}{\gamma_{a1}}$$
+
+**Interação N+M (Item 5.5.1.2):** Para barras submetidas à flexocompressão:
+
+$$\frac{N_{Sd}}{N_{Rd}} + \frac{8}{9} \cdot \frac{M_{Sd}}{M_{Rd}} \leq 1{,}0 \quad \text{se } \frac{N_{Sd}}{N_{Rd}} \geq 0{,}2$$
+
+$$\frac{N_{Sd}}{2 N_{Rd}} + \frac{M_{Sd}}{M_{Rd}} \leq 1{,}0 \quad \text{se } \frac{N_{Sd}}{N_{Rd}} < 0{,}2$$
+
+**Estado Limite de Serviço (ELS):** A flecha máxima é verificada em relação ao limite L/250 para combinações frequentes, conforme NBR 8800 Item 5.5.3.
+
+#### NBR 6120 (Ações em Edificações)
+
+As cargas variáveis mínimas seguem a NBR 6120 Item 6.4 (0,25 a 0,50 kN/m² conforme inclinação da cobertura). Uma carga de manutenção de 1 kN concentrado é aplicada isoladamente em cada nó do banzo superior. Casos assimétricos são gerados automaticamente (meia carga esquerda, meia direita e nós alternados). A verificação de empoçamento progressivo segue o Anexo D da norma. As combinações ELU seguem a NBR 8681 (Normal, Secundário, Alívio, Sem Vento, Vento Dominante), e as combinações ELS contemplam Flecha Total, Frequente e Quase permanente.
+
+#### NBR 6123:1988 (Vento em Edificações)
+
+A velocidade característica do vento é:
+
+$$V_k = V_0 \cdot S_1 \cdot S_2 \cdot S_3$$
+
+A pressão dinâmica é:
+
+$$q = 0{,}613 \cdot V_k^2 \quad (\text{N/m}^2)$$
+
+A força por elemento é $F = (C_e - C_i) \cdot q \cdot A_s$, aplicada tridimensionalmente: forças verticais no banzo superior (sucção), forças horizontais nas fachadas e força de arrasto global $F_a = C_a \cdot q \cdot A_e$. O ângulo de incidência do vento (0° a 345°) é decomposto em componentes nos eixos X e Z.
+
+### 2.3 Interação Solo-Estrutura (ISE)
+
+A resposta estrutural real depende da rigidez da fundação subjacente, fator incorporado diretamente no modelo matricial por meio de molas elásticas (modelo de Winkler).
+
+**Modelagem de apoios elásticos:** O coeficiente de reação do subleito k_s1 é obtido empiricamente por tipo de solo. O sistema suporta seis tipos de solo predefinidos (Areia Fofa, Areia Compacta, Argila Mole, Argila Rija, Rocha e Customizado).
+
+Para solos granulares (areias), aplica-se a correção geométrica de Terzaghi:
+
+$$k_s = k_{s1} \cdot \left( \frac{B + 0{,}305}{2B} \right)^2$$
+
+Para solos coesivos (argilas):
+
+$$k_s = k_{s1} \cdot \left( \frac{0{,}305}{B} \right)$$
+
+A rotação da base é penalizada por molas rotacionais $K_{\theta x}$ e $K_{\theta z}$, calculadas pelo produto do coeficiente $k_s$ pelo momento de inércia da base da fundação ($I_x$ e $I_z$).
+
+### 2.4 Algoritmo Genético Memético
+
+O otimizador implementa um Algoritmo Genético Memético (MA), combinando exploração global via GA com refinamento local via hill climbing com aprendizado Lamarckiano.
+
+#### 2.4.1 Codificação
+
+Cada indivíduo é um vetor de inteiros $[g_0, g_1, ..., g_N]$, onde cada posição representa o índice do perfil no catálogo PostgreSQL para um grupo estrutural (Banzo Superior, Banzo Inferior, Diagonal, Montante etc). As variáveis são discretas, o que garante soluções fabricáveis a partir de perfis comerciais reais.
+
+#### 2.4.2 Função Objetivo
+
+O GA minimiza o custo total em reais (R$), não apenas o peso:
+
+$$f(\mathbf{x}) = W(\mathbf{x}) \cdot c_{kg} + \sum_{i} p_i$$
+
+Onde $W(\mathbf{x})$ é o peso total da estrutura em kg, $c_{kg}$ é o custo unitário do material (R$/kg), e as penalidades $p_i$ são:
+
+1. Violação normativa NBR 8800 (ELU): R$ 1e6 $\cdot (U - 1{,}0)$ para cada barra com $U > 1{,}0$.
+2. Violação de flecha (ELS): R$ 1e6 $\cdot$ (excesso) se flecha $> L/250$.
+3. Penalidade de padronização: R$ 5e3 $\cdot$ (excesso) se o número de perfis distintos exceder o limite configurado ($AG\_MAX\_PERFIS\_DISTINTOS$).
+
+#### 2.4.3 Fase Genética (Exploração Global)
+
+| Operador | Método | Parâmetro |
+|----------|--------|-----------|
+| Seleção | Torneio (k=3) | AG_INDICE_TORNEIO |
+| Crossover | 2 pontos (cxTwoPoint) | AG_PROBABILIDADE_CRUZAMENTO (0,7) |
+| Mutação | Uniforme inteira (mutUniformInt, indpb=1/N) | AG_PROBABILIDADE_MUTACAO (0,15) |
+| Elitismo | Hall of Fame (top 1) | Sempre preserva o melhor |
+
+#### 2.4.4 Fase Memética (Refinamento Local)
+
+A cada geração, após a variação genética, os melhores aproximadamente 30% dos indivíduos passam por uma busca local hill climbing first-improvement com reinício:
+
+```
+Para cada grupo no indivíduo:
+  1. Tentar perfil imediatamente mais leve (índice -1)
+  2. Se melhorar o custo, manter e reiniciar varredura
+  3. Senão, tentar perfil imediatamente mais pesado (índice +1)
+  4. Se melhorar, manter e reiniciar varredura
+  5. Senão, passar ao próximo grupo
+Repetir até nenhuma troca unitária melhorar o fitness
 ```
 
-## 4. Fundamentação Teórica e Modelagem Estrutural
+Características do algoritmo memético:
 
-O núcleo analítico do software é balizado pelos preceitos da mecânica dos sólidos, métodos matriciais e engenharia geotécnica.
+- Aprendizagem Lamarckiana: o cromossomo é atualizado com a solução melhorada.
+- Cache de avaliação: combinações de perfis já avaliadas na mesma execução são reutilizadas, evitando análises MEF redundantes.
+- Direção bidirecional: diferente do algoritmo guloso original (que só subia perfis), o hill climbing pode subir ou descer, escapando de superdimensionamentos.
+- Controlável via AG_USAR_REFINAMENTO_LOCAL (padrão true). Desative para usar GA puro.
 
-### 4.1. Método dos Elementos Finitos (MEF)
+```mermaid
+flowchart TD
+    Start([Início]) --> Init[Gerar população inicial aleatória]
+    Init --> Eval[Avaliar fitness de todos os indivíduos]
+    Eval --> GenLoop{Loop de gerações}
+    GenLoop --> Cancel{Cancelamento solicitado?}
+    Cancel -->|Sim| End([Fim])
+    Cancel -->|Não| MemCheck{Memória OK?}
+    MemCheck -->|Não| End
+    MemCheck -->|Sim| Select[Seleção por torneio]
+    Select --> Crossover[Crossover 2 pontos]
+    Crossover --> Mutation[Mutação uniforme]
+    Mutation --> LS[Busca local hill climbing]
+    LS --> SelPop[Seleção da próxima geração]
+    SelPop --> Hall[Atualizar Hall of Fame]
+    Hall --> Conv{Convergiu ou máx. gerações?}
+    Conv -->|Não| GenLoop
+    Conv -->|Sim| Best[Reconstruir melhor solução]
+    Best --> End
+```
 
-O solver PyNite FEA emprega elementos de viga-coluna tridimensionais com **seis graus de liberdade por nó**: três translações ($D_x, D_y, D_z$) e três rotações ($R_x, R_y, R_z$). Esta formulação de pórtico espacial é necessária para que o modelo de interação solo-estrutura, descrito na Seção 4.3, possa representar corretamente a rigidez rotacional das sapatas de fundação por meio de molas de apoio acopladas aos graus de liberdade $R_x$ e $R_z$ dos nós apoiados.
+#### 2.4.5 Cancelamento e Proteção de Memória
 
-Na superestrutura, o comportamento mecânico é essencialmente de treliça: toda a carga externa é aplicada como força nodal, nenhum momento externo é imposto, e a triangulação das barras garante que os esforços internos sejam predominantemente axiais. As hipóteses fundamentais incluem ligações suficientemente flexíveis para não transmitirem momentos fletores significativos entre os membros.
+O CanceladorOtimizacao permite abortar a otimização via API entre gerações. O verificador de memória lança LimiteMemoriaExcedido se a RAM do container exceder o percentual configurado (padrão 85%).
 
-A rigidez axial de cada barra é função direta de sua seção transversal ($A$), módulo de elasticidade longitudinal ($E$) e comprimento ($L$). A contribuição das rigidezes locais de todas as barras compõe a matriz de rigidez global da estrutura $[K]$. O problema é solucionado resolvendo-se o sistema linear:
+## 3. Arquitetura do Sistema e Stack Tecnológico
 
-$$\{F\} = [K] \cdot \{D\}$$
+A aplicação adota uma arquitetura cliente-servidor com processamento assíncrono para isolar a visualização intensiva do cálculo matricial pesado.
 
-onde $\{F\}$ é o vetor das forças aplicadas e $\{D\}$ é o vetor de deslocamentos nodais resultantes.
+```mermaid
+flowchart LR
+    A[Browser - Nuxt 4 + Three.js] -->|HTTP/WS| B[Nginx]
+    B --> C[FastAPI - Python 3.12]
+    B --> D[Nuxt SSR - Node 24]
+    C --> E[(PostgreSQL 16)]
+    C --> F[(Redis 7)]
+    C --> G[Celery Worker]
+    G --> E
+    G --> F
+    G --> H[PyNite MEF 3D]
+    G --> I[DEAP - GA Memético]
+    H --> J[NBR 8800/6120/6123]
+    I --> J
+```
 
-### 4.2. Verificações Normativas (NBR 8800)
+### 3.1 Princípios Arquiteturais
 
-O dimensionamento segue rigorosamente os critérios de segurança da **NBR 8800 (Projeto de estruturas de aço)**. O sistema avalia o **Estado Limite Último (ELU)**, aplicando os coeficientes de ponderação das ações ($\gamma_f = 1,4$ para cargas permanentes e variáveis) e o coeficiente de minoração da resistência ($\gamma_{a1} = 1,10$).
+- **Feature-based:** cada responsabilidade tem seu próprio diretório (api/, engineering/, optimization/, worker/, db/).
+- **Assíncrono:** tarefas CPU-bound (MEF + GA) rodam em processo Celery separado.
+- **Stateless API:** FastAPI não mantém estado entre requisições; tudo é persistido em PostgreSQL e Redis.
+- **Cache determinístico:** payloads idênticos reaproveitam resultados via hash SHA-256 em Redis.
+- **Memória protegida:** o GA aborta graciosamente se a RAM do container exceder 85% do limite.
 
-A aprovação exige que a Taxa de Utilização ($U = N_{Ed} / N_{Rd}$) seja $\le 1,0$ em todos os elementos estruturais.
+### 3.2 Fluxo de Dados
 
-#### Esforço de Tração Axial
-
-Em elementos tracionados ($N_{Ed} > 0$), a resistência de cálculo ($N_{Rd}$) é governada pelo escoamento da seção transversal bruta:
-
-$$N_{Rd} = \frac{A \cdot f_y}{\gamma_{a1}}$$
-
-#### Esforço de Compressão e Instabilidade
-
-Em membros sob compressão ($N_{Ed} < 0$), a resistência é governada pela flambagem global, considerando o eixo de menor inércia ($\min(I_x, I_y)$) para o cálculo do raio de giração $r = \sqrt{I/A}$:
-
-$$N_{Rd} = \frac{\chi \cdot A \cdot f_y}{\gamma_{a1}}$$
-
-O fator de redução $\chi$ é calculado via curvas de flambagem normativas, baseado no índice de esbeltez reduzido ($\lambda_0$):
-
-- Se $\lambda_0 \le 1,5$: $\chi = 0,658^{\lambda_0^2}$
-- Se $\lambda_0 > 1,5$: $\chi = \dfrac{0,877}{\lambda_0^2}$
-
-#### Limites de Esbeltez e Heurística de $L_k$
-
-O sistema impõe limites normativos rigorosos para evitar o uso de perfis excessivamente esbeltos, independentemente da carga:
-
-- **Compressão:** $\lambda = K \cdot L / r \le 200$
-- **Tração:** $\lambda = K \cdot L / r \le 300$
-
-Para banzos contínuos, o software utiliza uma **Heurística de $L_k$** que detecta travamentos transversais. Se um nó não possui barras de contraventamento ou transversais incidentes, o comprimento livre de flambagem fora do plano é acumulado entre os painéis adjacentes, garantindo a segurança contra instabilidade lateral e torcional.
-
-### 4.3. Estabilidade 3D e Contraventamento
-
-A geração paramétrica de modelos inclui automaticamente **Contraventamentos em X** (X-Bracing) nos planos superior e inferior, além de barras transversais de fechamento em todos os quadros. Essa configuração impede a instabilidade torcional e garante a rigidez necessária para suportar cargas tridimensionais complexas, prevenindo o colapso por deslocamento lateral.
-
-### 4.4. Interação Solo-Estrutura (Apoios Elásticos)
-
-A abordagem computacional tradicional considera apoios indeslocáveis, o que mascara os efeitos dos recalques. O software implementa o Modelo de Winkler para simular bases deformáveis.
-
-O coeficiente de reação do subleito extraído de testes padronizados ($k_{s1}$) é devidamente corrigido para refletir as dimensões físicas da sapata de fundação ($B$), embasado nas proposições de Terzaghi:
-
-- **Para solos granulares (areias):** $k_s = k_{s1} \cdot \left( \dfrac{B + 0,305}{2B} \right)^2$
-- **Para solos coesivos (argilas):** $k_s = k_{s1} \cdot \left( \dfrac{0,305}{B} \right)$
-
-Com o coeficiente corrigido, são atribuídas molas computacionais aos nós apoiados, explorado a formulação de seis graus de liberdade do solver para acoplar rigidezes tanto translacionais quanto rotacionais:
-
-- **Translação Vertical:** $K_z = k_s \cdot B \cdot L_{sapata} \quad \text{[kN/m]}$
-- **Rigidez Rotacional:** $K_{\theta} = k_s \cdot I_{base} \quad \text{[kN}\cdot\text{m/rad]}$
-
-onde $I_{base}$ é o momento de inércia da base da sapata em relação ao eixo de rotação considerado.
-
-## 5. Algoritmo de Otimização e Processo Decisório
-
-Para convergir em uma solução estrutural economicamente viável, o sistema adota um algoritmo determinístico de busca heurística sequencial.
-
-### 5.1. Etapas do Processo Iterativo
-
-1. **Agrupamento Funcional:** Os membros da treliça são alocados em grupos de similaridade construtiva (ex.: grupo de montantes, grupo de banzos inferiores) para manter a uniformidade de fabricação e montagem.
-2. **Inicialização Mínima:** O solver é iniciado atribuindo-se o menor perfil tabular disponível no banco de dados a todos os grupos simultaneamente.
-3. **Análise por Elementos Finitos:** O cálculo matricial é executado, obtendo-se as forças internas e as taxas de utilização ($U$) segundo a formulação descrita na Seção 4.2.
-4. **Atualização Seletiva (Upgrade):** Constatada uma taxa de utilização superior a 1,0 em um ou mais componentes de um grupo, este tem seu perfil incrementado para a próxima seção transversal na tabela comercial.
-5. **Convergência:** A iteração é repetida até se atingir a estabilidade global, caracterizada por $U \le 1,0$ em todos os elementos estruturais, ou até que o limite de 30 iterações seja atingido. O processamento é então finalizado e os custos calculados para o material testado.
-
-### 5.2. Fluxograma de Execução
+O usuário interage com o frontend Nuxt, que envia um payload JSON com as propriedades geométricas, os dados de carregamento e o perfil do solo via WebSocket. O FastAPI cria uma tarefa no banco de dados e a despacha para o worker Celery, que executa o algoritmo genético memético resolvendo o modelo MEF a cada avaliação. O progresso é transmitido em tempo real para o frontend via WebSocket. Ao concluir, o resultado é persistido e enviado ao cliente.
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    participant Usr as Cliente
-    participant Srv as Servidor Principal
-    participant Cpu as Processos Paralelos
-    participant Mef as Solucionador MEF
+    participant U as Usuário
+    participant F as Frontend (Nuxt)
+    participant B as Backend (FastAPI)
+    participant C as Celery Worker
+    participant D as PostgreSQL
+    participant R as Redis
+    participant S as Solver (PyNite)
 
-    Usr->>Srv: Submete parâmetros do projeto (Geometria e Solo)
-    Srv->>Cpu: Inicia 4 processos paralelos isolados por liga metálica
-
-    loop Otimização Estrutural Progressiva (máx. 30 iterações)
-        Cpu->>Cpu: Atribui os perfis mínimos aos grupos da treliça
-        Cpu->>Mef: Formula matrizes de rigidez locais e global
-        Mef->>Mef: Resolve sistema linear e processa reações
-        Mef-->>Cpu: Retorna os esforços axiais apurados
-        Cpu->>Cpu: Analisa o Estado Limite Último (U)
-
-        alt Excedeu Limite (U > 1.0)
-            Cpu->>Cpu: Atualiza o grupo subdimensionado para o próximo perfil do catálogo
-        else Estabilidade Plena (U ≤ 1.0)
-            Cpu->>Cpu: Encerra ciclo iterativo para o material correspondente
-        end
+    U->>F: Define L, H, W, divisões e cargas
+    F->>B: POST /api/ws/otimizar (JSON Payload)
+    B->>D: Criar tarefa (PENDENTE)
+    B->>C: Despachar tarefa Celery
+    C->>D: Atualizar status (EM_ANDAMENTO)
+    Loop Gerações do GA
+        C->>S: Construir e resolver modelo MEF
+        S-->>C: Retornar esforços e utilização
+        C->>C: Verificar NBR 8800 / aplicar penalidades
+        C->>D: Atualizar progresso e logs
+        D-->>F: WebSocket streaming de progresso
     end
-
-    Cpu-->>Srv: Consolida o projeto viável de menor massa de cada liga
-    Srv->>Srv: Estima o custo final multiplicando peso pelo valor unitário
-    Srv-->>Usr: Responde via API com o projeto mais econômico
-    Usr->>Usr: Processa e exibe renderização 3D colorizada
+    C->>D: Persistir resultado (CONCLUIDO)
+    D-->>F: WebSocket resultado final
+    F->>U: Renderizar visualizador 3D com heatmap
 ```
 
-## 6. Bancos de Dados de Materiais Comerciais
+### 3.3 Stack Tecnológica
 
-A otimização estrutural consulta arquivos contendo dimensões e propriedades disponíveis comercialmente, assegurando que o dimensionamento resulte em soluções executáveis na prática.
+| Camada | Tecnologia |
+|--------|-----------|
+| Frontend | Nuxt 4 + Vue 3.5 + TypeScript |
+| Visualização 3D | Three.js via @tresjs/core + @tresjs/cientos |
+| Estado | Pinia 3 |
+| Estilos | Tailwind CSS 3.4 |
+| Backend | FastAPI 0.115 + Pydantic 2.10 |
+| Servidor ASGI | Uvicorn (1 worker) |
+| Banco de Dados | PostgreSQL 16 |
+| ORM | SQLAlchemy 2.0 |
+| Broker e Cache | Redis 7 |
+| Fila de Tarefas | Celery 5.4 (1 processo por worker) |
+| MEF | PyniteFEA 3.0 |
+| Otimização | DEAP 1.4 (Algoritmo Genético) |
+| Relatórios | ReportLab 4.2 (PDF) + python-docx 1.1 (DOCX) |
+| Proxy Reverso | Nginx stable-alpine |
+| Runtime | Python 3.12 + Node.js 24 |
 
-### 6.1. Catálogo de Perfis Estruturais (`profiles.csv`)
+### 3.4 Estrutura de Diretórios
 
-A tabela inclui seções tubulares de perfil quadrado (SHS - Square Hollow Sections). O algoritmo inicia as buscas priorizando elementos de área reduzida.
+```
+truss-opt-3d/
+  docker-compose.yml              (orquestração dos serviços)
+  nginx/conf.d/default.conf       (proxy reverso)
+  backend/                        (Python 3.12 FastAPI + Celery)
+    api/                          (rotas REST, WebSocket, schemas Pydantic, memorial)
+    core/                         (config, database, celery_app, cache, memoria)
+    db/                           (modelos ORM: Material, Perfil, TarefaOtimizacao)
+    engineering/                  (modelos físicos, solver FEA, normas NBR 8800/6120/6123)
+    optimization/                 (algoritmo genético memético com DEAP)
+    worker/                       (tarefa Celery de otimização)
+    seed/                         (população inicial: 6 materiais + 32 perfis)
+    tests/                        (25 testes pytest)
+  frontend/                       (Node 24 Nuxt 4 + Three.js)
+    components/                   (TrussViewer, TrussSidebar, LoadingOverlay, etc)
+    stores/                       (Pinia: form, WebSocket, catálogos)
+    composables/                  (useToast)
+    types/                        (interfaces TypeScript)
+    utils/                        (truss3d, trussGenerators)
+```
 
-| Perfil Comercial | Área transversal ($A$) [m²] | Inércia no eixo ($I_x$) [m⁴] | Peso de Ref. (aço) [kg/m] |
-| :--------------- | :-------------------------- | :--------------------------- | :------------------------ |
-| SHS 40x40x2.5    | 0.000375                    | 0.000000084                  | 2.94                      |
-| SHS 50x50x3.0    | 0.000564                    | 0.000000201                  | 4.43                      |
-| SHS 60x60x3.0    | 0.000684                    | 0.000000361                  | 5.37                      |
-| SHS 75x75x4.0    | 0.001140                    | 0.000000958                  | 8.92                      |
-| SHS 100x100x5.0  | 0.001900                    | 0.000002870                  | 14.90                     |
-| SHS 150x150x8.0  | 0.004540                    | 0.000015100                  | 35.70                     |
-| SHS 200x200x10.0 | 0.007600                    | 0.000045300                  | 59.70                     |
+## 4. Catálogo de Materiais e Perfis
 
-> **Observação sobre o cálculo do peso próprio:** A coluna "Peso de Ref." é informativa e fornece o peso linear do perfil em aço estrutural. O software, contudo, não utiliza essa coluna para os cálculos de carga de peso próprio. O peso de cada elemento é determinado dinamicamente como $p = A \cdot \rho_{material} \cdot L$, onde $\rho_{material}$ é a densidade da liga metálica em análise. Isso garante que a contribuição do peso próprio do alumínio (2.800 kg/m³) seja corretamente distinta da do aço (7.850 kg/m³).
+O banco de dados PostgreSQL armazena 6 aços estruturais nacionais e 32 perfis comerciais, inseridos automaticamente na primeira inicialização. O otimizador seleciona o material de melhor custo benefício entre as opções disponíveis.
 
-### 6.2. Catálogo de Ligas Metálicas (`materials.csv`)
+### 4.1 Materiais Estruturais
 
-A seleção do material afeta substancialmente a rigidez final e o custo por quilograma, promovendo competição de orçamentos durante os cálculos paralelos do backend. O catálogo conta com **quatro ligas**, cada uma processada por um worker independente.
+| Material | fy (MPa) | fu (MPa) | E (GPa) | Rho (kg/m³) | Custo (R$/kg) | Norma |
+|----------|----------|----------|---------|-------------|---------------|-------|
+| A36 | 250 | 400 | 200 | 7850 | 8,45 | ASTM A36 |
+| A572-Gr50 | 345 | 450 | 200 | 7850 | 12,95 | ASTM A572 Gr.50 |
+| MR250 | 250 | 400 | 200 | 7850 | 8,80 | NBR 8800 / NBR 7007 |
+| MR350 | 350 | 450 | 200 | 7850 | 10,50 | NBR 8800 / NBR 7007 |
+| SAC300 | 300 | 420 | 200 | 7850 | 9,70 | NBR 8800 |
+| SAC350 | 350 | 420 | 200 | 7850 | 11,10 | NBR 8800 |
 
-| Especificação do Material        | Tensão de Escoamento ($f_y$) | Módulo de Elasticidade ($E$) | Densidade  | Valor de Referência |
-| :------------------------------- | :--------------------------- | :--------------------------- | :--------- | :------------------ |
-| Aço Estrutural A36               | 250 MPa                      | 200 GPa                      | 7850 kg/m³ | R\$ 8,45 / kg       |
-| Aço de Alta Resistência A572 G50 | 345 MPa                      | 200 GPa                      | 7850 kg/m³ | R\$ 12,95 / kg      |
-| Aço Patinável Corten             | 300 MPa                      | 200 GPa                      | 7850 kg/m³ | R\$ 10,00 / kg      |
-| Alumínio Estrutural 6061-T6      | 240 MPa                      | 70 GPa                       | 2800 kg/m³ | R\$ 65,00 / kg      |
+### 4.2 Perfis Comerciais
 
-## 7. Comportamentos Observados e Validação
+O catálogo contempla três famílias de perfis: cantoneiras de abas iguais (L, 10 perfis, uso em montantes e diagonais), tubos retangulares (RHS, 10 perfis, uso em banzos e montantes) e perfis U enrijecido (Ue, 12 perfis, uso em banzos de tesouras). Cada perfil possui área, momentos de inércia Ix e Iy, momento de inércia à torção J e dimensões nominais registrados no banco de dados.
 
-O sistema reproduz comportamentos técnicos previstos na teoria de dimensionamento estrutural de acordo com a variação dos parâmetros de entrada:
+## 5. API REST
 
-- **Impacto do Módulo de Elasticidade (Aço x Alumínio):** Apesar de o alumínio ser expressivamente menos denso do que o aço, o seu baixo módulo de elasticidade ($70 \text{ GPa}$) diminui sua resistência natural à instabilidade elástica global. Em simulações de grandes coberturas, é frequente que os processos de otimização resultem em perfis superdimensionados para as estruturas de alumínio puramente com a finalidade de controlar a flambagem de Euler. Diante dessa limitação física e do alto custo mercadológico do quilograma do alumínio, o aço se apresenta consistentemente como a melhor alternativa orçamentária.
-- **Consequências dos Recalques Geotécnicos:** Alterando-se as bases da simulação de fundações rígidas para solos com baixa capacidade de suporte (ex.: argilas moles), nota-se um assentamento diferencial das sapatas. O sistema ilustra de forma clara que esses deslocamentos verticais causam distorções torcionais na malha de cobertura, transferindo esforços nocivos para os pórticos superiores e exigindo rotinas severas de incremento de perfis (aumento de custo) na superestrutura a fim de compensar a deficiência da fundação subjacente.
-- **Aplicações para Aços Especiais:** Quando as configurações inseridas contêm elevadas exigências de cargas permanentes em edificações altas, os resultados apontam com frequência para as vantagens econômicas de aços como o A572 Grau 50. Devido à sua notável tensão de escoamento ($345 \text{ MPa}$), as bitolas dimensionadas são significativamente mais finas. A leveza final da estrutura compensa com vantagem financeira o custo superior por quilograma de fabricação do material em comparação com o Aço A36 comum.
+### 5.1 Endpoints Principais
 
-## 8. Guias de Instalação e Execução
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | /api/health | Health check |
+| GET | /api/materiais | Lista materiais ativos |
+| GET | /api/perfis?familia=RHS | Lista perfis (opcionalmente filtrados por família) |
+| POST | /api/otimizar | Inicia otimização, retorna task_id |
+| GET | /api/tarefas/{id} | Consulta status da tarefa por polling |
+| POST | /api/tarefas/{id}/cancelar | Cancela tarefa em andamento |
+| GET | /api/tarefas/{id}/memorial/{formato} | Download do memorial (pdf ou docx) |
+| WS | /api/ws/otimizar | Streaming de progresso em tempo real |
 
-O sistema e suas dependências associadas encontram-se empacotados por meio de ambientes virtuais (containers), facilitando as rotinas de hospedagem e depuração técnica.
+### 5.2 Exemplo de Payload
 
-### 8.1. Execução via Docker Compose (Recomendado)
+```json
+{
+  "length": 12.0,
+  "height": 2.5,
+  "width": 2.0,
+  "divisions": 6,
+  "load_cases": [
+    {"type": "G", "direction": "FY", "value": -20000.0},
+    {"type": "Q", "direction": "FY", "value": -50000.0}
+  ],
+  "soil_type": "Rocha",
+  "footing_b": 0.6,
+  "footing_l": 0.6,
+  "parametros_vento": {
+    "v0_mps": 40.0, "s1": 1.0, "s2": 1.0, "s3": 1.0,
+    "direcao_vento_graus": 0.0, "ce_externo": 0.8, "ci_interno": 0.0
+  },
+  "restricoes": {
+    "familias_permitidas": ["RHS"],
+    "usar_penalidade_diversidade": true
+  },
+  "ag_geracoes": 12,
+  "ag_populacao": 20
+}
+```
 
-A utilização da suíte Docker assegura que os ambientes do frontend, backend e o proxy de roteamento Nginx sejam ativados simultaneamente e com as versões de dependências devidamente alinhadas.
+## 6. Frontend
+
+### 6.1 Visualização 3D
+
+O componente TrussViewer usa @tresjs/core (wrapper Vue para Three.js) e oferece:
+
+- Heatmap de tensões com gradiente contínuo (azul 0% a verde 50%, amarelo 80% e vermelho 100%).
+- Modo deformada com amplificação visual dos deslocamentos nodais (fator 50x).
+- Controles orbitais para rotação, zoom e pan.
+- Seleção de barras: clique em qualquer barra para inspecionar detalhes no MemberDetailCard.
+- Apoios simbólicos: cones (Pinned), bases (Roller), blocos (Fixed).
+
+### 6.2 Painel de Controles
+
+A sidebar (TrussSidebar) segue o fluxo natural de configuração: Geometria, Carregamento (com vento NBR 6123 colapsável), Fundação e Otimizador (com modo de desempenho e restrições avançadas). Todos os campos possuem tooltips explicativos com terminologia técnica e valores típicos.
+
+### 6.3 Estado Global
+
+A store Pinia (useTrussStore) centraliza o formulário reativo, o ciclo de vida do WebSocket, os catálogos carregados do backend e as ações de memorial. O progresso da otimização é exibido em tempo real com logs por material, barra de progresso global entre todos os materiais e painel expansível de gerações.
+
+## 7. Memorial de Cálculo
+
+O memorial é gerado sob demanda em /api/tarefas/{id}/memorial/{formato} e contém:
+
+1. Dados de entrada (geometria, cargas, materiais, fundação).
+2. Casos de carga aplicados conforme NBR 6120.
+3. Combinações ELU e ELS conforme NBR 8681.
+4. Tabela de esforços por barra: força axial N, momentos M, taxa de utilização U, fator chi, fator Q, índice de esbeltez lambda e status (ok ou falha).
+5. Equações NBR 8800 utilizadas com referência ao item da norma.
+6. Cargas de vento NBR 6123 (Vk, q, Ce, Ci).
+7. Resultado da otimização: peso total, custo total, material vencedor, utilização máxima, flecha máxima e contraflecha.
+8. Barras mais solicitadas (top 5 por taxa de utilização).
+
+Formatos suportados: PDF (ReportLab) e DOCX (python-docx). O memorial é persistido em PostgreSQL (base64) para reuso.
+
+## 8. Cenários de Simulação e Validação
+
+Durante a elaboração da modelagem, foram conduzidas baterias de testes com predições numéricas:
+
+- **Baixa Carga:** Convergência rápida para os perfis iniciais do banco de dados, com taxa limite restrita apenas aos estados limites de esbeltez excessiva.
+- **Carga Crítica:** Aumentos de carga vertical ativam o ciclo completo do algoritmo memético, demandando perfis mais robustos para mitigar flechas e evitar falhas por escoamento ou flambagem.
+- **Diferentes tipos de solo:** Apoios em rocha fornecem matrizes de deslocamento restritas, enquanto solos moles propagam recalques nodais pelas molas de Winkler, induzindo perfis mais robustos.
+- **Comparação entre aços:** A validação confirma que aços de maior resistência (MR350, A572 Gr50) podem resultar em estruturas mais leves, mas o custo unitário mais elevado (R$ 10,50 a R$ 12,95/kg) faz com que o GA frequentemente prefira aços de resistência média com menor custo (MR250 a R$ 8,80/kg ou A36 a R$ 8,45/kg).
+
+## 9. Instalação e Execução
+
+### 9.1 Pré-requisitos
+
+- Docker 24+ com Docker Compose v2+
+- 4 GB de RAM disponível (recomendado)
+- Git para clonar o repositório
+
+### 9.2 Execução com Docker Compose (recomendado)
+
+Clone o repositório e inicie todos os serviços:
 
 ```bash
-# 1. Obtenha o código-fonte do repositório
-git clone https://github.com/paulomml/truss-opt-3d.git
+git clone <url-do-repositorio>
 cd truss-opt-3d
-
-# 2. Inicialize a construção e instanciação dos contêineres em background
 docker compose up --build -d
-
-# 3. A aplicação estará operante e disponível na porta roteada pelo Nginx
-# Acesse através do seu navegador local:
-http://localhost:3000
 ```
 
-### 8.2. Implantação Manual e Desenvolvimento
+Na primeira execução, o banco de dados PostgreSQL é populado automaticamente com 6 materiais e 32 perfis (via `seed/popular_banco.py`).
 
-O provisionamento independente dos serviços é indicado a profissionais interessados em inspeção de depuração contínua, criação de novos componentes ou acompanhamento de consoles.
+Para acompanhar os logs:
 
-**API Numérica Backend (FastAPI):**
+```bash
+docker compose logs -f backend worker
+```
+
+Para parar a aplicação:
+
+```bash
+docker compose down
+```
+
+Para aplicar alterações no código após modificar arquivos:
+
+```bash
+docker compose up -d --build
+```
+
+Isso reconstrói as imagens e reinicia apenas os containers alterados.
+
+**Acessos após a inicialização:**
+
+| Recurso | URL |
+|---------|-----|
+| Frontend (via Nginx) | http://localhost:80 |
+| Frontend (direto) | http://localhost:3000 |
+| Documentação da API (Swagger) | http://localhost:8000/docs |
+| Health check | http://localhost:8000/api/health |
+
+### 9.3 Desenvolvimento Local (sem Docker)
+
+Para desenvolvimento, é necessário ter Python 3.12+, Node.js 24+ e Redis rodando localmente.
+
+**Backend:**
 
 ```bash
 cd backend
-python -m venv venv
-# Ativação do ambiente de dependências:
-# Em ambientes Unix/MacOS execute: source venv/bin/activate
-# Em Microsoft Windows execute: venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-# Inicie o servidor FastAPI na porta 8000 com o recurso de auto reload habilitado
+cp .env.example .env
+# Edite .env se necessário (padrões apontam para localhost)
+python -c "from seed.popular_banco import popular_banco; popular_banco()"
 uvicorn api.main:app --reload --port 8000
 ```
 
-**Painel Gráfico Frontend (Nuxt 4):**
+Em outro terminal, inicie o worker Celery (requer Redis em execução):
+
+```bash
+celery -A core.celery_app worker --loglevel=info --concurrency=1
+```
+
+**Frontend:**
 
 ```bash
 cd frontend
 npm install
-# Inicie o servidor de desenvolvimento para renderização da interface e testes HMR
 npm run dev
 ```
 
-## 9. Ambiente de Teste Público
+O servidor de desenvolvimento do Nuxt (porta 3000) faz proxy automático das requisições `/api` para o backend (porta 8000), não sendo necessário configurar CORS manualmente.
 
-O software possui uma versão estável implantada para simulações via web. Este recurso elimina a necessidade de configurações prévias de servidores por parte de terceiros.
+### 9.4 Primeiros Passos
 
-- **Acesso ao ambiente de testes em nuvem:** [https://trussopt3d.onrender.com](https://trussopt3d.onrender.com)
+Com a aplicação rodando, siga este roteiro rápido:
+
+1. Acesse http://localhost:3000 no navegador.
+2. Na sidebar, escolha um tipo de estrutura (ex: Tesoura Pratt).
+3. Ajuste vão (12 m), altura (2,5 m) e número de painéis (6).
+4. Em Carregamento, mantenha os valores padrão de carga permanente e sobrecarga.
+5. Em Otimizador, selecione o modo de desempenho (Normal ou Rápido para testes).
+6. Clique em "Iniciar Análise Estrutural".
+7. Acompanhe o progresso em tempo real no painel de logs.
+8. Ao finalizar, explore o resultado 3D: gire a câmera, clique em barras para inspecionar, e expanda o rodapé para ver todas as métricas.
+9. Se desejar, baixe o memorial de cálculo em PDF ou Word.
+
+## 10. Variáveis de Ambiente
+
+Todas as variáveis são opcionais (têm defaults) e lidas via pydantic-settings:
+
+| Variável | Default | Descrição |
+|----------|---------|-----------|
+| POSTGRES_HOST | postgres | Host do PostgreSQL |
+| POSTGRES_USUARIO / POSTGRES_SENHA | truss | Credenciais do Postgres |
+| POSTGRES_BANCO | truss_opt | Nome do banco |
+| REDIS_HOST | redis | Host do Redis |
+| CELERY_MAX_CONCORRENCIA | 1 | Processos por worker (MEF é CPU bound) |
+| LIMITE_MEMORIA_PERCENTUAL | 85.0 | Aborta GA acima deste percentual de RAM |
+| AG_POPULACAO_TAMANHO | 20 | Tamanho da população do GA |
+| AG_GERACOES | 12 | Número de gerações |
+| AG_PROBABILIDADE_CRUZAMENTO | 0.7 | Probabilidade de crossover |
+| AG_PROBABILIDADE_MUTACAO | 0.15 | Probabilidade de mutação |
+| AG_PENALIDADE_VIOLACAO_NORMATIVA | 1.0e6 | Penalidade por violação NBR (R$) |
+| AG_PENALIDADE_DIVERSIDADE_PERFIS | 5.0e3 | Penalidade por perfis distintos extras (R$) |
+| AG_MAX_PERFIS_DISTINTOS | 4 | Limite de perfis distintos antes de aplicar multa |
+| AG_USAR_REFINAMENTO_LOCAL | true | Ativa busca local (algoritmo memético) |
+| NBR_FLECHA_LIMITE | 250.0 | Divisor do vão para ELS (L/250) |
+| NBR_ESBELTEZ_MAX_COMPRESSAO | 200.0 | Limite de lambda para compressão (NBR 8800 5.3.4.1) |
+| NBR_ESBELTEZ_MAX_TRACAO | 300.0 | Limite de lambda para tração (NBR 8800 5.2.8.1) |
+
+## 11. Testes
+
+```bash
+cd backend
+pytest -v
+```
+
+Cobertura atual: 25 testes distribuídos em:
+
+- test_nbr8800.py (9 testes): esbeltez, fator Q, chi, N_rd, interação N+M, flecha.
+- test_nbr6120.py (8 testes): cargas de cobertura, manutenção, assimetrias, combinações, empoçamento.
+- test_nbr6123.py (6 testes): Vk, q, decomposição de direção, área frontal, forças 3D.
+- test_otimizacao_ga.py (2 testes): integração GA + solver com treliça simples.
+
+Os testes usam SQLite em memória (via conftest.py) para não depender de PostgreSQL.
+
+## 12. Licença
+
+Distribuído sob licença MIT. Consulte o arquivo `LICENSE` para detalhes.
+
+## 13. Referências
+
+- ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. NBR 8800: Projeto de estruturas de aço e de estruturas mistas de aço e concreto de edifícios. Rio de Janeiro, 2008.
+- ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. NBR 6120: Ações para o cálculo de estruturas de edificações. Rio de Janeiro, 2019.
+- ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. NBR 6123: Forças devidas ao vento em edificações. Rio de Janeiro, 1988.
+- ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. NBR 14762: Dimensionamento de estruturas de aço constituídas por perfis formados a frio. Rio de Janeiro, 2010.
+- ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. NBR 8681: Ações e segurança nas estruturas. Rio de Janeiro, 2003.
+- FORTES, A. S. et al. Python FEA: PyNite. Biblioteca open-source para análise por elementos finitos.
+- FORTIN, F. A. et al. DEAP: Evolutionary Algorithms Made Easy. Journal of Machine Learning Research, v. 13, p. 2171 2175, 2012.
+- TERZAGHI, K. Theoretical Soil Mechanics. John Wiley and Sons, 1943.
+- WINKLER, E. Die Lehre von der Elasticitaet und Festigkeit. Prag, 1867.

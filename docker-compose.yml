@@ -1,14 +1,108 @@
-version: "3.8"
+# ============================================================
+# docker-compose.yml — TRUSS-OPT 3D
+# Arquitetura completa: PostgreSQL + Redis + FastAPI + Celery + Nuxt + Nginx
+# ============================================================
 
 services:
+  # ----------------------------------------------------------
+  # Banco de dados PostgreSQL
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: truss-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USUARIO:-truss}
+      POSTGRES_PASSWORD: ${POSTGRES_SENHA:-truss}
+      POSTGRES_DB: ${POSTGRES_BANCO:-truss_opt}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USUARIO:-truss} -d ${POSTGRES_BANCO:-truss_opt}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - truss-network
+
+  # ----------------------------------------------------------
+  # Redis (broker Celery + cache)
+  # ----------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: truss-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - truss-network
+
+  # ----------------------------------------------------------
+  # Backend FastAPI (Python 3.12)
+  # ----------------------------------------------------------
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: truss-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./backend:/app
+      - backend_logs:/var/log/truss
+    networks:
+      - truss-network
 
+  # ----------------------------------------------------------
+  # Worker Celery (processamento assíncrono)
+  # ----------------------------------------------------------
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: truss-worker
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+    networks:
+      - truss-network
+
+  # ----------------------------------------------------------
+  # Frontend Nuxt (Node 24)
+  # ----------------------------------------------------------
   frontend:
     build:
       context: ./frontend
@@ -16,24 +110,40 @@ services:
       args:
         - API_URL_BASE=http://backend:8000
     container_name: truss-frontend
+    restart: unless-stopped
     environment:
       - NODE_ENV=production
       - API_URL_BASE=http://backend:8000
     depends_on:
       - backend
+    ports:
+      - "3000:3000"
+    networks:
+      - truss-network
 
+  # ----------------------------------------------------------
+  # Nginx (proxy reverso)
+  # ----------------------------------------------------------
   nginx:
     image: nginx:stable-alpine
     container_name: truss-nginx
+    restart: unless-stopped
     ports:
       - "80:80"
-      - "3000:80"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       - backend
       - frontend
+    networks:
+      - truss-network
 
 networks:
-  default:
+  truss-network:
     name: truss-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_logs:

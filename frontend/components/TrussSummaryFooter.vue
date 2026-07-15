@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from "vue";
 import { useTrussStore } from "@/stores/useTrussStore";
-import { getCylinderData } from "@/utils/truss3d";
-import type { MemberResult, NodeResult } from "@/types/truss";
+import { getCylinderData, formatarNumero, formatarMoeda } from "@/utils/truss3d";
+import type { BarraResultado, NoResultado } from "@/types/truss";
 
 const store = useTrussStore();
 const isExpanded = ref(false);
@@ -11,263 +11,197 @@ const isMobile = ref(false);
 onMounted(() => {
   const checkMobile = () => {
     isMobile.value = window.innerWidth < 768;
-    if (window.innerWidth >= 1024) {
-      isExpanded.value = true;
-    } else {
-      isExpanded.value = false;
-    }
+    if (window.innerWidth >= 1024) isExpanded.value = true;
+    else isExpanded.value = false;
   };
   checkMobile();
   window.addEventListener("resize", checkMobile);
-
-  onBeforeUnmount(() => {
-    window.removeEventListener("resize", checkMobile);
-  });
+  onBeforeUnmount(() => window.removeEventListener("resize", checkMobile));
 });
 
 const trussResult = computed(() => store.result);
 
-const getMemberLength = (
-  member: MemberResult,
-  nodes: Record<string, NodeResult>,
-): number => {
+const getMemberLength = (member: BarraResultado, nodes: Record<string, NoResultado>): number => {
   const directLength = (member as any).length;
-  if (typeof directLength === "number" && directLength >= 0) {
-    return directLength;
-  }
-
-  const cylinderData = getCylinderData(member, nodes);
-  return cylinderData.length ?? 0;
+  if (typeof directLength === "number" && directLength >= 0) return directLength;
+  return getCylinderData(member, nodes).length ?? 0;
 };
 
 const totalMembers = computed(() => trussResult.value?.members?.length ?? 0);
-
-const totalNodes = computed(() =>
-  trussResult.value?.nodes ? Object.keys(trussResult.value.nodes).length : 0,
-);
+const totalNodes = computed(() => trussResult.value?.nodes ? Object.keys(trussResult.value.nodes).length : 0);
 
 const totalLength = computed(() => {
-  if (!trussResult.value?.members?.length || !trussResult.value?.nodes) {
-    return 0;
-  }
-
-  return trussResult.value.members.reduce((sum, member) => {
-    return sum + getMemberLength(member, trussResult.value!.nodes);
-  }, 0);
+  if (!trussResult.value?.members?.length || !trussResult.value?.nodes) return 0;
+  return trussResult.value.members.reduce(
+    (acc, m) => acc + getMemberLength(m, trussResult.value!.nodes),
+    0,
+  );
 });
 
-const totalWeight = computed(() => trussResult.value?.total_weight ?? 0);
-const totalCost = computed(() => trussResult.value?.total_cost ?? 0);
-const precamber = computed(() => trussResult.value?.precamber ?? 0);
-const winningMaterial = computed(
-  () => trussResult.value?.winning_material ?? "Aço",
-);
+const flechaRatio = computed(() => {
+  const r = trussResult.value;
+  if (!r || !r.real_span || !r.max_deflection) return null;
+  const ratio = r.real_span / r.max_deflection;
+  return `L/${Math.round(ratio)}`;
+});
 
-const hasData = computed(
-  () =>
-    trussResult.value != null && totalMembers.value > 0 && totalNodes.value > 0,
-);
+function formatarTempo(segundos: number): string {
+  if (!segundos) return "—";
+  const min = Math.floor(segundos / 60);
+  const seg = Math.round(segundos % 60);
+  if (min > 0) return `${min}m ${seg}s`;
+  return `${seg}s`;
+}
 
-const formattedLength = computed(() => totalLength.value.toFixed(2));
-const formattedWeight = computed(() => totalWeight.value.toFixed(2));
-const formattedPrecamber = computed(() => (precamber.value * 1000).toFixed(1));
-const formattedCost = computed(() =>
-  totalCost.value.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }),
-);
+function formatarPeso(valor: number): string {
+  if (valor >= 1000) return `${(valor / 1000).toFixed(2)} t`;
+  return `${formatarNumero(valor)} kg`;
+}
 
-const toggleSummary = () => {
-  isExpanded.value = !isExpanded.value;
+const baixarMemorial = (formato: "pdf" | "docx") => {
+  store.baixarMemorial(formato);
 };
 </script>
 
 <template>
-  <Transition name="footer-slide">
-    <footer
-      v-if="hasData && !(isMobile && store.showMobileMenu)"
-      class="fixed bottom-0 right-0 z-40 w-full md:left-80 md:w-auto"
-    >
-      <div
-        class="mx-auto flex w-full flex-col border-t border-gray-700 bg-gray-900/95 backdrop-blur-sm px-4 py-4 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.3)] sm:px-6 lg:px-8"
+  <footer
+    v-if="trussResult"
+    :class="[
+      'bg-gray-800/95 backdrop-blur-md border-t border-gray-700 transition-all duration-300',
+      isExpanded ? 'max-h-[32rem]' : 'max-h-14',
+      isMobile && store.showMobileMenu ? 'hidden' : 'block',
+    ]"
+  >
+    <div class="px-4 py-2">
+      <button
+        @click="isExpanded = !isExpanded"
+        class="w-full flex items-center justify-between text-xs text-gray-400 hover:text-white"
       >
-        <div
-          class="summary-header flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
-        >
-          <div>
-            <p class="text-sm font-semibold text-white flex items-center gap-2">
-              <Icon name="lucide:clipboard-list" class="w-5 h-5" />
-              Resumo da Estrutura Otimizada
-            </p>
-            <p class="text-xs text-gray-400 mt-1 flex gap-4">
-              <span
-                >Material Recomendado:
-                <span class="text-blue-400 font-bold uppercase">{{
-                  winningMaterial
-                }}</span></span
-              >
-              <span v-if="isMobile"
-                >Custo Estimado:
-                <span class="text-green-400 font-bold"
-                  >R$ {{ formattedCost }}</span
-                ></span
-              >
-            </p>
-          </div>
+        <span class="font-bold uppercase tracking-wider">
+          Resumo da Análise
+          <span v-if="trussResult.is_structurally_stable" class="ml-2 text-green-400">✓ Estável</span>
+          <span v-else class="ml-2 text-red-400">✗ Instável</span>
+        </span>
+        <Icon :name="isExpanded ? 'lucide:chevron-down' : 'lucide:chevron-up'" class="w-4 h-4" />
+      </button>
 
-          <button
-            type="button"
-            class="summary-toggle inline-flex items-center justify-center rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-200 transition"
-            @click="toggleSummary"
-            :aria-expanded="isExpanded"
-          >
-            {{ isExpanded ? "Ocultar" : "Ver Resumo" }}
-          </button>
+      <div v-if="isExpanded" class="mt-3 space-y-3">
+        <!-- Primeira fileira: principais indicadores -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div class="bg-gray-900/50 rounded-lg p-2">
+            <div class="text-[10px] text-gray-400 uppercase">Peso Total</div>
+            <div class="text-lg font-bold text-blue-400 font-mono">
+              {{ formatarPeso(trussResult.total_weight) }}
+            </div>
+          </div>
+          <div class="bg-gray-900/50 rounded-lg p-2">
+            <div class="text-[10px] text-gray-400 uppercase">Custo Estimado</div>
+            <div class="text-lg font-bold text-green-400 font-mono">
+              {{ formatarMoeda(trussResult.total_cost) }}
+            </div>
+          </div>
+          <div class="bg-gray-900/50 rounded-lg p-2">
+            <div class="text-[10px] text-gray-400 uppercase">Material</div>
+            <div class="text-lg font-bold text-white font-mono">
+              {{ trussResult.winning_material }}
+            </div>
+          </div>
+          <div class="bg-gray-900/50 rounded-lg p-2">
+            <div class="text-[10px] text-gray-400 uppercase">Utilização Máx.</div>
+            <div
+              :class="[
+                'text-lg font-bold font-mono',
+                trussResult.max_utilization > 1 ? 'text-red-400' : 'text-green-400',
+              ]"
+            >
+              {{ formatarNumero(trussResult.max_utilization * 100, 1) }}%
+            </div>
+          </div>
+          <div class="bg-gray-900/50 rounded-lg p-2">
+            <div class="text-[10px] text-gray-400 uppercase">Contra-flecha</div>
+            <div class="text-lg font-bold text-yellow-400 font-mono">
+              {{ formatarNumero(trussResult.precamber * 1000, 1) }} mm
+            </div>
+          </div>
         </div>
 
-        <div
-          :class="[
-            'summary-cards mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5',
-            { expanded: isExpanded, collapsed: !isExpanded },
-          ]"
-        >
-          <div
-            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
-            title="Exibe o valor total para a compra dos materiais."
-          >
-            <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
-              Custo Estimado
-            </p>
-            <p class="mt-3 text-2xl font-semibold text-green-400">
-              <span class="text-sm font-normal">R$</span> {{ formattedCost }}
-            </p>
-            <p class="mt-2 text-sm text-gray-400">
-              Custo total de aquisição dos materiais.
-            </p>
+        <!-- Segunda fileira: indicadores complementares -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div class="bg-gray-900/50 rounded-lg p-2">
+            <div class="text-[10px] text-gray-400 uppercase">Flecha Máxima</div>
+            <div class="text-lg font-bold text-yellow-400 font-mono">
+              {{ formatarNumero(trussResult.max_deflection * 1000, 1) }} mm
+            </div>
+            <div v-if="flechaRatio" class="text-[10px] text-gray-500 mt-0.5">
+              {{ flechaRatio }}
+            </div>
           </div>
-
-          <div
-            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
-            title="Exibe o peso total de toda a estrutura metálica."
-          >
-            <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
-              Peso Total
-            </p>
-            <p class="mt-3 text-2xl font-semibold text-white">
-              {{ formattedWeight }}
-              <span class="text-base font-normal text-gray-400">kg</span>
-            </p>
-            <p class="mt-2 text-sm text-gray-400">
-              Massa total considerando a liga de
-              {{ winningMaterial }}.
-            </p>
+          <div class="bg-gray-900/50 rounded-lg p-2">
+            <div class="text-[10px] text-gray-400 uppercase">Vão Real</div>
+            <div class="text-lg font-bold text-white font-mono">
+              {{ formatarNumero(trussResult.real_span, 1) }} m
+            </div>
           </div>
-
-          <div
-            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
-            title="Exibe a soma do comprimento de todas as barras de metal."
-          >
-            <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
-              Comprimento Total
-            </p>
-            <p class="mt-3 text-2xl font-semibold text-white">
-              {{ formattedLength }}
-              <span class="text-base font-normal text-gray-400">m</span>
-            </p>
-            <p class="mt-2 text-sm text-gray-400">
-              Soma do comprimento de todas as barras de metal.
-            </p>
+          <div class="bg-gray-900/50 rounded-lg p-2">
+            <div class="text-[10px] text-gray-400 uppercase">Perfis Distintos</div>
+            <div class="text-lg font-bold text-blue-400 font-mono">
+              {{ trussResult.num_perfis_distintos }}
+            </div>
           </div>
+          <div class="bg-gray-900/50 rounded-lg p-2">
+            <div class="text-[10px] text-gray-400 uppercase">Gerações</div>
+            <div class="text-lg font-bold text-gray-300 font-mono">
+              {{ trussResult.geracoes_executadas }}
+            </div>
+          </div>
+          <div class="bg-gray-900/50 rounded-lg p-2">
+            <div class="text-[10px] text-gray-400 uppercase">Tempo de Análise</div>
+            <div class="text-lg font-bold text-gray-300 font-mono">
+              {{ formatarTempo(trussResult.tempo_execucao_segundos) }}
+            </div>
+          </div>
+        </div>
 
-          <div
-            class="rounded-lg border border-gray-700 bg-gray-800 px-4 py-4"
-            title="Exibe o número total de peças individuais."
-          >
-            <p class="text-xs uppercase tracking-[0.2em] text-gray-400">
-              Quantidade de Peças
-            </p>
-            <p class="mt-3 text-2xl font-semibold text-white">
+        <!-- Fileira de metadados da estrutura -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div class="bg-gray-900/50 rounded-lg p-2 col-span-1">
+            <div class="text-[10px] text-gray-400 uppercase">Barras</div>
+            <div class="text-sm font-bold text-gray-300 font-mono">
               {{ totalMembers }}
-              <span class="text-base font-normal text-gray-400">un.</span>
-            </p>
-            <p class="mt-2 text-sm text-gray-400">
-              Total de peças para fabricação.
-            </p>
+            </div>
           </div>
-
-          <div
-            class="rounded-lg border border-blue-900/50 bg-blue-900/10 px-4 py-4"
-            title="Valor recomendado de contra-flecha para fabricação para compensar cargas permanentes (NBR 8800)."
-          >
-            <p class="text-xs uppercase tracking-[0.2em] text-blue-400">
-              Contra-flecha (Sug.)
-            </p>
-            <p class="mt-3 text-2xl font-semibold text-blue-400">
-              {{ formattedPrecamber }}
-              <span class="text-base font-normal text-blue-400/70">mm</span>
-            </p>
-            <p class="mt-2 text-sm text-gray-400">
-              Curvatura recomendada para montagem.
-            </p>
+          <div class="bg-gray-900/50 rounded-lg p-2 col-span-1">
+            <div class="text-[10px] text-gray-400 uppercase">Nós</div>
+            <div class="text-sm font-bold text-gray-300 font-mono">
+              {{ totalNodes }}
+            </div>
+          </div>
+          <div class="bg-gray-900/50 rounded-lg p-2 md:col-span-3">
+            <div class="text-[10px] text-gray-400 uppercase">Comprimento Total de Barras</div>
+            <div class="text-sm font-bold text-gray-300 font-mono">
+              {{ formatarNumero(totalLength, 1) }} m
+            </div>
           </div>
         </div>
       </div>
-    </footer>
-  </Transition>
+
+      <!-- Botões de Memorial -->
+      <div v-if="isExpanded && trussResult.is_structurally_stable" class="mt-3 flex gap-2 justify-end">
+        <button
+          @click="baixarMemorial('pdf')"
+          class="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg"
+        >
+          <Icon name="lucide:file-text" class="w-4 h-4" />
+          Memorial PDF
+        </button>
+        <button
+          @click="baixarMemorial('docx')"
+          class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg"
+        >
+          <Icon name="lucide:file-text" class="w-4 h-4" />
+          Memorial Word
+        </button>
+      </div>
+    </div>
+  </footer>
 </template>
-
-<style scoped>
-.footer-slide-enter-active,
-.footer-slide-leave-active {
-  transition:
-    transform 0.3s ease-in-out,
-    opacity 0.3s ease-in-out;
-}
-.footer-slide-enter-from,
-.footer-slide-leave-to {
-  transform: translateY(100%);
-  opacity: 0;
-}
-
-.summary-header {
-  gap: 0.75rem;
-}
-
-.summary-toggle {
-  display: inline-flex;
-}
-
-.summary-cards {
-  transition:
-    max-height 0.3s ease,
-    opacity 0.3s ease,
-    padding 0.3s ease;
-  overflow: hidden;
-}
-
-.summary-cards.collapsed {
-  max-height: 0;
-  opacity: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  pointer-events: none;
-}
-
-.summary-cards.expanded {
-  max-height: 2000px;
-  opacity: 1;
-}
-
-@media (max-width: 900px) {
-  .summary-header {
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .summary-toggle {
-    width: fit-content;
-  }
-}
-</style>
