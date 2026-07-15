@@ -147,17 +147,17 @@ def construir_e_resolver(
 
     modelo = FEModel3D()
 
-    # ----- Material (E em Pa, comprimentos em m, forças em N, rho em kg/m^3) -----
+    # Material (E em Pa, comprimentos em m, forças em N, rho em kg/m3)
     modelo.add_material(
         material.nome,
         material.e_pa,
         material.g_pa,
         material.nu,
-        material.rho_kg_m3,  # kg/m^3: consistente com E em Pa e lengths em m
+        material.rho_kg_m3,  # kg/m3: consistente com E em Pa e lengths em m
         fy=material.fy_pa,
     )
 
-    # ----- Seções (uma por perfil distinto) -----
+    # Seções (uma por perfil distinto)
     for perfil in perfil_por_grupo.values():
         if perfil.nome not in modelo.sections:
             modelo.add_section(
@@ -168,18 +168,56 @@ def construir_e_resolver(
                 perfil.j_m4,
             )
 
-    # ----- Nós -----
+    # Nós
     for nid, no in nos_entrada.items():
         modelo.add_node(nid, no.x, no.y, no.z)
+
+        usar_ise = solo_tipo is not None and solo_tipo != "Rocha"
+
         if no.support == "Pinned":
-            modelo.def_support(nid, True, True, True, False, False, False)
+            if usar_ise:
+                modelo.def_support(nid, True, False, True, False, False, False)
+            else:
+                modelo.def_support(nid, True, True, True, False, False, False)
         elif no.support == "Roller":
-            # Roller restringe apenas Y (vertical) e Z (lateral).
-            modelo.def_support(nid, False, True, True, False, False, False)
+            if usar_ise:
+                modelo.def_support(nid, False, False, True, False, False, False)
+            else:
+                modelo.def_support(nid, False, True, True, False, False, False)
         elif no.support == "Fixed":
             modelo.def_support(nid, True, True, True, True, True, True)
 
-    # ----- Barras -----
+    # ISE: aplicar molas Winkler nos nós de base
+    if solo_tipo is not None and solo_tipo != "Rocha":
+        solo_info = BANCO_SOLOS.get(solo_tipo, BANCO_SOLOS["Rocha"])
+        ks1_kN_m3 = (
+            custom_ks
+            if (solo_tipo == "Customizado" and custom_ks is not None)
+            else solo_info["ks1"]
+        )
+        B = max(footing_b, 0.305)
+        if solo_info["tipo"] == "granular":
+            ks_kN_m3 = ks1_kN_m3 * ((B + 0.305) / (2 * B)) ** 2
+        elif solo_info["tipo"] == "coesivo":
+            ks_kN_m3 = ks1_kN_m3 * (0.305 / B)
+        else:
+            ks_kN_m3 = ks1_kN_m3
+
+        ks = ks_kN_m3 * 1000.0  # kN/m3 para N/m3
+
+        K_y = ks * B * footing_l  # N/m
+        I_x = footing_l * B**3 / 12  # m4
+        I_z = B * footing_l**3 / 12  # m4
+        K_theta_x = ks * I_x  # Nm/rad
+        K_theta_z = ks * I_z  # Nm/rad
+
+        for nid, no in nos_entrada.items():
+            if no.support in ("Pinned", "Roller"):
+                modelo.def_support_spring(nid, "DY", K_y)
+                modelo.def_support_spring(nid, "RX", K_theta_x)
+                modelo.def_support_spring(nid, "RZ", K_theta_z)
+
+    # Barras
     # Mapa perfil por barra (importante para relatório).
     perfil_por_barra: dict[int, PerfilFisico] = {}
     for b in barras_entrada:
@@ -197,7 +235,7 @@ def construir_e_resolver(
             resultado.erro = f"Falha ao adicionar barra {b.id}: {e}"
             return resultado
 
-    # ----- Cálculo do vão real -----
+    # Cálculo do vão real
     xs_apoios = [no.x for no in nos_entrada.values() if no.support != "None"]
     vano_real = (
         (max(xs_apoios) - min(xs_apoios))
@@ -206,12 +244,12 @@ def construir_e_resolver(
     )
     resultado.vano_real = max(vano_real, 0.1)
 
-    # ----- Identificação do banzo superior -----
+    # Identificação do banzo superior
     if nos_banzo_superior is None:
         y_max = max((n.y for n in nos_entrada.values()), default=0.0)
         nos_banzo_superior = [nid for nid, n in nos_entrada.items() if abs(n.y - y_max) < 0.05]
 
-    # ----- Casos de carga externos (G2 e Q) -----
+    # Casos de carga externos (G2 e Q)
     # PyNite exige um "case name" por caso de carga.
     casos_carga_ativos: set[str] = set()
     for i, caso in enumerate(casos_carga_externos):
@@ -234,7 +272,7 @@ def construir_e_resolver(
                     case=case_name,
                 )
 
-    # ----- Lâmina d'água (NBR 6120 item 5.6) -----
+    # Lâmina d'água (NBR 6120 item 5.6)
     if water_lamina_mm > 0 and nos_banzo_superior:
         # Peso = lamina(mm) * 10 N/m^2 por mm * área tributária.
         carga_agua = water_lamina_mm * 10.0  # N/m^2
@@ -248,7 +286,7 @@ def construir_e_resolver(
                 if nid in nos_entrada:
                     modelo.add_node_load(nid, "FY", -carga_por_no, case="Water")
 
-    # ----- Vento NBR 6123 -----
+    # Vento NBR 6123
     if parametros_vento is not None:
         if nos_fachada is None:
             nos_fachada = identificar_fachadas_perpendiculares(
@@ -261,7 +299,7 @@ def construir_e_resolver(
             if f.no_id in nos_entrada:
                 modelo.add_node_load(f.no_id, f.direction, f.valor, case="Wind")
 
-    # ----- Carga de manutenção NBR 6120 (1 kN por nó do banzo superior) -----
+    # Carga de manutenção NBR 6120 (1 kN por nó do banzo superior)
     casos_manutencao: list[str] = []
     for i, nid in enumerate(nos_banzo_superior):
         if nid in nos_entrada:
@@ -269,7 +307,7 @@ def construir_e_resolver(
             modelo.add_node_load(nid, "FY", -1000.0, case=case_name)
             casos_manutencao.append(case_name)
 
-    # ----- Peso próprio (G1) -----
+    # Peso próprio (G1)
     # Distribuído igualmente nos nós das extremidades de cada barra.
     peso_total = 0.0
     pesos_nos: dict[str, float] = {nid: 0.0 for nid in nos_entrada}
@@ -289,7 +327,7 @@ def construir_e_resolver(
 
     resultado.peso_total_kg = peso_total
 
-    # ----- Combinações ELU e ELS -----
+    # Combinações ELU e ELS
     fatores_combo = {
         "ELU_Normal": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50, "Wind": 1.40, "Water": 1.40},
         "ELU_Secundario": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.40, "Wind": 1.40, "Water": 1.40},
@@ -309,6 +347,20 @@ def construir_e_resolver(
             "Wind": 0.00,
             "Water": 0.00,
         },
+        "ELS_Flecha_Frequente": {
+            "Dead1": 1.00,
+            "Dead2": 1.00,
+            "Live": 0.5,
+            "Wind": 0.00,
+            "Water": 0.00,
+        },
+        "ELS_Flecha_Permanente": {
+            "Dead1": 1.00,
+            "Dead2": 1.00,
+            "Live": 0.3,
+            "Wind": 0.00,
+            "Water": 0.00,
+        },
         "ELS_Permanente": {"Dead1": 1.00, "Dead2": 1.00, "Wind": 0.00, "Water": 0.00},
     }
     # Adiciona combinações de manutenção (uma por caso Maint_i).
@@ -320,14 +372,14 @@ def construir_e_resolver(
         with contextlib.suppress(Exception):
             modelo.add_load_combo(nome, fatores)
 
-    # ----- Análise -----
+    # Análise
     try:
         modelo.analyze(check_statics=False, check_stability=True)
     except Exception as e:
         resultado.erro = f"Falha na análise MEF: {e}"
         return resultado
 
-    # ----- Extração de deslocamentos (flecha) -----
+    # Extração de deslocamentos (flecha)
     max_flecha = 0.0
     max_contraflecha = 0.0
     for nid, no_modelo in modelo.nodes.items():
@@ -350,10 +402,10 @@ def construir_e_resolver(
     resultado.flecha_maxima = max_flecha
     resultado.contraflecha = max_contraflecha
 
-    # ----- Cálculo do Lk por barra -----
+    # Cálculo do Lk por barra
     lk_map = calcular_lk_banzos(resultado.barras, resultado.nos)
 
-    # ----- Envoltória de esforços por barra -----
+    # Envoltória de esforços por barra
     combos_elu_nomes = [
         n for n in fatores_combo if n.startswith("ELU_") and not n.startswith("ELS_")
     ]

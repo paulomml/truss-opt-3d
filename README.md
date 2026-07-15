@@ -7,7 +7,7 @@
 > **Professor:** Prof. Audelis Marcelo
 > **Semestre:** 2026/01
 
-O TRUSS-OPT 3D (Truss Optimizer 3D, Otimizador de Treliças 3D) é um sistema computacional voltado à engenharia civil, focado no dimensionamento e na otimização paramétrica de treliças espaciais via Algoritmo Genético Memético, com verificação automática das normas brasileiras NBR 8800:2008 (estruturas de aço), NBR 6120 (cargas em edificações) e NBR 6123:1988 (vento em edificações). O sistema foi desenvolvido para resolver um problema clássico de engenharia: encontrar o equilíbrio ideal entre a segurança estrutural e a viabilidade econômica, minimizando o custo total de fabricação por meio da seleção automatizada da seção transversal mais leve e mais barata que consiga resistir às cargas solicitantes, sem violar os limites normativos de resistência e estabilidade.
+O TRUSS-OPT 3D (Truss Optimizer 3D, Otimizador de Treliças 3D) é um sistema computacional voltado à engenharia civil, focado no dimensionamento e na otimização paramétrica de treliças espaciais via Algoritmo Genético Memético, com verificação automática das normas brasileiras NBR 8800:2008 (estruturas de aço), NBR 6120:2019 (cargas em edificações) e NBR 6123:1988 (vento em edificações). O sistema foi desenvolvido para resolver um problema clássico de engenharia: encontrar o equilíbrio ideal entre a segurança estrutural e a viabilidade econômica, minimizando o custo total de fabricação por meio da seleção automatizada da seção transversal mais leve e mais barata que consiga resistir às cargas solicitantes, sem violar os limites normativos de resistência e estabilidade.
 
 > **Aviso legal:** Esta ferramenta é destinada a fins educacionais e de pré-dimensionamento. Projetos reais devem ser validados por engenheiro civil habilitado e seguem os textos originais das normas ABNT.
 
@@ -17,6 +17,9 @@ O TRUSS-OPT 3D (Truss Optimizer 3D, Otimizador de Treliças 3D) é um sistema co
 - [2. Fundamentação Teórica e Modelagem Estrutural](#2-fundamentacao-teorica-e-modelagem-estrutural)
   - [2.1 Método dos Elementos Finitos (MEF)](#21-metodo-dos-elementos-finitos-mef)
   - [2.2 Verificações Normativas](#22-verificacoes-normativas)
+    - [2.2.1 NBR 8800:2008](#221-nbr-88002008-estruturas-de-aco)
+    - [2.2.2 NBR 6120:2019](#222-nbr-61202019-acoes-em-edificacoes)
+    - [2.2.3 NBR 6123:1988](#223-nbr-61231988-vento-em-edificacoes)
   - [2.3 Interação Solo-Estrutura (ISE)](#23-interacao-solo-estrutura-ise)
   - [2.4 Algoritmo Genético Memético](#24-algoritmo-genetico-memetico)
 - [3. Arquitetura do Sistema e Stack Tecnológico](#3-arquitetura-do-sistema-e-stack-tecnologico)
@@ -37,7 +40,7 @@ O software permite ao usuário:
 
 - Selecionar entre 9 topologias paramétricas de treliça (Pratt, Howe, Fink, Warren, torres quadradas e triangulares, balanços Pratt e Warren).
 - Definir vão, altura, largura, número de painéis e carregamentos gravitacionais.
-- Configurar parâmetros de vento conforme NBR 6123 (V0, S1, S2, S3, Ce, Ci).
+- Configurar parâmetros de vento conforme NBR 6123 (`V0`, `S1`, `S2`, `S3`, `Ce`, `Ci`).
 - Restringir o espaço de busca do otimizador (materiais, famílias de perfis, perfis específicos).
 - Executar a otimização assíncrona (Celery + Redis) sem bloquear a interface.
 - Visualizar a estrutura 3D com heatmap de tensões e deformada amplificada.
@@ -64,9 +67,9 @@ Os nós são submetidos a restrições que simulam os apoios físicos, permitind
 
 A avaliação do Estado Limite Último (ELU) determina a taxa de utilização U, garantindo U <= 1.0 para todas as combinações de carregamento.
 
-#### NBR 8800:2008 (Estruturas de Aço)
+#### 2.2.1 NBR 8800:2008 (Estruturas de Aço)
 
-**Esbeltez máxima:** O índice de esbeltez λ é limitado a 200 para peças comprimidas (Item 5.3.4.1) e 300 para peças tracionadas (Item 5.2.8.1). O comprimento de flambagem Lk é obtido por varredura de grafo, diferenciando o plano da treliça (Lk = L) do plano fora da treliça (Lk = L para banzos).
+**Esbeltez máxima:** O índice de esbeltez λ é limitado a 200 para peças comprimidas (Item 5.3.4.1) e 300 para peças tracionadas (Item 5.2.8.1). O comprimento de flambagem `Lk` é obtido por varredura de grafo, diferenciando o plano da treliça (`Lk = L`) do plano fora da treliça (`Lk = L` para banzos).
 
 **Flambagem local (Fator Q):** Conforme Anexo F da NBR 8800, para seções com relação b/t superior ao limite λr, aplica-se o fator de redução Q obtido pelo método da largura efetiva.
 
@@ -104,11 +107,11 @@ $$\frac{N_{Sd}}{2 N_{Rd}} + \frac{M_{Sd}}{M_{Rd}} \leq 1{,}0 \quad \text{se } \f
 
 **Estado Limite de Serviço (ELS):** A flecha máxima é verificada em relação ao limite L/250 para combinações frequentes, conforme NBR 8800 Item 5.5.3.
 
-#### NBR 6120 (Ações em Edificações)
+#### 2.2.2 NBR 6120:2019 (Ações em Edificações)
 
 As cargas variáveis mínimas seguem a NBR 6120 Item 6.4 (0,25 a 0,50 kN/m² conforme inclinação da cobertura). Uma carga de manutenção de 1 kN concentrado é aplicada isoladamente em cada nó do banzo superior. Casos assimétricos são gerados automaticamente (meia carga esquerda, meia direita e nós alternados). A verificação de empoçamento progressivo segue o Anexo D da norma. As combinações ELU seguem a NBR 8681 (Normal, Secundário, Alívio, Sem Vento, Vento Dominante), e as combinações ELS contemplam Flecha Total, Frequente e Quase permanente.
 
-#### NBR 6123:1988 (Vento em Edificações)
+#### 2.2.3 NBR 6123:1988 (Vento em Edificações)
 
 A velocidade característica do vento é:
 
@@ -152,9 +155,9 @@ $$f(\mathbf{x}) = W(\mathbf{x}) \cdot c_{kg} + \sum_{i} p_i$$
 
 Onde $W(\mathbf{x})$ é o peso total da estrutura em kg, $c_{kg}$ é o custo unitário do material (R$/kg), e as penalidades $p_i$ são:
 
-1. Violação normativa NBR 8800 (ELU): R$ 1e6 $\cdot (U - 1{,}0)$ para cada barra com $U > 1{,}0$.
-2. Violação de flecha (ELS): R$ 1e6 $\cdot$ (excesso) se flecha $> L/250$.
-3. Penalidade de padronização: R$ 5e3 $\cdot$ (excesso) se o número de perfis distintos exceder o limite configurado ($AG\_MAX\_PERFIS\_DISTINTOS$).
+1. Violação normativa NBR 8800 (ELU): R$ 1.000.000 $\cdot (U - 1{,}0)$ para cada barra com $U > 1{,}0$.
+2. Violação de flecha (ELS): R$ 1.000.000 $\cdot$ (excesso) se flecha $> L/250$.
+3. Penalidade de padronização: R$ 5.000 $\cdot$ (excesso) se o número de perfis distintos exceder o limite configurado ($AG\_MAX\_PERFIS\_DISTINTOS$).
 
 #### 2.4.3 Fase Genética (Exploração Global)
 
@@ -162,7 +165,7 @@ Onde $W(\mathbf{x})$ é o peso total da estrutura em kg, $c_{kg}$ é o custo uni
 | --------- | ------------------------------------------- | --------------------------------- |
 | Seleção   | Torneio (k=3)                               | AG_INDICE_TORNEIO                 |
 | Crossover | 2 pontos (cxTwoPoint)                       | AG_PROBABILIDADE_CRUZAMENTO (0,7) |
-| Mutação   | Uniforme inteira (mutUniformInt, indpb=1/N) | AG_PROBABILIDADE_MUTACAO (0,15)   |
+| Mutação   | Uniforme inteira (mutUniformInt, indpb=1/N) | AG_PROBABILIDADE_MUTACAO (0,2)    |
 | Elitismo  | Hall of Fame (top 1)                        | Sempre preserva o melhor          |
 
 #### 2.4.4 Fase Memética (Refinamento Local)
@@ -215,9 +218,9 @@ O `CanceladorOtimizacao` permite abortar a otimização via API entre gerações
 
 A implementação observa dois cuidados fundamentais frequentemente negligenciados em algoritmos genéticos artesanais:
 
-1. **Avaliação explícita da população inicial (geração 0):** A função `algorithms.varAnd()` da DEAP apenas produz filhos via crossover/mutação — ela não avalia a população de origem. Por isso, antes do loop evolutivo, todos os indivíduos da população inicial são avaliados e os melhores ~30% passam pelo refinamento local (hill climbing), dando ao GA um ponto de partida já polido. As estatísticas da geração 0 são registradas no `Logbook` e reportadas via callback de progresso.
+1. **Avaliação explícita da população inicial (geração 0):** A função `algorithms.varAnd()` da DEAP apenas produz filhos via crossover/mutação: ela não avalia a população de origem. Por isso, antes do loop evolutivo, todos os indivíduos da população inicial são avaliados e os melhores ~30% passam pelo refinamento local (hill climbing), dando ao GA um ponto de partida já polido. As estatísticas da geração 0 são registradas no `Logbook` e reportadas via callback de progresso.
 
-2. **Elitismo efetivo via injeção do Hall of Fame:** O `tools.HallOfFame(1)` da DEAP é apenas um arquivo passivo (rastreador do melhor indivíduo já visto) — ele **não** injeta o elite de volta na população. Sem uma injeção explícita, a seleção (μ, λ) pode descartar o melhor indivíduo entre gerações se todos os seus filhos forem piores. A cada geração, após a seleção, o pior indivíduo da população é substituído por uma cópia do elite (apenas se o elite for estritamente melhor), garantindo que o melhor fitness seja monotonicamente não-crescente entre gerações. Esta é a abordagem canônica recomendada pela comunidade DEAP (cf. mantenedor F.-M. De Rainville, lista oficial `deap-users`).
+2. **Elitismo efetivo via injeção do Hall of Fame:** O `tools.HallOfFame(1)` da DEAP é apenas um arquivo passivo (rastreador do melhor indivíduo já visto); ele **não** injeta o elite de volta na população. Sem uma injeção explícita, a seleção (μ, λ) pode descartar o melhor indivíduo entre gerações se todos os seus filhos forem piores. A cada geração, após a seleção, o pior indivíduo da população é substituído por uma cópia do elite (apenas se o elite for estritamente melhor), garantindo que o melhor fitness seja monotonicamente não-crescente entre gerações. Esta é a abordagem canônica recomendada pela comunidade DEAP (cf. mantenedor F.-M. De Rainville, lista oficial `deap-users`).
 
 ## 3. Arquitetura do Sistema e Stack Tecnológico
 
@@ -241,7 +244,7 @@ flowchart LR
 
 ### 3.1 Princípios Arquiteturais
 
-- **Feature-based:** cada responsabilidade tem seu próprio diretório (api/, engineering/, optimization/, worker/, db/).
+- **Feature-based:** cada responsabilidade tem seu próprio diretório (`api/`, `engineering/`, `optimization/`, `worker/`, `db/`).
 - **Assíncrono:** tarefas CPU-bound (MEF + GA) rodam em processo Celery separado.
 - **Stateless API:** FastAPI não mantém estado entre requisições; tudo é persistido em PostgreSQL e Redis.
 - **Cache determinístico:** payloads idênticos reaproveitam resultados via hash SHA-256 em Redis.
@@ -262,9 +265,10 @@ sequenceDiagram
     participant S as Solver (PyNite)
 
     U->>F: Define L, H, W, divisões e cargas
-    F->>B: POST /api/ws/otimizar (JSON Payload)
+    F->>B: POST /api/otimizar (JSON Payload)
     B->>D: Criar tarefa (PENDENTE)
-    B->>C: Despachar tarefa Celery
+    B->>+R: Enfileirar tarefa (broker Celery)
+    R->>-C: Consumir tarefa
     C->>D: Atualizar status (EM_ANDAMENTO)
     Loop Gerações do GA
         C->>S: Construir e resolver modelo MEF
@@ -419,7 +423,7 @@ O memorial é gerado sob demanda em /api/tarefas/{id}/memorial/{formato} e cont�
 3. Combinações ELU e ELS conforme NBR 8681.
 4. Tabela de esforços por barra: força axial N, momentos M, taxa de utilização U, fator chi, fator Q, índice de esbeltez lambda e status (ok ou falha).
 5. Equações NBR 8800 utilizadas com referência ao item da norma.
-6. Cargas de vento NBR 6123 (Vk, q, Ce, Ci).
+6. Cargas de vento NBR 6123 (`Vk`, `q`, `Ce`, `Ci`).
 7. Resultado da otimização: peso total, custo total, material vencedor, utilização máxima, flecha máxima e contraflecha.
 8. Barras mais solicitadas (top 5 por taxa de utilização).
 
@@ -582,6 +586,6 @@ Distribuído sob licença MIT. Consulte o arquivo `LICENSE` para detalhes.
 - ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. NBR 14762: Dimensionamento de estruturas de aço constituídas por perfis formados a frio. Rio de Janeiro, 2010.
 - ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. NBR 8681: Ações e segurança nas estruturas. Rio de Janeiro, 2003.
 - FORTES, A. S. et al. Python FEA: PyNite. Biblioteca open-source para análise por elementos finitos.
-- FORTIN, F. A. et al. DEAP: Evolutionary Algorithms Made Easy. Journal of Machine Learning Research, v. 13, p. 2171 2175, 2012.
+- FORTIN, F. A. et al. DEAP: Evolutionary Algorithms Made Easy. Journal of Machine Learning Research, v. 13, p. 2171–2175, 2012.
 - TERZAGHI, K. Theoretical Soil Mechanics. John Wiley and Sons, 1943.
 - WINKLER, E. Die Lehre von der Elasticitaet und Festigkeit. Prag, 1867.
