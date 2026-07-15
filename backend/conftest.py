@@ -60,7 +60,7 @@ def configurar_banco_testes():
         cliente_fake = fakeredis.FakeRedis(decode_responses=True)
         definir_cliente_redis(cliente_fake)
     except ImportError:
-        pass  # fakeredis opcional — testes que não usam Redis ainda funcionam.
+        pass  # fakeredis opcional: testes que não usam Redis ainda funcionam.
 
     yield
     engine_teste.dispose()
@@ -68,7 +68,7 @@ def configurar_banco_testes():
 
 @pytest.fixture(autouse=True)
 def mock_celery_delay(monkeypatch):
-    """Mocka `otimizar_trelice.delay` para não disparar Celery real em testes."""
+    """Mocka otimizar_trelice.delay para não disparar Celery real em testes."""
     from worker import tarefas
     def _delay_mock(*args, **kwargs):
         class _ResultadoFalso:

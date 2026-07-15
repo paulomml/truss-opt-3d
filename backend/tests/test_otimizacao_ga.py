@@ -1,9 +1,4 @@
-"""
-Teste de integração do Algoritmo Genético com o solver MEF.
-
-Valida que o GA consegue produzir uma solução estável para uma treliça
-simples e que o resultado contém os campos esperados.
-"""
+"""Teste de integração do Algoritmo Genético com o solver MEF."""
 import pytest
 
 from engineering.modelos_fisicos import BarraFisica, MaterialFisico, NoFisico, PerfilFisico
@@ -116,3 +111,160 @@ def test_ga_respeita_restricoes_familia(trelica_simples, material_a36, perfis_cu
 
     for perfil in perfil_por_grupo.values():
         assert perfil.familia == "RHS"
+
+
+# =====================================================================
+# Testes de regressão: algoritmo memético
+# =====================================================================
+
+def test_ga_populacao_inicial_eh_avaliada(trelica_simples, material_a36, perfis_curtos):
+    """População inicial é avaliada antes do loop evolutivo."""
+    nos, barras = trelica_simples
+    grupos = list({b.group for b in barras})
+    casos_carga = [{"type": "G", "direction": "FY", "value": -1000.0}]
+    nos_banzo_superior = ["U0", "U1", "U2", "U3"]
+
+    progresso = []
+
+    def callback(geracao, total, min_fit, msg):
+        progresso.append((geracao, min_fit))
+
+    otimizar_trelice_ga(
+        nos=nos,
+        barras=barras,
+        grupos=grupos,
+        perfis_disponiveis=perfis_curtos,
+        material=material_a36,
+        casos_carga=casos_carga,
+        nos_banzo_superior=nos_banzo_superior,
+        nos_fachada=[],
+        geracoes=3,
+        tamanho_populacao=6,
+        callback_progresso=callback,
+    )
+
+    # O callback deve ter recebido a geração 0 (população inicial).
+    assert len(progresso) > 0
+    assert progresso[0][0] == 0, "Geração 0 (população inicial) não foi reportada"
+    # O fitness mínimo da geração 0 deve ser finito (não inf).
+    assert progresso[0][1] < float("inf"), "População inicial não foi avaliada (fitness=inf)"
+
+
+def test_ga_elitismo_preserva_melhor_entre_geracoes(trelica_simples, material_a36, perfis_curtos):
+    """Fitness é monótono não-crescente entre gerações (elitismo efetivo)."""
+    nos, barras = trelica_simples
+    grupos = list({b.group for b in barras})
+    casos_carga = [{"type": "G", "direction": "FY", "value": -1500.0}]
+    nos_banzo_superior = ["U0", "U1", "U2", "U3"]
+
+    fitness_por_geracao = []
+
+    def callback(geracao, total, min_fit, msg):
+        fitness_por_geracao.append(min_fit)
+
+    otimizar_trelice_ga(
+        nos=nos,
+        barras=barras,
+        grupos=grupos,
+        perfis_disponiveis=perfis_curtos,
+        material=material_a36,
+        casos_carga=casos_carga,
+        nos_banzo_superior=nos_banzo_superior,
+        nos_fachada=[],
+        geracoes=6,
+        tamanho_populacao=8,
+        callback_progresso=callback,
+        usar_refinamento_local=False,  # GA puro para isolar o elitismo
+    )
+
+    # O melhor fitness deve ser monótono não-crescente.
+    for i in range(1, len(fitness_por_geracao)):
+        assert fitness_por_geracao[i] <= fitness_por_geracao[i - 1] + 1e-6, (
+            f"Elitismo quebrado: geração {i} tem fitness "
+            f"{fitness_por_geracao[i]:.4f} > {fitness_por_geracao[i-1]:.4f} "
+            f"(geração anterior)"
+        )
+
+
+def test_ga_puro_sem_refinamento_local_funciona(trelica_simples, material_a36, perfis_curtos):
+    """
+    GA puro (usar_refinamento_local=False) também deve funcionar e
+    produzir uma solução válida.
+    """
+    nos, barras = trelica_simples
+    grupos = list({b.group for b in barras})
+    casos_carga = [{"type": "G", "direction": "FY", "value": -1000.0}]
+    nos_banzo_superior = ["U0", "U1", "U2", "U3"]
+
+    resultado, perfil_por_grupo, logs = otimizar_trelice_ga(
+        nos=nos,
+        barras=barras,
+        grupos=grupos,
+        perfis_disponiveis=perfis_curtos,
+        material=material_a36,
+        casos_carga=casos_carga,
+        nos_banzo_superior=nos_banzo_superior,
+        nos_fachada=[],
+        geracoes=3,
+        tamanho_populacao=6,
+        usar_refinamento_local=False,
+    )
+
+    assert resultado is not None
+    assert len(perfil_por_grupo) == len(grupos)
+    # Confirma que o GA puro foi registrado nos logs.
+    assert any("puro" in linha.lower() for linha in logs), "GA puro não foi registrado nos logs"
+
+
+def test_ga_memetico_nao_termina_infinito(trelica_simples, material_a36, perfis_curtos):
+    """Busca local hill-climbing termina em tempo finito (trava max_iter)."""
+    import time
+
+    nos, barras = trelica_simples
+    grupos = list({b.group for b in barras})
+    casos_carga = [{"type": "G", "direction": "FY", "value": -1000.0}]
+    nos_banzo_superior = ["U0", "U1", "U2", "U3"]
+
+    inicio = time.time()
+    otimizar_trelice_ga(
+        nos=nos,
+        barras=barras,
+        grupos=grupos,
+        perfis_disponiveis=perfis_curtos,
+        material=material_a36,
+        casos_carga=casos_carga,
+        nos_banzo_superior=nos_banzo_superior,
+        nos_fachada=[],
+        geracoes=2,
+        tamanho_populacao=4,
+        usar_refinamento_local=True,
+    )
+    duracao = time.time() - inicio
+
+    # Deve terminar em menos de 60 segundos para uma treliça simples.
+    assert duracao < 60.0, f"GA memético demorou {duracao:.1f}s: possível loop infinito na busca local"
+
+
+def test_ga_zero_geracoes_avalia_populacao_inicial(trelica_simples, material_a36, perfis_curtos):
+    """Com zero gerações, avalia população inicial e retorna resultado."""
+    nos, barras = trelica_simples
+    grupos = list({b.group for b in barras})
+    casos_carga = [{"type": "G", "direction": "FY", "value": -1000.0}]
+    nos_banzo_superior = ["U0", "U1", "U2", "U3"]
+
+    resultado, perfil_por_grupo, logs = otimizar_trelice_ga(
+        nos=nos,
+        barras=barras,
+        grupos=grupos,
+        perfis_disponiveis=perfis_curtos,
+        material=material_a36,
+        casos_carga=casos_carga,
+        nos_banzo_superior=nos_banzo_superior,
+        nos_fachada=[],
+        geracoes=0,
+        tamanho_populacao=4,
+    )
+
+    # Mesmo com 0 gerações, deve retornar um resultado (da pop inicial).
+    assert resultado is not None
+    assert len(perfil_por_grupo) == len(grupos)

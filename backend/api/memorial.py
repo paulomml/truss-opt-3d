@@ -5,7 +5,7 @@ O memorial documenta:
 1. Dados de entrada (geometria, cargas, materiais, restrições).
 2. Combinações de cargas aplicadas (NBR 6120/8681).
 3. Tabela de esforços nas barras (axial, momentos, utilização).
-4. Verificações NBR 8800 (ELU, ELS, flambagem) — com referência às equações.
+4. Verificações NBR 8800 (ELU, ELS, flambagem): com referência às equações.
 5. Verificações NBR 6120 (cargas de manutenção, assimetrias).
 6. Verificações NBR 6123 (vento, pressões).
 7. Resultado final (peso, custo, perfis escolhidos).

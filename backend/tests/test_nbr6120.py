@@ -20,13 +20,13 @@ from engineering.standards.nbr_6120 import (
 
 
 def test_carga_cobertura_inclinacao_baixa():
-    """Para inclinação < 1%, q deve usar o máximo (0.50 kN/m²)."""
+    """Para inclinação < 1%, q deve usar o máximo (0.50 kN/m^2)."""
     q = calcular_carga_cobertura(0.5)
     assert q == 0.50
 
 
 def test_carga_cobertura_inclinacao_alta():
-    """Para inclinação ≥ 5%, q deve ser 0.25 kN/m²."""
+    """Para inclinação >= 5%, q deve ser 0.25 kN/m^2."""
     q = calcular_carga_cobertura(7.0)
     assert q == 0.25
 
@@ -69,7 +69,7 @@ def test_combinacoes_els_contem_flecha_total():
 
 
 def test_verificacao_empozamento_ok():
-    """Inclinação efetiva ≥ 1% deve retornar atendido."""
+    """Inclinação efetiva >= 1% deve retornar atendido."""
     atendido, msg = verificar_empozamento(
         flecha_permanente=0.005,
         vano=5.0,

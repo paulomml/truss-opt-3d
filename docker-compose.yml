@@ -1,12 +1,8 @@
-# ============================================================
-# docker-compose.yml — TRUSS-OPT 3D
+# docker-compose.yml: TRUSS-OPT 3D
 # Arquitetura completa: PostgreSQL + Redis + FastAPI + Celery + Nuxt + Nginx
-# ============================================================
 
 services:
-  # ----------------------------------------------------------
   # Banco de dados PostgreSQL
-  # ----------------------------------------------------------
   postgres:
     image: postgres:16-alpine
     container_name: truss-postgres
@@ -27,9 +23,7 @@ services:
     networks:
       - truss-network
 
-  # ----------------------------------------------------------
   # Redis (broker Celery + cache)
-  # ----------------------------------------------------------
   redis:
     image: redis:7-alpine
     container_name: truss-redis
@@ -47,9 +41,7 @@ services:
     networks:
       - truss-network
 
-  # ----------------------------------------------------------
   # Backend FastAPI (Python 3.12)
-  # ----------------------------------------------------------
   backend:
     build:
       context: ./backend
@@ -74,9 +66,7 @@ services:
     networks:
       - truss-network
 
-  # ----------------------------------------------------------
   # Worker Celery (processamento assíncrono)
-  # ----------------------------------------------------------
   worker:
     build:
       context: ./backend
@@ -100,9 +90,7 @@ services:
     networks:
       - truss-network
 
-  # ----------------------------------------------------------
   # Frontend Nuxt (Node 24)
-  # ----------------------------------------------------------
   frontend:
     build:
       context: ./frontend
@@ -121,9 +109,7 @@ services:
     networks:
       - truss-network
 
-  # ----------------------------------------------------------
   # Nginx (proxy reverso)
-  # ----------------------------------------------------------
   nginx:
     image: nginx:stable-alpine
     container_name: truss-nginx

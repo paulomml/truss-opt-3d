@@ -1,7 +1,4 @@
-# ============================================================
-# Backend Dockerfile — truss-opt-3d
-# Python 3.12 + FastAPI + Celery + PyNite + DEAP
-# ============================================================
+# Backend Dockerfile: Python 3.12 + FastAPI + Celery + PyNite + DEAP
 FROM python:3.12-slim
 
 # Metadados.
@@ -12,7 +9,7 @@ LABEL org.opencontainers.image.version="2.0.0"
 # Diretório de trabalho.
 WORKDIR /app
 
-# Variáveis de ambiente Python — sem bufferização para logs em tempo real.
+# Variáveis de ambiente Python: sem bufferização para logs em tempo real.
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -42,7 +39,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/api/health || exit 1
 
-# Comando padrão — uvicorn com proxy-headers para nginx.
+# Comando padrão: uvicorn com proxy-headers para nginx.
 CMD ["uvicorn", "api.main:app", \
      "--host", "0.0.0.0", \
      "--port", "8000", \

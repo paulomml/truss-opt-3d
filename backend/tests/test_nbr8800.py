@@ -4,7 +4,7 @@ Testes unitários das verificações NBR 8800.
 Cobrem:
 - Esbeltez máxima (compressão e tração).
 - Fator Q (flambagem local).
-- Fator χ (flambagem global).
+- Fator chi (flambagem global).
 - Interação N + M (Item 5.5.1.2).
 - Verificação ELS (flecha).
 """
@@ -44,20 +44,20 @@ def perfil_l25():
 
 
 def test_esbeltez_maxima_compressao(material_a36, perfil_l25):
-    """Barra com λ > 200 em compressão deve retornar U = 999."""
+    """Barra com lambda > 200 em compressão deve retornar U = 999."""
     barra = BarraFisica(
         id=1, node_start="A", node_end="B",
         group="Diagonal", length=2.5,
         axial_force=-1000.0,  # compressão
     )
-    # lk = 2.5 m; raio de giração ≈ 7.1 mm; λ ≈ 350.
+    # lk = 2.5 m; raio de giração ~= 7.1 mm; lambda ~= 350.
     resultado = verificar_barra_nbr8800(barra, perfil_l25, material_a36)
     assert resultado.utilization == 999.0
     assert resultado.violacao_normativa
 
 
 def test_esbeltez_maxima_tracao(material_a36, perfil_l25):
-    """Barra com λ > 300 em tração deve retornar U = 999."""
+    """Barra com lambda > 300 em tração deve retornar U = 999."""
     barra = BarraFisica(
         id=1, node_start="A", node_end="B",
         group="Diagonal", length=2.5,
@@ -68,13 +68,13 @@ def test_esbeltez_maxima_tracao(material_a36, perfil_l25):
 
 
 def test_fator_q_secao_compacta(material_a36, perfil_l25):
-    """Seção compacta (b/t < λr) deve ter Q = 1.0."""
+    """Seção compacta (b/t < lambdar) deve ter Q = 1.0."""
     q = calcular_fator_q(perfil_l25, material_a36)
     assert q == 1.0
 
 
 def test_fator_q_seção_esbelta(material_a36):
-    """Seção muito esbelta (b/t > λr) deve ter Q < 1.0."""
+    """Seção muito esbelta (b/t > lambdar) deve ter Q < 1.0."""
     perfil_esbelto = PerfilFisico(
         id=2, nome="Test_Esbelto", familia="L",
         h_mm=100, bf_mm=100, d_mm=0, t_mm=1.0,  # b/t = 100
@@ -85,14 +85,14 @@ def test_fator_q_seção_esbelta(material_a36):
 
 
 def test_fator_chi_decrece_com_esbeltez(material_a36, perfil_l25):
-    """χ deve diminuir à medida que Lk aumenta."""
+    """chi deve diminuir à medida que Lk aumenta."""
     chi_curto, _, _ = calcular_fator_chi(perfil_l25, material_a36, 0.5, 0.5, 1.0)
     chi_longo, _, _ = calcular_fator_chi(perfil_l25, material_a36, 2.0, 2.0, 1.0)
     assert chi_curto > chi_longo
 
 
 def test_n_rd_tracao_vs_compressao(material_a36, perfil_l25):
-    """N_rd de tração deve ser ≥ N_rd de compressão (devido a χ)."""
+    """N_rd de tração deve ser >= N_rd de compressão (devido a chi)."""
     chi, _, _ = calcular_fator_chi(perfil_l25, material_a36, 1.0, 1.0, 1.0)
     n_rd_tracao = calcular_n_rd(perfil_l25, material_a36, chi, 1.0, tracao=True)
     n_rd_compressao = calcular_n_rd(perfil_l25, material_a36, chi, 1.0, tracao=False)
@@ -100,7 +100,7 @@ def test_n_rd_tracao_vs_compressao(material_a36, perfil_l25):
 
 
 def test_interacao_nm_alta_compressao(material_a36, perfil_l25):
-    """Barra com N/N_rd ≥ 0.2 deve usar Eq. 5.5.1.2-a."""
+    """Barra com N/N_rd >= 0.2 deve usar Eq. 5.5.1.2-a."""
     barra = BarraFisica(
         id=1, node_start="A", node_end="B",
         group="Banzo", length=1.0,

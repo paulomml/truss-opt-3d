@@ -2,8 +2,8 @@
 Gerenciamento da sessão SQLAlchemy e do engine global do PostgreSQL.
 
 O engine é criado uma única vez por processo (pool de conexões reutilizável).
-A fábrica de sessões `SessionLocal` deve ser utilizada via dependência FastAPI
-em `obter_sessao` para garantir o fechamento adequado após cada requisição.
+A fábrica de sessões SessionLocal deve ser utilizada via dependência FastAPI
+em obter_sessao para garantir o fechamento adequado após cada requisição.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 from core.config import configuracoes
 
 
-# Engine global — o pool padrão do SQLAlchemy gerencia concorrência e reuso.
+# Engine global: o pool padrão do SQLAlchemy gerencia concorrência e reuso.
 engine = create_engine(
     configuracoes.database_url,
     pool_pre_ping=True,  # Detecta conexões mortas antes de usá-las.
@@ -25,7 +25,7 @@ engine = create_engine(
     pool_recycle=1800,
 )
 
-# Fábrica de sessões — cada chamada cria uma sessão transacional isolada.
+# Fábrica de sessões: cada chamada cria uma sessão transacional isolada.
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,

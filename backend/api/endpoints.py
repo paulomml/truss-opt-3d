@@ -2,13 +2,13 @@
 Endpoints REST da API TRUSS-OPT 3D.
 
 Rotas:
-- POST /api/otimizar          — inicia otimização assíncrona, retorna task_id
-- GET  /api/tarefas/{id}      — consulta status/resultado por polling
-- POST /api/tarefas/{id}/cancelar — cancela tarefa em andamento
-- GET  /api/materiais         — lista materiais cadastrados
-- GET  /api/perfis            — lista perfis cadastrados
-- GET  /api/health            — health check
-- WS   /api/ws/otimizar       — otimização com streaming WebSocket
+- POST /api/otimizar         : inicia otimização assíncrona, retorna task_id
+- GET  /api/tarefas/{id}     : consulta status/resultado por polling
+- POST /api/tarefas/{id}/cancelar: cancela tarefa em andamento
+- GET  /api/materiais        : lista materiais cadastrados
+- GET  /api/perfis           : lista perfis cadastrados
+- GET  /api/health           : health check
+- WS   /api/ws/otimizar      : otimização com streaming WebSocket
 """
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ async def iniciar_otimizacao(
 
     Retorna imediatamente com o ID da tarefa para polling subsequente.
     """
-    # Verifica cache — se já existe resultado idêntico, retorna imediatamente.
+    # Verifica cache: se já existe resultado idêntico, retorna imediatamente.
     payload_dict = requisicao.model_dump(mode="json")
     chave = gerar_chave_cache(payload_dict)
     cacheado = obter_do_cache(chave)

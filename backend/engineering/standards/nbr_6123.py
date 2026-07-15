@@ -1,23 +1,23 @@
 """
-Verificações NBR 6123:1988 — Forças devidas ao vento em edificações.
+Verificações NBR 6123:1988: Forças devidas ao vento em edificações.
 
 Implementa o modelo de cargas estáticas de vento em coberturas e fechamentos
 verticais, com aplicação 3D na treliça.
 
 Fórmulas principais (Item 4):
-    Vk = V0 · S1 · S2 · S3               (velocidade característica)
-    q   = 0.613 · Vk²                     (pressão dinâmica, N/m²)
-    F   = (Ce − Ci) · q · A              (força em elemento de área A)
-    Fa  = Ca · q · Ae                     (força de arrasto global)
+    Vk = V0 * S1 * S2 * S3               (velocidade característica)
+    q   = 0.613 * Vk^2                     (pressão dinâmica, N/m^2)
+    F   = (Ce − Ci) * q * A              (força em elemento de área A)
+    Fa  = Ca * q * Ae                     (força de arrasto global)
 
 Onde:
-    V0  — velocidade básica do vento (mapa isovelocidade, 30-50 m/s no Brasil)
-    S1  — fator topográfico (1.0 terreno plano; >1.0 em encostas)
-    S2  — fator de rugosidade (0.5-1.5 conforme classe e altura)
-    S3  — fator estatístico (1.0 para edifícios comuns, vida útil 50 anos)
-    Ce  — coeficiente de forma externo (pressão/sucção)
-    Ci  — coeficiente de forma interno
-    Ca  — coeficiente de arrasto
+    V0 : velocidade básica do vento (mapa isovelocidade, 30-50 m/s no Brasil)
+    S1 : fator topográfico (1.0 terreno plano; >1.0 em encostas)
+    S2 : fator de rugosidade (0.5-1.5 conforme classe e altura)
+    S3 : fator estatístico (1.0 para edifícios comuns, vida útil 50 anos)
+    Ce : coeficiente de forma externo (pressão/sucção)
+    Ci : coeficiente de forma interno
+    Ca : coeficiente de arrasto
 """
 from __future__ import annotations
 
@@ -28,8 +28,8 @@ from typing import Dict, List, Tuple
 from engineering.modelos_fisicos import NoFisico
 
 
-# Densidade do ar ao nível do mar (kg/m³) — NBR 6123 Item 4.1.c.
-RHO_AR = 1.225  # kg/m³
+# Densidade do ar ao nível do mar (kg/m^3): NBR 6123 Item 4.1.c.
+RHO_AR = 1.225  # kg/m^3
 
 
 @dataclass
@@ -54,12 +54,12 @@ class ParametrosVento:
 
     @property
     def velocidade_caracteristica(self) -> float:
-        """Vk = V0 · S1 · S2 · S3."""
+        """Vk = V0 * S1 * S2 * S3."""
         return self.v0_mps * self.s1 * self.s2 * self.s3
 
     @property
     def pressao_dinamica(self) -> float:
-        """q = 0.613 · Vk² (N/m²)."""
+        """q = 0.613 * Vk^2 (N/m^2)."""
         return 0.613 * self.velocidade_caracteristica**2
 
 
@@ -67,7 +67,7 @@ def decompor_direcao_vento(direcao_graus: float) -> Tuple[float, float]:
     """
     Decompõe a direção do vento em componentes X e Z (vento horizontal).
 
-    Retorna (fx_unit, fz_unit) — vetor unitário horizontal.
+    Retorna (fx_unit, fz_unit): vetor unitário horizontal.
     """
     rad = math.radians(direcao_graus)
     return math.cos(rad), math.sin(rad)
@@ -112,7 +112,7 @@ def calcular_forcas_vento_3d(
     3. Para o conjunto: calcula força de arrasto global e distribui entre
        nós das fachadas perpendiculares ao vento.
 
-    A área tributária de cada nó é estimada a partir da malha — para
+    A área tributária de cada nó é estimada a partir da malha: para
     treliças planares, considera-se 1 m de profundidade.
     """
     if not nos:
@@ -122,9 +122,7 @@ def calcular_forcas_vento_3d(
     q = parametros.pressao_dinamica
     fx_dir, fz_dir = decompor_direcao_vento(parametros.direcao_vento_graus)
 
-    # ----------------------------------------------------------
     # 1) Sucção/pressão vertical na cobertura (banzo superior).
-    # ----------------------------------------------------------
     if nos_banzo_superior:
         # Área tributária por nó = área total da cobertura / nº de nós.
         # Estimativa da profundidade (z) e vão (x) da cobertura.
@@ -133,7 +131,7 @@ def calcular_forcas_vento_3d(
         if xs and zs:
             area_cobertura = (max(xs) - min(xs)) * (max(zs) - min(zs))
             area_por_no = area_cobertura / len(nos_banzo_superior)
-            # Força vertical: (Ce - Ci) * q * A — sinal negativo (sucção para cima).
+            # Força vertical: (Ce - Ci) * q * A: sinal negativo (sucção para cima).
             forca_vertical = (parametros.ce_externo - parametros.ci_interno) * q * area_por_no
             for nid in nos_banzo_superior:
                 if nid in nos:
@@ -143,9 +141,7 @@ def calcular_forcas_vento_3d(
                         valor=-abs(forca_vertical),  # Sucção para cima.
                     ))
 
-    # ----------------------------------------------------------
     # 2) Pressão horizontal nas fachadas (montantes de torres).
-    # ----------------------------------------------------------
     if nos_fachada:
         # Area frontal estimada por nó.
         area_frontal = calcular_area_frontal(nos, parametros.direcao_vento_graus)
@@ -167,9 +163,7 @@ def calcular_forcas_vento_3d(
                         valor=forca_horizontal * fz_dir,
                     ))
 
-    # ----------------------------------------------------------
     # 3) Arrasto global aplicado nos nós do plano perpendicular.
-    # ----------------------------------------------------------
     area_arrasto = calcular_area_frontal(nos, parametros.direcao_vento_graus)
     if area_arrasto > 0:
         forca_arrasto = parametros.ca_arrasto * q * area_arrasto
@@ -198,7 +192,7 @@ def identificar_fachadas_perpendiculares(
     """
     Identifica os nós pertencentes às fachadas perpendiculares à direção do vento.
 
-    Para vento no eixo X (0°), as fachadas são as faces em x_min e x_max.
+    Para vento no eixo X (0 graus), as fachadas são as faces em x_min e x_max.
     """
     if not nos:
         return []

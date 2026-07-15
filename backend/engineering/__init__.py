@@ -1,10 +1,10 @@
 """
-Pacote de Engenharia — solvers físicos e verificações normativas.
+Pacote de Engenharia: solvers físicos e verificações normativas.
 
 Submódulos:
-- `fea/`              — Solver PyNite (MEF 3D).
-- `standards/`        — Verificações NBR 8800, 6120, 6123 (modular).
-- `modelos_fisicos`   — Dataclasses de domínio (NoFisico, BarraFisica, etc).
+- fea/             : Solver PyNite (MEF 3D).
+- standards/       : Verificações NBR 8800, 6120, 6123 (modular).
+- modelos_fisicos  : Dataclasses de domínio (NoFisico, BarraFisica, etc).
 """
 from engineering.modelos_fisicos import (
     BarraFisica,

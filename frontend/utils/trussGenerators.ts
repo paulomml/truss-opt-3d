@@ -33,10 +33,7 @@ function addMember(
   });
 }
 
-/**
- * Extrusão 3D via duplicação de malha e injeção de X-bracing.
- * Transforma grafos planares em estruturas espacialmente estáveis contra flambagem global e torção.
- */
+/** Extrusão 3D via duplicação de malha e X-bracing. */
 function extrude3D(planar: RawTruss, width: number): RawTruss {
   if (width <= 0) return planar;
 
@@ -55,7 +52,7 @@ function extrude3D(planar: RawTruss, width: number): RawTruss {
     addMember(members, m.node_start + "B", m.node_end + "B", m.group);
   }
 
-  // Estabilização global via X-Bracing e membros transversais.
+  // X-Bracing e membros transversais.
   const nodeIds = Object.keys(planar.nodes);
 
   // Membros transversais (conectores de profundidade).
@@ -63,7 +60,7 @@ function extrude3D(planar: RawTruss, width: number): RawTruss {
     addMember(members, id + "F", id + "B", "Transversal");
   }
 
-  // Contraventamento cruzado para mitigar esforços de torção e flambagem global da estrutura.
+  // Contraventamento cruzado.
   for (const m of planar.members) {
     const n1 = planar.nodes[m.node_start];
     const n2 = planar.nodes[m.node_end];
@@ -86,7 +83,7 @@ function extrude3D(planar: RawTruss, width: number): RawTruss {
   return { nodes, members };
 }
 
-// --- CONFIGURAÇÕES DE TELHADO (ROOFS) ---
+// Telhados
 
 export function generatePrattRoof(
   span: number,
@@ -94,7 +91,7 @@ export function generatePrattRoof(
   width: number,
   panels: number,
 ): RawTruss {
-  // Treliça Pratt: montantes sob compressão e diagonais sob tração para cargas gravitacionais.
+  // Treliça Pratt.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -156,8 +153,7 @@ export function generateHoweRoof(
   width: number,
   panels: number,
 ): RawTruss {
-  // Treliça Howe: diagonais comprimidas e montantes tracionados.
-  // Eficiente para inclinações convencionais e superposição de cargas pontuais.
+  // Treliça Howe.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -212,7 +208,7 @@ export function generateFinkRoof(
   height: number,
   width: number,
 ): RawTruss {
-  // Treliça Fink: ideal para vãos curtos e alta inclinação devido à subdivisão geométrica das diagonais.
+  // Treliça Fink.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -267,7 +263,7 @@ export function generateFinkRoof(
   return extrude3D({ nodes, members }, width);
 }
 
-// --- TIPOLOGIAS DE PONTE (BRIDGES) ---
+// Pontes
 
 export function generateWarrenBridge(
   span: number,
@@ -275,7 +271,7 @@ export function generateWarrenBridge(
   width: number,
   panels: number,
 ): RawTruss {
-  // Treliça Warren: redução de montantes verticais para otimização de peso próprio (Dead Load).
+  // Treliça Warren.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -329,7 +325,7 @@ export function generatePrattBridge(
   width: number,
   panels: number,
 ): RawTruss {
-  // Pratt Bridge: topologia com diagonais predominantemente tracionadas sob carga distribuída.
+  // Pratt Bridge.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -391,7 +387,7 @@ export function generatePrattBridge(
   return extrude3D({ nodes, members }, width);
 }
 
-// --- TIPOLOGIAS DE TORRE (TOWERS) ---
+// Torres
 
 export function generateSquareTower(
   height: number,
@@ -399,7 +395,7 @@ export function generateSquareTower(
   topWidth: number,
   sections: number,
 ): RawTruss {
-  // Torre de seção quadrada: estabilidade contra esforços de torção e momentos fletores biaxiais.
+  // Torre de seção quadrada.
   height = Math.max(0.1, height);
   width = Math.max(0, width);
   topWidth = Math.max(0.01, topWidth);
@@ -451,7 +447,7 @@ export function generateSquareTower(
         "Transversal",
       );
     } else {
-      // Geração espacial 3D com contraventamento em todas as faces.
+      // Geração espacial 3D.
       addNode(nodes, createNodeId("N1", i), -w / 2, h, -w / 2, support);
       addNode(nodes, createNodeId("N2", i), w / 2, h, -w / 2, support);
       addNode(nodes, createNodeId("N3", i), w / 2, h, w / 2, support);
@@ -515,7 +511,7 @@ export function generateTriangularTower(
   topWidth: number,
   sections: number,
 ): RawTruss {
-  // Torre triangular: configuração isostática estável com redução de membros transversais.
+  // Torre triangular.
   height = Math.max(0.1, height);
   width = Math.max(0, width);
   topWidth = Math.max(0.01, topWidth);
@@ -613,7 +609,7 @@ export function generateTriangularTower(
   return { nodes, members };
 }
 
-// --- BALANÇOS E MARQUISES (CANTILEVERS) ---
+// Balanços
 
 export function generateCantileverPratt(
   span: number,
@@ -621,7 +617,7 @@ export function generateCantileverPratt(
   width: number,
   panels: number,
 ): RawTruss {
-  // Cantilever Pratt: diagonais tracionadas para otimizar a transferência de carga ao apoio rígido.
+  // Cantilever Pratt.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);
@@ -681,7 +677,7 @@ export function generateCantileverWarren(
   width: number,
   panels: number,
 ): RawTruss {
-  // Cantilever Warren: redução de redundância nodal para estruturas leves em balanço.
+  // Cantilever Warren.
   span = Math.max(0.1, span);
   height = Math.max(0.1, height);
   width = Math.max(0, width);

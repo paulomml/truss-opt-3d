@@ -1,7 +1,7 @@
 """
 Entrypoint do Celery worker.
 
-Executado via `celery -A core.celery_app worker` no container Docker.
+Executado via celery -A core.celery_app worker no container Docker.
 """
 from core.celery_app import app_celery
 

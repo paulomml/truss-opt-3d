@@ -1,9 +1,7 @@
-# Frontend Dockerfile — truss-opt-3d
-# Build multi-estágio: Node 24 + Nuxt 4 → servidor Node de produção.
+# Frontend Dockerfile: truss-opt-3d
+# Build multi-estágio: Node 24 + Nuxt 4 -> servidor Node de produção.
 
-# ============================================================
 # Estágio 1: Build da aplicação Nuxt
-# ============================================================
 FROM node:24-slim AS construtor
 
 WORKDIR /app
@@ -28,9 +26,7 @@ ENV API_URL_BASE=$API_URL_BASE
 # Compila o Nuxt (gera .output/server/index.mjs).
 RUN npm run build
 
-# ============================================================
 # Estágio 2: Servidor de produção enxuto
-# ============================================================
 FROM node:24-slim AS runtime
 
 WORKDIR /app

@@ -13,7 +13,7 @@ from kombu import Queue
 from core.config import configuracoes
 
 
-# Instância global do Celery — importada por `worker.tarefas`.
+# Instância global do Celery: importada por worker.tarefas.
 app_celery = Celery(
     "truss_opt_3d",
     broker=configuracoes.redis_url,

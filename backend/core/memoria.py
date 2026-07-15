@@ -1,5 +1,5 @@
 """
-Monitor de memória do processo — protege contra OOM em otimizações longas.
+Monitor de memória do processo: protege contra OOM em otimizações longas.
 
 A análise MEF + Algoritmo Genético pode consumir muita RAM quando o catálogo
 de perfis é grande ou a população é numerosa. Este módulo fornece um check

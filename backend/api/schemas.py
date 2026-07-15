@@ -2,7 +2,7 @@
 Schemas Pydantic para a camada de API.
 
 Estes modelos validam e serializam o tráfego HTTP entre o frontend Nuxt
-e o backend FastAPI. São distintos dos modelos ORM (em `db/modelos.py`)
+e o backend FastAPI. São distintos dos modelos ORM (em db/modelos.py)
 para manter separação de responsabilidades.
 """
 from __future__ import annotations
@@ -13,9 +13,7 @@ from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
 
-# --------------------------------------------------------------
 # Geometria e cargas (entrada)
-# --------------------------------------------------------------
 class NoBruto(BaseModel):
     """Nó estrutural enviado pelo frontend."""
     id: str
@@ -45,7 +43,7 @@ class CasoCarga(BaseModel):
 
     - type: 'G' (permanente) ou 'Q' (variável/acidental)
     - direction: 'FX' | 'FY' | 'FZ' | 'MX' | 'MY' | 'MZ'
-    - value: valor da força (N) ou momento (N·m)
+    - value: valor da força (N) ou momento (N*m)
     - nodes: lista opcional de nós onde aplicar; se None, ratear no banzo superior.
     """
     type: Literal["G", "Q"]
@@ -99,7 +97,7 @@ class ParametrosVento(BaseModel):
 
 
 class RequisicaoOtimizacao(BaseModel):
-    """Payload principal enviado para `/api/otimizar`."""
+    """Payload principal enviado para /api/otimizar."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -126,9 +124,7 @@ class RequisicaoOtimizacao(BaseModel):
     ag_populacao: Optional[int] = Field(None, ge=4, le=200)
 
 
-# --------------------------------------------------------------
 # Resultados (saída)
-# --------------------------------------------------------------
 class NoResultado(BaseModel):
     """Resultado FEA para um nó."""
     id: str
@@ -180,9 +176,7 @@ class RespostaOtimizacao(BaseModel):
     logs: List[str] = Field(default_factory=list)
 
 
-# --------------------------------------------------------------
 # Status de tarefa assíncrona
-# --------------------------------------------------------------
 class StatusTarefa(BaseModel):
     """Status de uma tarefa Celery consultável por polling."""
     task_id: str
@@ -193,9 +187,7 @@ class StatusTarefa(BaseModel):
     criado_em: Optional[datetime] = None
 
 
-# --------------------------------------------------------------
 # Catálogos
-# --------------------------------------------------------------
 class MaterialSchema(BaseModel):
     """Schema público para material."""
     id: int

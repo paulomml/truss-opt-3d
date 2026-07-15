@@ -1,10 +1,10 @@
-// utils/truss3d.ts — Funções utilitárias para renderização 3D.
+// utils/truss3d.ts: Funções utilitárias para renderização 3D.
 import { Vector3, Quaternion } from "three";
 import type { BarraResultado, BarraBruta, NoResultado, NoBruto } from "@/types/truss";
 
 /**
  * Calcula os dados geométricos de um cilindro que representa uma barra.
- * Retorna a posição (midpoint), quaternion (alinhamento Y → direção da barra) e comprimento.
+ * Retorna a posição (midpoint), quaternion (alinhamento Y -> direção da barra) e comprimento.
  */
 export function getCylinderData(
   member: BarraResultado | BarraBruta,
@@ -47,29 +47,29 @@ export function getCylinderData(
 
 /**
  * Retorna a cor de uma barra com base na sua taxa de utilização (U).
- * Escala: 0% = azul → 50% = verde → 80% = amarelo → 100% = vermelho.
+ * Escala: 0% = azul -> 50% = verde -> 80% = amarelo -> 100% = vermelho.
  */
 export function getMemberColor(utilization: number): string {
   const u = Math.max(0, Math.min(1, utilization));
 
   if (u < 0.5) {
-    // Azul (0.0) → Verde (0.5).
+    // Azul (0.0) -> Verde (0.5).
     const t = u / 0.5;
-    const r = Math.round(59 + (34 - 59) * t); // #3b82f6 → #22c55e
+    const r = Math.round(59 + (34 - 59) * t); // #3b82f6 -> #22c55e
     const g = Math.round(130 + (197 - 130) * t);
     const b = Math.round(246 + (94 - 246) * t);
     return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
   } else if (u < 0.8) {
-    // Verde (0.5) → Amarelo (0.8).
+    // Verde (0.5) -> Amarelo (0.8).
     const t = (u - 0.5) / 0.3;
-    const r = Math.round(34 + (234 - 34) * t); // #22c55e → #eab308
+    const r = Math.round(34 + (234 - 34) * t); // #22c55e -> #eab308
     const g = Math.round(197 + (179 - 197) * t);
     const b = Math.round(94 + (8 - 94) * t);
     return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
   } else {
-    // Amarelo (0.8) → Vermelho (1.0).
+    // Amarelo (0.8) -> Vermelho (1.0).
     const t = (u - 0.8) / 0.2;
-    const r = Math.round(234 + (239 - 234) * t); // #eab308 → #ef4444
+    const r = Math.round(234 + (239 - 234) * t); // #eab308 -> #ef4444
     const g = Math.round(179 + (68 - 179) * t);
     const b = Math.round(8 + (68 - 8) * t);
     return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;

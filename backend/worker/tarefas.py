@@ -1,7 +1,7 @@
 """
 Tarefas Celery para processamento assíncrono de otimização.
 
-A tarefa `otimizar_trelice` recebe um payload JSON serializável, executa
+A tarefa otimizar_trelice recebe um payload JSON serializável, executa
 o algoritmo genético e persiste o resultado no PostgreSQL. O frontend
 pode acompanhar progresso via WebSocket ou polling na API de status.
 """
@@ -66,11 +66,11 @@ def _atualizar_status_tarefa(
 @app_celery.task(bind=True, name="worker.tarefas.otimizar_trelice")
 def otimizar_trelice(self, tarefa_id: int, payload: dict) -> dict:
     """
-    Tarefa Celery principal — executa o GA e persiste o resultado.
+    Tarefa Celery principal: executa o GA e persiste o resultado.
 
     Args:
-        tarefa_id: ID da tarefa no banco (tabela `tarefas_otimizacao`).
-        payload: dicionário com `RequisicaoOtimizacao` (já validado).
+        tarefa_id: ID da tarefa no banco (tabela tarefas_otimizacao).
+        payload: dicionário com RequisicaoOtimizacao (já validado).
 
     Returns:
         Dicionário com o resultado serializável (também persistido no banco).
@@ -226,7 +226,7 @@ def otimizar_trelice(self, tarefa_id: int, payload: dict) -> dict:
             if resultado.erro:
                 linha_sumario = f"[{material.nome}] Falhou: {resultado.erro}"
             else:
-                linha_sumario = f"[{material.nome}] Concluído. Custo: R$ {resultado.peso_total_kg * material.custo_kg:.2f} ({resultado.peso_total_kg:.1f} kg × R$ {material.custo_kg:.2f}/kg) | Utilização: {resultado.utilizacao_maxima*100:.1f}%"
+                linha_sumario = f"[{material.nome}] Concluído. Custo: R$ {resultado.peso_total_kg * material.custo_kg:.2f} ({resultado.peso_total_kg:.1f} kg x R$ {material.custo_kg:.2f}/kg) | Utilização: {resultado.utilizacao_maxima*100:.1f}%"
             all_logs_acumulados.append(linha_sumario)
             _atualizar_status_tarefa(
                 tarefa_id,
@@ -235,7 +235,7 @@ def otimizar_trelice(self, tarefa_id: int, payload: dict) -> dict:
                 logs="\n".join(all_logs_acumulados),
             )
 
-            # Compara pelo custo total (peso × preço do material).
+            # Compara pelo custo total (peso x preço do material).
             custo_novo = resultado.peso_total_kg * material.custo_kg
             custo_atual = (
                 melhor_resultado.peso_total_kg * melhor_material_custo_kg
@@ -298,7 +298,7 @@ def _construir_resposta(
 ) -> dict:
     """Constrói o dict final no formato RespostaOtimizacao."""
 
-    # Mapa barra → perfil (para preencher nome do material).
+    # Mapa barra -> perfil (para preencher nome do material).
     barras_saida = []
     for b in resultado.barras:
         barras_saida.append({

@@ -1,5 +1,5 @@
 """
-Motor de Otimização — Algoritmo Genético Memético (DEAP + Hill Climbing).
+Motor de Otimização: Algoritmo Genético Memético (DEAP + Hill Climbing).
 
 Combina:
 - GA (exploração global): crossover, mutação, seleção por torneio.
@@ -7,7 +7,7 @@ Combina:
   indivíduos a cada geração (aprendizagem Lamarckiana).
 
 Indivíduo: vetor de inteiros (índices no catálogo de perfis), um por grupo.
-Fitness: peso_total_kg × custo_kg_material + penalidades (minimiza R$).
+Fitness: peso_total_kg x custo_kg_material + penalidades (minimiza R$).
 Penalidades: violação NBR 8800/6120/6123, flecha ELS, diversidade de perfis.
 """
 from __future__ import annotations
@@ -114,10 +114,10 @@ def _avaliar_individuo(
     """
     Função objetivo do GA.
 
-    Retorna uma tupla (fitness,) — DEAP exige iterável mesmo para fitness simples.
-    Fitness = peso_total_kg × custo_kg_material + penalidades (minimiza custo em R$).
+    Retorna uma tupla (fitness,): DEAP exige iterável mesmo para fitness simples.
+    Fitness = peso_total_kg x custo_kg_material + penalidades (minimiza custo em R$).
     """
-    # Mapa grupo → perfil (a partir do indivíduo).
+    # Mapa grupo -> perfil (a partir do indivíduo).
     perfil_por_grupo: Dict[str, PerfilFisico] = {}
     for i, grupo in enumerate(grupos):
         idx = individuo[i] if i < len(individuo) else 0
@@ -142,7 +142,7 @@ def _avaliar_individuo(
     )
 
     if resultado.erro:
-        # Estrutura inviável — penalidade máxima.
+        # Estrutura inviável: penalidade máxima.
         return (configuracoes.ag_penalidade_violacao_normativa,)
 
     peso = resultado.peso_total_kg
@@ -255,20 +255,21 @@ def otimizar_trelice_ga(
     # ----------------------------------------------------------------
     # Busca local (hill climbing first-improvement com reinício).
     # ----------------------------------------------------------------
-    def _refinamento_local(individuo: List[int]) -> float:
+    def _refinamento_local(individuo: List[int], max_iter: int = 2000) -> float:
         """
         Hill climbing first-improvement com reinício de varredura.
 
-        Para cada grupo, testa o perfil imediatamente acima e abaixo.
-        Se qualquer troca unitária melhorar o fitness, adota e reinicia
-        a varredura desde o primeiro grupo. Repete até nenhuma troca
-        unitária melhorar (convergência para ótimo local).
+        Testa o perfil imediatamente acima e abaixo de cada grupo.
+        Reinicia a varredura ao encontrar melhora. Trava de segurança
+        em max_iter iteracoes.
 
         Retorna o fitness do indivíduo refinado.
         """
         melhor_fitness = _avaliar_com_cache(individuo)[0]
+        iter_count = 0
 
-        while True:
+        while iter_count < max_iter:
+            iter_count += 1
             melhorou = False
             for i in range(num_grupos):
                 original = individuo[i]
@@ -313,9 +314,9 @@ def otimizar_trelice_ga(
     # Registra a função de avaliação COM cache.
     toolbox.register("evaluate", _avaliar_com_cache)
 
-    # Crossover de 2 pontos — apropriado para variáveis discretas (índices).
+    # Crossover de 2 pontos: apropriado para variáveis discretas (índices).
     toolbox.register("mate", tools.cxTwoPoint)
-    # Mutação uniforme — substitui um gene por um índice aleatório.
+    # Mutação uniforme: substitui um gene por um índice aleatório.
     toolbox.register("mutate", tools.mutUniformInt, low=0, up=max(num_perfis - 1, 0),
                      indpb=1.0 / max(num_grupos, 1))
     toolbox.register("select", tools.selTournament, tournsize=configuracoes.ag_indice_torneio)
@@ -323,18 +324,61 @@ def otimizar_trelice_ga(
     # População inicial.
     populacao = toolbox.population(n=tamanho_populacao)
 
-    # Estatísticas — fitness.values é uma tupla, extraímos o escalar.
+    # Estatísticas: fitness.values é uma tupla, extraímos o escalar.
     stats = tools.Statistics(lambda ind: ind.fitness.values[0] if ind.fitness.values else float("inf"))
     stats.register("min", lambda x: min(x) if x else float("inf"))
     stats.register("avg", lambda x: sum(x) / len(x) if x else float("inf"))
 
-    # Hall da fama (top 1).
+    # Hall da fama (top 1): rastreia o melhor indivíduo já visto.
     hof = tools.HallOfFame(1)
 
     # Loop manual para permitir cancelamento e callback de progresso.
     melhor_fitness_historico = float("inf")
     logbook = tools.Logbook()
     logbook.header = ["gen", "nevals", "min", "avg"]
+
+    # ----------------------------------------------------------------
+    # Avaliação da população inicial (geração 0)
+    # ----------------------------------------------------------------
+    # algorithms.varAnd não avalia a população: apenas produz filhos.
+    invalidos_iniciais = [ind for ind in populacao if not ind.fitness.valid]
+    if invalidos_iniciais:
+        fitnesses_init = toolbox.map(toolbox.evaluate, invalidos_iniciais)
+        for ind, fit in zip(invalidos_iniciais, fitnesses_init):
+            ind.fitness.values = fit
+
+    # Fase memética inicial: refina os melhores ~30% da população.
+    if usar_refinamento_local and populacao:
+        ordenados_init = sorted(
+            populacao,
+            key=lambda ind: ind.fitness.values[0] if ind.fitness.valid else float("inf"),
+        )
+        n_refinar_init = max(1, len(ordenados_init) // 3)
+        for ind in ordenados_init[:n_refinar_init]:
+            valores = list(ind)
+            fitness_refinado = _refinamento_local(valores)
+            for i, val in enumerate(valores):
+                ind[i] = val
+            ind.fitness.values = (fitness_refinado,)
+
+    # Atualiza o Hall of Fame com a população inicial refinada.
+    hof.update(populacao)
+
+    # Estatísticas da geração 0 (população inicial).
+    record_init = stats.compile(populacao)
+    logbook.record(gen=0, nevals=len(invalidos_iniciais), **(record_init or {}))
+    if record_init and record_init["min"] < melhor_fitness_historico:
+        melhor_fitness_historico = record_init["min"]
+    if callback_progresso:
+        min_fit_init = record_init["min"] if record_init else float("inf")
+        avg_init = record_init["avg"] if record_init else float("inf")
+        msg_init = (
+            f"Geração 0/{geracoes} (inicial) | min=R$ {min_fit_init:.2f} | "
+            f"avg=R$ {avg_init:.2f}"
+            if record_init
+            else f"Geração 0/{geracoes} (inicial)"
+        )
+        callback_progresso(0, geracoes, min_fit_init, msg_init)
 
     for geracao in range(geracoes):
         # Verifica cancelamento.
@@ -383,18 +427,51 @@ def otimizar_trelice_ga(
                 ind.fitness.values = (fitness_refinado,)
 
         # --------------------------------------------------------
-        # SELEÇÃO para próxima geração
+        # SELEÇÃO para próxima geração (mu, lambda)
         # --------------------------------------------------------
+        # Seleciona a próxima população apenas a partir dos filhos.
         populacao[:] = toolbox.select(offspring, k=len(populacao))
+
+        # --------------------------------------------------------
+        # Elitismo: substitui o pior pelo melhor (Hall of Fame)
+        # --------------------------------------------------------
+        if len(hof) > 0 and len(populacao) > 0:
+            elite = hof[0]
+            elite_fit = elite.fitness.values[0] if elite.fitness.valid else float("inf")
+            # Localiza o pior indivíduo da população atual (maior fitness
+            # = pior, pois o GA minimiza custo em R$).
+            pior_idx = max(
+                range(len(populacao)),
+                key=lambda i: populacao[i].fitness.values[0]
+                if populacao[i].fitness.valid
+                else float("-inf"),
+            )
+            pior_fit = (
+                populacao[pior_idx].fitness.values[0]
+                if populacao[pior_idx].fitness.valid
+                else float("inf")
+            )
+            # Substitui o pior por uma cópia do elite, apenas se o elite
+            # for estritamente melhor (evita cópias desnecessárias e
+            # preserva diversidade quando o elite já está na população).
+            if elite_fit < pior_fit:
+                populacao[pior_idx] = toolbox.clone(elite)
+
         hof.update(populacao)
 
         # Estatísticas.
         record = stats.compile(populacao)
-        logbook.record(gen=geracao+1, nevals=len(invalidos), **record)
+        logbook.record(gen=geracao+1, nevals=len(invalidos), **(record or {}))
 
         if callback_progresso:
             min_fit = record["min"] if record else float("inf")
-            msg = f"Geração {geracao+1}/{geracoes} | min=R$ {min_fit:.2f} | avg=R$ {record['avg']:.2f}" if record else f"Geração {geracao+1}/{geracoes}"
+            avg_fit = record["avg"] if record else float("inf")
+            msg = (
+                f"Geração {geracao+1}/{geracoes} | min=R$ {min_fit:.2f} | "
+                f"avg=R$ {avg_fit:.2f}"
+                if record
+                else f"Geração {geracao+1}/{geracoes}"
+            )
             callback_progresso(geracao+1, geracoes, min_fit, msg)
 
         if record and record["min"] < melhor_fitness_historico:

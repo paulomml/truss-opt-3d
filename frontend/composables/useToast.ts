@@ -13,7 +13,7 @@ export const useToast = () => {
     const id = Date.now();
     toasts.value.push({ id, message, type });
 
-    // Previne memory leaks e poluição da DOM em fluxos com alto volume de erros (WS reconnection).
+    // Remove toast após 5s para evitar acúmulo na DOM.
     setTimeout(() => {
       removeToast(id);
     }, 5000);

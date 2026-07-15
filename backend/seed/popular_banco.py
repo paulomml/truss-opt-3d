@@ -1,13 +1,13 @@
 """
 Script de popularização inicial do banco de dados.
 
-Substitui os antigos `materials.csv` e `profiles.csv` por registros
+Substitui os antigos materials.csv e profiles.csv por registros
 relacionais no PostgreSQL. Executado automaticamente na primeira
-inicialização do container backend (via `seed.sh` no entrypoint).
+inicialização do container backend (via seed.sh no entrypoint).
 
 Catálogo:
 - 6 aços estruturais nacionais (NBR 8800 / NBR 7007)
-- 27 perfis comerciais (cantoneiras L, tubos RHS, U enrijecido Ue)
+- 32 perfis comerciais (cantoneiras L, tubos RHS, U enrijecido Ue)
 """
 from __future__ import annotations
 
@@ -23,9 +23,7 @@ _logger = logging.getLogger("seed")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 
-# --------------------------------------------------------------
-# MATERIAIS — Aços estruturais nacionais (NBR 8800 / NBR 7007)
-# --------------------------------------------------------------
+# MATERIAIS: Aços estruturais nacionais (NBR 8800 / NBR 7007)
 MATERIAIS_PADRAO = [
     {
         "nome": "A36",
@@ -78,14 +76,12 @@ MATERIAIS_PADRAO = [
 ]
 
 
-# --------------------------------------------------------------
-# PERFIS — Cantoneiras L, Tubos RHS, U enrijecido Ue
-# --------------------------------------------------------------
+# PERFIS: Cantoneiras L, Tubos RHS, U enrijecido Ue
 # Formato: (nome, familia, h, bf, d, t, Area, Ix, Iy, J, uso, chapa_ref)
-# Unidades: dimensões em mm, áreas em m², inércias em m⁴.
-# --------------------------------------------------------------
+# Unidades: dimensões em mm, áreas em m^2, inércias em m^4.
+
 PERFIS_PADRAO = [
-    # Cantoneiras de abas iguais (L) — Montantes e Diagonais
+    # Cantoneiras de abas iguais (L): Montantes e Diagonais
     ("L19x3.18",   "L", 19, 19, 0, 3.18, 1.11e-4, 3.20e-9, 3.20e-9, 3.74e-10, "Montante/Diagonal", "3/4 pol x 1/8 pol"),
     ("L22x3.18",   "L", 22, 22, 0, 3.18, 1.30e-4, 5.03e-9, 5.03e-9, 4.40e-10, "Montante/Diagonal", "7/8 pol x 1/8 pol"),
     ("L25x3.18",   "L", 25, 25, 0, 3.18, 1.49e-4, 7.49e-9, 7.49e-9, 5.02e-10, "Montante/Diagonal", "1 pol x 1/8 pol"),
@@ -97,7 +93,7 @@ PERFIS_PADRAO = [
     ("L64x6.35",   "L", 64, 64, 0, 6.35, 7.36e-4, 2.49e-7, 2.49e-7, 5.10e-9,  "Montante/Diagonal", "2.1/2 pol x 1/4 pol"),
     ("L76x6.35",   "L", 76, 76, 0, 6.35, 8.85e-4, 4.34e-7, 4.34e-7, 6.18e-9,  "Banzo/Montante",   "3 pol x 1/4 pol"),
 
-    # Tubos retangulares (RHS) — Banzos e Montantes
+    # Tubos retangulares (RHS): Banzos e Montantes
     ("RHS50x30x2.00", "RHS", 50, 30, 0, 2.00, 2.96e-4, 5.60e-8, 2.08e-8, 5.50e-8,  "Banzo/Montante", "Chapa 14"),
     ("RHS50x30x1.50", "RHS", 50, 30, 0, 1.50, 2.25e-4, 4.36e-8, 1.63e-8, 4.25e-8,  "Banzo/Montante", "Chapa 16"),
     ("RHS60x40x2.00", "RHS", 60, 40, 0, 2.00, 3.76e-4, 1.11e-7, 5.43e-8, 1.28e-7,  "Banzo/Montante", "Chapa 14"),
@@ -109,7 +105,7 @@ PERFIS_PADRAO = [
     ("RHS120x60x3.00", "RHS", 120, 60, 0, 3.00, 1.02e-3, 1.13e-6, 3.18e-7, 8.16e-7,  "Banzo", "Chapa 10"),
     ("RHS150x75x3.00", "RHS", 150, 75, 0, 3.00, 1.29e-3, 2.26e-6, 6.40e-7, 1.32e-6,  "Banzo", "Chapa 10"),
 
-    # U enrijecido (Ue) — Banzos de tesouras
+    # U enrijecido (Ue): Banzos de tesouras
     ("Ue75x40x15x2.00",  "Ue", 75, 40, 15, 2.00, 3.26e-4, 2.91e-7, 3.89e-8, 4.36e-10, "Banzo", "—"),
     ("Ue75x40x15x2.25",  "Ue", 75, 40, 15, 2.25, 3.65e-4, 3.24e-7, 4.34e-8, 6.18e-10, "Banzo", "—"),
     ("Ue75x40x15x2.65",  "Ue", 75, 40, 15, 2.65, 4.28e-4, 3.77e-7, 5.04e-8, 1.01e-9,  "Banzo", "—"),

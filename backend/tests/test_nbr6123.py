@@ -39,12 +39,12 @@ def test_pressao_dinamica():
 
 
 def test_decompor_direcao_vento():
-    """Direção 0° = eixo X puro."""
+    """Direção 0 graus = eixo X puro."""
     fx, fz = decompor_direcao_vento(0.0)
     assert abs(fx - 1.0) < 1e-6
     assert abs(fz - 0.0) < 1e-6
 
-    # Direção 90° = eixo Z puro.
+    # Direção 90 graus = eixo Z puro.
     fx, fz = decompor_direcao_vento(90.0)
     assert abs(fx - 0.0) < 1e-6
     assert abs(fz - 1.0) < 1e-6
@@ -58,8 +58,8 @@ def test_calcular_area_frontal():
         "C": NoFisico("C", 0, 5, 0),
         "D": NoFisico("D", 10, 5, 0),
     }
-    # Vento em 0° (eixo X): projeta em fx=1, fz=0 → largura projetada = 0
-    # Mas area frontal deve usar max-min da projeção.
+    # Vento em 0 graus (eixo X): projeta em fx=1, fz=0 -> largura projetada = 0
+    # Mas área frontal deve usar max-min da projeção.
     area = calcular_area_frontal(nos, 0.0)
     assert area > 0  # altura * (max - min da projeção)
 
@@ -88,7 +88,7 @@ def test_calcular_forcas_vento_3d():
 
 
 def test_identificar_fachadas_perpendiculares():
-    """Para vento em 0°, fachadas são os nós em x_min e x_max."""
+    """Para vento em 0 graus, fachadas são os nós em x_min e x_max."""
     nos = {
         "A": NoFisico("A", 0, 0, 0),
         "B": NoFisico("B", 10, 0, 0),

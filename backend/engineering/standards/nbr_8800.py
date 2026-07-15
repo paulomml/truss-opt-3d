@@ -1,14 +1,14 @@
 """
-Verificações NBR 8800:2008 — Projeto de estruturas de aço.
+Verificações NBR 8800:2008: Projeto de estruturas de aço.
 
 Implementa:
 - Esbeltez máxima (Item 5.2.8 e 5.3.4)
-- Flambagem local — Fator Q (Anexo F)
+- Flambagem local: Fator Q (Anexo F)
 - Força axial resistente N_rd (Item 5.2.2 e 5.3.2)
-- Fator de redução χ (Item 5.3.3)
+- Fator de redução chi (Item 5.3.3)
 - Momento fletor resistente M_rd (regime elástico)
 - Interação N + M (Item 5.5.1.2)
-- Estado Limite de Serviço — Flecha (ELS)
+- Estado Limite de Serviço: Flecha (ELS)
 
 Referências diretas às equações da norma são mantidas nos comentários.
 """
@@ -21,7 +21,7 @@ from typing import Optional
 from engineering.modelos_fisicos import BarraFisica, MaterialFisico, PerfilFisico
 
 
-# Coeficiente de ponderação γ_a1 para combinações normais (NBR 8800 Tabela 4).
+# Coeficiente de ponderação gamma_a1 para combinações normais (NBR 8800 Tabela 4).
 GAMMA_A1 = 1.10
 
 
@@ -44,16 +44,16 @@ def calcular_fator_q(perfil: PerfilFisico, material: MaterialFisico) -> float:
 
     Para perfis L/RHS/Ue formados a frio, a esbeltez local b/t determina
     a necessidade de redução da área efetiva. Implementação simplificada
-    mas conservadora: Qs = 1.0 se b/t ≤ λr; senão Qa = Ae/Ag.
+    mas conservadora: Qs = 1.0 se b/t <= lambdar; senão Qa = Ae/Ag.
     """
     t = max(perfil.t_mm, 0.1) / 1000.0  # em metros
     # Largura da mesa mais esbelta (conservador): bf ou h.
     b_mm = max(perfil.h_mm, perfil.bf_mm)
     b = b_mm / 1000.0
-    # Largura flat descontando dobras (≈ 3t de cada lado).
+    # Largura flat descontando dobras (~= 3t de cada lado).
     b_flat = max(b - 6 * t, t)
 
-    # λr = 1.40 * sqrt(E/fy) para elementos sem enrijecedor longitudinal.
+    # lambdar = 1.40 * sqrt(E/fy) para elementos sem enrijecedor longitudinal.
     e_pa = material.e_pa
     fy_pa = material.fy_pa
     lamb_r = 1.40 * math.sqrt(e_pa / fy_pa)
@@ -62,7 +62,7 @@ def calcular_fator_q(perfil: PerfilFisico, material: MaterialFisico) -> float:
     if lamb <= lamb_r:
         return 1.0
 
-    # Largura efetiva (Anexo F, Eq. F.3 — versão simplificada).
+    # Largura efetiva (Anexo F, Eq. F.3: versão simplificada).
     bef = (
         1.92
         * t
@@ -83,7 +83,7 @@ def calcular_fator_chi(
     fator_q: float,
 ) -> tuple[float, float, float]:
     """
-    Fator de redução χ associado à flambagem global (Item 5.3.3).
+    Fator de redução chi associado à flambagem global (Item 5.3.3).
 
     Retorna (chi, lambda0, esbeltez_maxima).
     """
@@ -91,7 +91,7 @@ def calcular_fator_chi(
     fy_pa = material.fy_pa * fator_q  # fy reduzido por Q
     a = perfil.area_m2
 
-    # Força axial de flambagem elástica Ne (Anexo E) — menor entre eixos.
+    # Força axial de flambagem elástica Ne (Anexo E): menor entre eixos.
     n_ex = (math.pi**2 * e_pa * perfil.ix_m4) / (lkx**2)
     n_ey = (math.pi**2 * e_pa * perfil.iy_m4) / (lky**2)
     n_e = min(n_ex, n_ey)
@@ -99,10 +99,10 @@ def calcular_fator_chi(
     if n_e <= 0:
         return 0.0, float("inf"), float("inf")
 
-    # λ0 = sqrt(Ag * Q * fy / Ne)  (Item 5.3.3.2)
+    # lambda0 = sqrt(Ag * Q * fy / Ne)  (Item 5.3.3.2)
     lambda_0 = math.sqrt((a * fy_pa) / n_e)
 
-    # χ (Item 5.3.3.1).
+    # chi (Item 5.3.3.1).
     if lambda_0 <= 1.5:
         chi = 0.658 ** (lambda_0**2)
     else:
@@ -128,8 +128,8 @@ def calcular_n_rd(
     """
     Força axial resistente de cálculo N_rd (Item 5.2.2 / 5.3.2).
 
-    - Tração: N_rd = A · fy / γa1
-    - Compressão: N_rd = χ · Q · A · fy / γa1
+    - Tração: N_rd = A * fy / gammaa1
+    - Compressão: N_rd = chi * Q * A * fy / gammaa1
     """
     a = perfil.area_m2
     fy = material.fy_pa
@@ -183,7 +183,7 @@ def verificar_barra_nbr8800(
     # 1) Fator Q (flambagem local).
     fator_q = calcular_fator_q(perfil, material)
 
-    # 2) Fator χ e esbeltez.
+    # 2) Fator chi e esbeltez.
     chi, lambda_0, esbeltez_max = calcular_fator_chi(
         perfil, material, lkx, lky, fator_q
     )
@@ -220,7 +220,7 @@ def verificar_barra_nbr8800(
             esbeltez=esbeltez_max,
             fator_chi=chi, fator_q=fator_q,
             violacao_normativa=True,
-            detalhes="N_rd nulo — instabilidade.",
+            detalhes="N_rd nulo: instabilidade.",
         )
 
     # 5) Interação N + M (Item 5.5.1.2).
@@ -232,7 +232,7 @@ def verificar_barra_nbr8800(
 
     if ratio_n >= 0.2:
         utilization = ratio_n + (8.0 / 9.0) * ratio_m
-        eq_ref = "NBR 8800 5.5.1.2-a (N/N_rd ≥ 0.2)"
+        eq_ref = "NBR 8800 5.5.1.2-a (N/N_rd >= 0.2)"
     else:
         utilization = (ratio_n / 2.0) + ratio_m
         eq_ref = "NBR 8800 5.5.1.2-b (N/N_rd < 0.2)"
@@ -240,8 +240,8 @@ def verificar_barra_nbr8800(
     violacao = utilization > 1.0
     detalhes = (
         f"{eq_ref} | N_sd={n_sd/1000:.2f} kN, N_rd={n_rd/1000:.2f} kN, "
-        f"M_sd={m_sd/1000:.2f} kN·m, M_rd={m_rd/1000:.2f} kN·m, "
-        f"χ={chi:.3f}, Q={fator_q:.3f}, λ₀={lambda_0:.2f}, λ={esbeltez_max:.0f}."
+        f"M_sd={m_sd/1000:.2f} kN*m, M_rd={m_rd/1000:.2f} kN*m, "
+        f"chi={chi:.3f}, Q={fator_q:.3f}, lambda_0={lambda_0:.2f}, lambda={esbeltez_max:.0f}."
     )
 
     return ResultadoVerificacao(
@@ -268,7 +268,7 @@ def verificar_flecha_els(
     Retorna (atendido, flecha_limite, mensagem).
     """
     if vano_real <= 0:
-        return True, 0.0, "Vão indefinido — ELS não aplicável."
+        return True, 0.0, "Vão indefinido: ELS não aplicável."
 
     flecha_limite = vano_real / limite_divisor
     if flecha_maxima > flecha_limite:
@@ -276,6 +276,6 @@ def verificar_flecha_els(
             False,
             flecha_limite,
             f"Flecha {flecha_maxima*1000:.2f} mm > L/{limite_divisor:.0f} "
-            f"({flecha_limite*1000:.2f} mm) — ELS violado.",
+            f"({flecha_limite*1000:.2f} mm): ELS violado.",
         )
-    return True, flecha_limite, f"Flecha {flecha_maxima*1000:.2f} mm ≤ L/{limite_divisor:.0f} — ELS atendido."
+    return True, flecha_limite, f"Flecha {flecha_maxima*1000:.2f} mm <= L/{limite_divisor:.0f}: ELS atendido."

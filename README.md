@@ -195,12 +195,12 @@ flowchart TD
     Cancel -->|Sim| End([Fim])
     Cancel -->|Não| MemCheck{Memória OK?}
     MemCheck -->|Não| End
-    MemCheck -->|Sim| Select[Seleção por torneio]
-    Select --> Crossover[Crossover 2 pontos]
-    Crossover --> Mutation[Mutação uniforme]
-    Mutation --> LS[Busca local hill climbing]
-    LS --> SelPop[Seleção da próxima geração]
-    SelPop --> Hall[Atualizar Hall of Fame]
+    MemCheck -->|Sim| VarAnd[Crossover + Mutação]
+    VarAnd --> EvalOff[Avaliar fitness dos filhos]
+    EvalOff --> LS[Busca local hill climbing]
+    LS --> SelPop[Seleção por torneio]
+    SelPop --> Elitism[Injeção de elitismo]
+    Elitism --> Hall[Atualizar Hall of Fame]
     Hall --> Conv{Convergiu ou máx. gerações?}
     Conv -->|Não| GenLoop
     Conv -->|Sim| Best[Reconstruir melhor solução]
@@ -209,7 +209,15 @@ flowchart TD
 
 #### 2.4.5 Cancelamento e Proteção de Memória
 
-O CanceladorOtimizacao permite abortar a otimização via API entre gerações. O verificador de memória lança LimiteMemoriaExcedido se a RAM do container exceder o percentual configurado (padrão 85%).
+O `CanceladorOtimizacao` permite abortar a otimização via API entre gerações. O verificador de memória lança `LimiteMemoriaExcedido` se a RAM do container exceder o percentual configurado (padrão 85%).
+
+#### 2.4.6 Avaliação Inicial e Elitismo Efetivo
+
+A implementação observa dois cuidados fundamentais frequentemente negligenciados em algoritmos genéticos artesanais:
+
+1. **Avaliação explícita da população inicial (geração 0):** A função `algorithms.varAnd()` da DEAP apenas produz filhos via crossover/mutação — ela não avalia a população de origem. Por isso, antes do loop evolutivo, todos os indivíduos da população inicial são avaliados e os melhores ~30% passam pelo refinamento local (hill climbing), dando ao GA um ponto de partida já polido. As estatísticas da geração 0 são registradas no `Logbook` e reportadas via callback de progresso.
+
+2. **Elitismo efetivo via injeção do Hall of Fame:** O `tools.HallOfFame(1)` da DEAP é apenas um arquivo passivo (rastreador do melhor indivíduo já visto) — ele **não** injeta o elite de volta na população. Sem uma injeção explícita, a seleção (μ, λ) pode descartar o melhor indivíduo entre gerações se todos os seus filhos forem piores. A cada geração, após a seleção, o pior indivíduo da população é substituído por uma cópia do elite (apenas se o elite for estritamente melhor), garantindo que o melhor fitness seja monotonicamente não-crescente entre gerações. Esta é a abordagem canônica recomendada pela comunidade DEAP (cf. mantenedor F.-M. De Rainville, lista oficial `deap-users`).
 
 ## 3. Arquitetura do Sistema e Stack Tecnológico
 
@@ -263,31 +271,33 @@ sequenceDiagram
         S-->>C: Retornar esforços e utilização
         C->>C: Verificar NBR 8800 / aplicar penalidades
         C->>D: Atualizar progresso e logs
-        D-->>F: WebSocket streaming de progresso
+        B->>D: Consultar progresso
+        B-->>F: WebSocket streaming de progresso
     end
     C->>D: Persistir resultado (CONCLUIDO)
-    D-->>F: WebSocket resultado final
+    B->>D: Consultar resultado
+    B-->>F: WebSocket resultado final
     F->>U: Renderizar visualizador 3D com heatmap
 ```
 
-### 3.3 Stack Tecnológica
+### 3.3 Stack Tecnológico
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Frontend | Nuxt 4 + Vue 3.5 + TypeScript |
-| Visualização 3D | Three.js via @tresjs/core + @tresjs/cientos |
-| Estado | Pinia 3 |
-| Estilos | Tailwind CSS 3.4 |
-| Backend | FastAPI 0.115 + Pydantic 2.10 |
-| Servidor ASGI | Uvicorn (1 worker) |
+| Frontend | Nuxt + Vue + TypeScript |
+| Visualização 3D | Three.js (@tresjs) |
+| Estado | Pinia |
+| Estilos | Tailwind CSS |
+| Backend | FastAPI + Pydantic |
+| Servidor ASGI | Uvicorn |
 | Banco de Dados | PostgreSQL 16 |
-| ORM | SQLAlchemy 2.0 |
+| ORM | SQLAlchemy |
 | Broker e Cache | Redis 7 |
-| Fila de Tarefas | Celery 5.4 (1 processo por worker) |
-| MEF | PyniteFEA 3.0 |
-| Otimização | DEAP 1.4 (Algoritmo Genético) |
-| Relatórios | ReportLab 4.2 (PDF) + python-docx 1.1 (DOCX) |
-| Proxy Reverso | Nginx stable-alpine |
+| Fila de Tarefas | Celery |
+| MEF | PyNiteFEA |
+| Otimização | DEAP |
+| Relatórios | ReportLab + python-docx |
+| Proxy Reverso | Nginx |
 | Runtime | Python 3.12 + Node.js 24 |
 
 ### 3.4 Estrutura de Diretórios
@@ -299,12 +309,12 @@ truss-opt-3d/
   backend/                        (Python 3.12 FastAPI + Celery)
     api/                          (rotas REST, WebSocket, schemas Pydantic, memorial)
     core/                         (config, database, celery_app, cache, memoria)
-    db/                           (modelos ORM: Material, Perfil, TarefaOtimizacao)
+    db/                           (modelos ORM: `Material`, `Perfil`, `TarefaOtimizacao`)
     engineering/                  (modelos físicos, solver FEA, normas NBR 8800/6120/6123)
     optimization/                 (algoritmo genético memético com DEAP)
     worker/                       (tarefa Celery de otimização)
     seed/                         (população inicial: 6 materiais + 32 perfis)
-    tests/                        (25 testes pytest)
+    tests/                        (36 testes pytest)
   frontend/                       (Node 24 Nuxt 4 + Three.js)
     components/                   (TrussViewer, TrussSidebar, LoadingOverlay, etc)
     stores/                       (Pinia: form, WebSocket, catálogos)
@@ -526,10 +536,10 @@ Todas as variáveis são opcionais (têm defaults) e lidas via pydantic-settings
 | REDIS_HOST | redis | Host do Redis |
 | CELERY_MAX_CONCORRENCIA | 1 | Processos por worker (MEF é CPU bound) |
 | LIMITE_MEMORIA_PERCENTUAL | 85.0 | Aborta GA acima deste percentual de RAM |
-| AG_POPULACAO_TAMANHO | 20 | Tamanho da população do GA |
-| AG_GERACOES | 12 | Número de gerações |
+| AG_POPULACAO_TAMANHO | 30 | Tamanho da população do GA |
+| AG_GERACOES | 25 | Número de gerações |
 | AG_PROBABILIDADE_CRUZAMENTO | 0.7 | Probabilidade de crossover |
-| AG_PROBABILIDADE_MUTACAO | 0.15 | Probabilidade de mutação |
+| AG_PROBABILIDADE_MUTACAO | 0.2 | Probabilidade de mutação |
 | AG_PENALIDADE_VIOLACAO_NORMATIVA | 1.0e6 | Penalidade por violação NBR (R$) |
 | AG_PENALIDADE_DIVERSIDADE_PERFIS | 5.0e3 | Penalidade por perfis distintos extras (R$) |
 | AG_MAX_PERFIS_DISTINTOS | 4 | Limite de perfis distintos antes de aplicar multa |
@@ -545,14 +555,15 @@ cd backend
 pytest -v
 ```
 
-Cobertura atual: 25 testes distribuídos em:
+Cobertura atual: 36 testes distribuídos em:
 
 - test_nbr8800.py (9 testes): esbeltez, fator Q, chi, N_rd, interação N+M, flecha.
 - test_nbr6120.py (8 testes): cargas de cobertura, manutenção, assimetrias, combinações, empoçamento.
 - test_nbr6123.py (6 testes): Vk, q, decomposição de direção, área frontal, forças 3D.
-- test_otimizacao_ga.py (2 testes): integração GA + solver com treliça simples.
+- test_otimizacao_ga.py (7 testes): integração GA + solver com treliça simples, restrições de família, avaliação da população inicial, elitismo entre gerações, GA puro, convergência da busca local e caso de borda com zero gerações.
+- test_api.py (6 testes): health check, listagem de materiais/perfis, criação e consulta de tarefas.
 
-Os testes usam SQLite em memória (via conftest.py) para não depender de PostgreSQL.
+Os testes usam SQLite em memória (via `conftest.py`) para não depender de PostgreSQL.
 
 ## 12. Licença
 

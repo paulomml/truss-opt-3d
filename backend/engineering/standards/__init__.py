@@ -2,9 +2,9 @@
 Pacote de verificações normativas modulares.
 
 Cada norma vive em seu próprio módulo:
-- nbr_8800.py — Estruturas de aço (ELU, ELS, flambagem).
-- nbr_6120.py — Ações em edificações (cargas, assimetrias, combinações).
-- nbr_6123.py — Vento em edificações (pressão dinâmica, arrasto).
+- nbr_8800.py: Estruturas de aço (ELU, ELS, flambagem).
+- nbr_6120.py: Ações em edificações (cargas, assimetrias, combinações).
+- nbr_6123.py: Vento em edificações (pressão dinâmica, arrasto).
 """
 from engineering.standards.nbr_8800 import (
     ResultadoVerificacao,

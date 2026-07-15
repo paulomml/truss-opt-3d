@@ -1,7 +1,7 @@
 """
 Cache de baixo nível baseado em Redis para análises estruturais.
 
-A análise MEF de uma mesma configuração geométrica é determinística — não
+A análise MEF de uma mesma configuração geométrica é determinística: não
 faz sentido recalcular quando o frontend envia payload idêntico. A chave
 de cache é um hash SHA-256 do payload normalizado.
 """
@@ -64,7 +64,7 @@ def obter_do_cache(chave: str) -> Optional[Any]:
             return None
         return json.loads(valor)
     except (redis.RedisError, ConnectionError, OSError):
-        # Cache indisponível — segue sem cache (degradação graciosa).
+        # Cache indisponível: segue sem cache (degradação graciosa).
         return None
     except (json.JSONDecodeError, TypeError):
         return None

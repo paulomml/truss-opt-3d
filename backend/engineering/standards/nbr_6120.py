@@ -1,5 +1,5 @@
 """
-Verificações NBR 6120:2019 — Ações para o cálculo de estruturas de edificações.
+Verificações NBR 6120:2019: Ações para o cálculo de estruturas de edificações.
 
 Foco em:
 - Carga concentrada de manutenção (Item 6.4): 1 kN atuando isoladamente
@@ -45,16 +45,16 @@ def calcular_carga_cobertura(inclinacao_percentual: float) -> float:
     """
     Carga variável mínima em cobertura (Item 6.4).
 
-    Para inclinações 1% ≤ i ≤ 5%, q varia de 0.50 a 0.25 kN/m².
-    Acima de 5%, q = 0.25 kN/m² (mínimo absoluto).
+    Para inclinações 1% <= i <= 5%, q varia de 0.50 a 0.25 kN/m^2.
+    Acima de 5%, q = 0.25 kN/m^2 (mínimo absoluto).
     Abaixo de 1%, não é permitido (recomendação).
     """
     if inclinacao_percentual < 1.0:
-        return 0.50  # Conservador — usar máximo.
+        return 0.50  # Conservador: usar máximo.
     if inclinacao_percentual >= 5.0:
         return 0.25
     # Interpolação linear entre 1% (0.50) e 5% (0.25)... mas a fórmula real é
-    # q = 0.25 kN/m² para i ≥ 3%, e q = 1/i + 0.15 para 2% < i < 3%, etc.
+    # q = 0.25 kN/m^2 para i >= 3%, e q = 1/i + 0.15 para 2% < i < 3%, etc.
     # Implementação simplificada e conservadora:
     if inclinacao_percentual < 3.0:
         return 0.40
@@ -71,7 +71,7 @@ def gerar_casos_manutencao(
     A carga de 1 kN atua isoladamente em cada nó do banzo superior, na
     posição mais desfavorável. O solver cria uma combinação por nó.
     """
-    carga_n = carga_kn * 1000.0  # kN → N
+    carga_n = carga_kn * 1000.0  # kN -> N
     casos = []
     for nid in nos_banzo_superior:
         casos.append(CasoCargaNormalizado(
@@ -89,7 +89,7 @@ def gerar_casos_assimetricos(
     eixo_x: bool = True,
 ) -> List[CasoCargaNormalizado]:
     """
-    Gera casos de carga assimétrica (NBR 6120 — envoltória).
+    Gera casos de carga assimétrica (NBR 6120: envoltória).
 
     Para treliças, a envoltória mais crítica considera:
     1. Meia carga no lado esquerdo (primeira metade dos nós).
@@ -136,10 +136,10 @@ def verificar_empozamento(
     carga_chuva_kn_m2: float = 0.0,
 ) -> Tuple[bool, str]:
     """
-    Verifica empoçamento progressivo (Anexo D — NBR 6120).
+    Verifica empoçamento progressivo (Anexo D: NBR 6120).
 
     Requisitos:
-    1. i_def = i_projeto - 0.024 * L³ * g / (E * I) + contraflecha/24 ≥ 1%
+    1. i_def = i_projeto - 0.024 * L^3 * g / (E * I) + contraflecha/24 >= 1%
     2. i_def = i_projeto + 0.024 * L * p / (E * I) - contraflecha/24 > 0
 
     Implementação simplificada: compara flecha sob carga permanente + chuva
@@ -154,9 +154,9 @@ def verificar_empozamento(
     if inclinacao_efetiva < 1.0:
         return False, (
             f"Inclinação efetiva {inclinacao_efetiva:.2f}% < 1% mínimo "
-            "(Anexo D NBR 6120) — risco de empoçamento progressivo."
+            "(Anexo D NBR 6120): risco de empoçamento progressivo."
         )
-    return True, f"Inclinação efetiva {inclinacao_efetiva:.2f}% ≥ 1% (Anexo D)."
+    return True, f"Inclinação efetiva {inclinacao_efetiva:.2f}% >= 1% (Anexo D)."
 
 
 def combinacoes_elu() -> List[Tuple[str, dict]]:
@@ -179,8 +179,8 @@ def combinacoes_els() -> List[Tuple[str, dict]]:
     Define as combinações de serviço (ELS) para verificação de flecha.
 
     NBR 6120 recomenda:
-    - Frequente: G + ψ1 * Q  (flecha incômoda)
-    - Quase-permanente: G + ψ2 * Q  (flecha de longa duração)
+    - Frequente: G + psi1 * Q  (flecha incômoda)
+    - Quase-permanente: G + psi2 * Q  (flecha de longa duração)
     - Rara: G + Q  (flecha total)
     """
     return [

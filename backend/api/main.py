@@ -1,8 +1,8 @@
 """
-App FastAPI principal — ponto de entrada do backend.
+App FastAPI principal: ponto de entrada do backend.
 
 Importa configurações, middlewares e roteadores. Executado via
-`uvicorn api.main:app` no container Docker.
+uvicorn api.main:app no container Docker.
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ app = FastAPI(
     lifespan=ciclo_vida,
 )
 
-# CORS — permite o frontend Nuxt em dev/prod.
+# CORS: permite o frontend Nuxt em dev/prod.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=configuracoes.cors_lista,
@@ -64,7 +64,7 @@ app.include_router(router)
 
 @app.get("/")
 async def raiz() -> dict:
-    """Endpoint raiz — redireciona para /docs."""
+    """Endpoint raiz: redireciona para /docs."""
     return {
         "mensagem": "TRUSS-OPT 3D API",
         "documentacao": "/docs",

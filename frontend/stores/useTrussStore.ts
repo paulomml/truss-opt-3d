@@ -1,4 +1,4 @@
-// stores/useTrussStore.ts — Store Pinia central do frontend.
+// stores/useTrussStore.ts: Store Pinia central do frontend.
 import { defineStore } from "pinia";
 import type {
   RequisicaoOtimizacao,
@@ -15,9 +15,7 @@ import { watch } from "vue";
 import * as generators from "@/utils/trussGenerators";
 
 export const useTrussStore = defineStore("truss", () => {
-  // ----------------------------------------------------------
   // Estado do formulário
-  // ----------------------------------------------------------
   const form = reactive<RequisicaoOtimizacao>({
     length: 12.0,
     height: 2.5,
@@ -83,9 +81,7 @@ export const useTrussStore = defineStore("truss", () => {
     }
   });
 
-  // ----------------------------------------------------------
   // Estado da aplicação
-  // ----------------------------------------------------------
   const result = ref<RespostaOtimizacao | null>(null);
   const rawTruss = ref<TrelicaBruta | null>(null);
   const loading = ref(false);
@@ -111,9 +107,7 @@ export const useTrussStore = defineStore("truss", () => {
 
   const { addToast } = useToast();
 
-  // ----------------------------------------------------------
   // Ações
-  // ----------------------------------------------------------
   const cancelOptimization = () => {
     if (ws.value) {
       ws.value.close();
@@ -319,9 +313,7 @@ export const useTrussStore = defineStore("truss", () => {
     modoDesempenho.value = "normal";
   };
 
-  // ----------------------------------------------------------
   // Catálogos
-  // ----------------------------------------------------------
   const carregarMateriais = async () => {
     try {
       const resp = await $fetch<Material[]>("/api/materiais");

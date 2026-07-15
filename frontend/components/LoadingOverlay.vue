@@ -4,9 +4,7 @@ import { useTrussStore } from "@/stores/useTrussStore";
 
 const store = useTrussStore();
 
-// ----------------------------------------------------------
-// Frases rotativas (mantidas do design original)
-// ----------------------------------------------------------
+// Frases rotativas de status
 const loadingPhrases = [
   "Analisando a estabilidade estrutural...",
   "Calculando a distribuição de esforços internos...",
@@ -35,9 +33,7 @@ onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval);
 });
 
-// ----------------------------------------------------------
 // Temporizador de execução
-// ----------------------------------------------------------
 const elapsedSeconds = ref(0);
 let timerInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -51,9 +47,7 @@ onMounted(() => {
   }, 1000);
 });
 
-// ----------------------------------------------------------
-// Parsing dos logs acumulados → agrupados por material
-// ----------------------------------------------------------
+// Parsing dos logs acumulados agrupados por material
 const materiaisLogs = computed(() => {
   if (!store.logsTexto) return {};
   const lines = store.logsTexto.split("\n").filter((l) => l.trim());
@@ -84,9 +78,7 @@ const materiaisOrdenados = computed(() => {
   return Object.keys(materiaisLogs.value);
 });
 
-// ----------------------------------------------------------
-// Status de cada material (concluído / processando / aguardando / erro)
-// ----------------------------------------------------------
+// Status de cada material
 const materiaisStatus = computed(() => {
   const dp = store.dadosProgresso;
   const names = dp.materiais_nomes as string[] | undefined;
@@ -113,9 +105,7 @@ const materiaisStatus = computed(() => {
   return status;
 });
 
-// ----------------------------------------------------------
 // Painéis expansíveis por material
-// ----------------------------------------------------------
 const materiaisExpandidos = reactive(new Set<string>());
 
 watchEffect(() => {
@@ -138,9 +128,7 @@ function isExpanded(name: string): boolean {
   return materiaisExpandidos.has(name);
 }
 
-// ----------------------------------------------------------
-// Barra de resumo (melhor global + material atual + tempo)
-// ----------------------------------------------------------
+// Barra de resumo
 const globalBestDisplay = computed(() => {
   const dp = store.dadosProgresso;
   const fit = dp.melhor_global_fitness;
@@ -171,9 +159,7 @@ const elapsedDisplay = computed(() => {
   return `${sec}s`;
 });
 
-// ----------------------------------------------------------
 // Helpers por material
-// ----------------------------------------------------------
 function getMaterialLines(name: string): string[] {
   return materiaisLogs.value[name] || [];
 }

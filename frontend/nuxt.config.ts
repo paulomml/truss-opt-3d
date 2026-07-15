@@ -1,4 +1,4 @@
-// nuxt.config.ts — Configuração do frontend Nuxt 4
+// nuxt.config.ts: Configuração do frontend Nuxt 4
 export default defineNuxtConfig({
   // Renderização client-side (WebGL no TrussViewer exige browser).
   ssr: false,
@@ -21,10 +21,7 @@ export default defineNuxtConfig({
   // Proxy + watcher para desenvolvimento (npm run dev).
   vite: {
     server: {
-      // Ative usePolling se for rodar npm run dev dentro do Docker:
-      // bind mounts não propagam eventos inotify corretamente,
-      // e sem polling o HMR não detecta alterações em arquivos.
-      // ATENÇÃO: polling aumenta o uso de CPU.
+      // Ative usePolling se for rodar npm run dev dentro do Docker.
       // watch: { usePolling: true, interval: 1000 },
       proxy: {
         "/api": {

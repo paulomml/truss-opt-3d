@@ -1,7 +1,7 @@
 """
-Modelos ORM do TRUSS-OPT 3D — PostgreSQL via SQLAlchemy 2.0.
+Modelos ORM do TRUSS-OPT 3D: PostgreSQL via SQLAlchemy 2.0.
 
-Estes modelos substituem os antigos `materials.csv` e `profiles.csv`,
+Estes modelos substituem os antigos materials.csv e profiles.csv,
 fornecendo um catálogo relacional consultável pela API e pelo otimizador.
 """
 from __future__ import annotations
@@ -52,7 +52,7 @@ class Material(Base):
     rho_kg_m3: Mapped[float] = mapped_column(Float, nullable=False, comment="Massa específica (kg/m³)")
     custo_kg: Mapped[float] = mapped_column(
         Float, nullable=False, default=8.5,
-        comment="Custo unitário (R$/kg) — utilizado pelo GA na função objetivo para minimizar custo total."
+        comment="Custo unitário (R$/kg): utilizado pelo GA na função objetivo para minimizar custo total."
     )
 
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -96,13 +96,13 @@ class Perfil(Base):
         String(16), nullable=False, comment="L | RHS | Ue | W | I | T | Cantoneira"
     )
 
-    # Dimensões nominais (mm) — utilizadas no cálculo do Fator Q (NBR 8800 Anexo F).
+    # Dimensões nominais (mm): utilizadas no cálculo do Fator Q (NBR 8800 Anexo F).
     h_mm: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     bf_mm: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     d_mm: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     t_mm: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 
-    # Propriedades de seção (unidades SI: m², m⁴).
+    # Propriedades de seção (unidades SI: m^2, m^4).
     area_m2: Mapped[float] = mapped_column(Float, nullable=False)
     ix_m4: Mapped[float] = mapped_column(Float, nullable=False, comment="Inércia em torno do eixo forte X")
     iy_m4: Mapped[float] = mapped_column(Float, nullable=False, comment="Inércia em torno do eixo fraco Y")

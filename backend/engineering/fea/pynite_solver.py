@@ -8,13 +8,13 @@ Responsável por:
 4. Aplicar forças de vento NBR 6123.
 5. Executar a análise linear e extrair esforços nas barras.
 6. Calcular comprimentos de flambagem (Lkx, Lky) para os banzos.
-7. Consolidar resultados em `ResultadoAnalise`.
+7. Consolidar resultados em ResultadoAnalise.
 
 Notas sobre a API PyNite v3:
-- `add_section(name, A, Iy, Iz, J)` — atenção à ordem (Iy, Iz, não Ix).
-- `add_material(name, E, G, nu, rho, fy=None)`.
-- `member.max_moment(direction, combo)` onde direction é 'my' ou 'mz'.
-- `node.DY[combo]` é um dict mapeando combo → deslocamento.
+- add_section(name, A, Iy, Iz, J): atenção à ordem (Iy, Iz, não Ix).
+- add_material(name, E, G, nu, rho, fy=None).
+- member.max_moment(direction, combo) onde direction é 'my' ou 'mz'.
+- node.DY[combo] é um dict mapeando combo -> deslocamento.
 """
 from __future__ import annotations
 
@@ -47,8 +47,8 @@ from engineering.standards.nbr_8800 import verificar_barra_nbr8800
 _logger = logging.getLogger(__name__)
 
 
-# Coeficiente de reação do subleito (Winkler) — NBR 6122 referenciado pela 8800.
-# Valores em kN/m³ (Padrão Terzaghi para placa 0.30x0.30 m).
+# Coeficiente de reação do subleito (Winkler): NBR 6122 referenciado pela 8800.
+# Valores em kN/m^3 (Padrão Terzaghi para placa 0.30x0.30 m).
 BANCO_SOLOS = {
     "Areia Fofa":      {"ks1": 15000,  "tipo": "granular"},
     "Areia Compacta":  {"ks1": 100000, "tipo": "granular"},
@@ -131,7 +131,7 @@ def construir_e_resolver(
     """
     Constrói o modelo MEF, aplica cargas e resolve.
 
-    Retorna um `ResultadoAnalise` com esforços, deslocamentos e peso.
+    Retorna um ResultadoAnalise com esforços, deslocamentos e peso.
     """
     resultado = ResultadoAnalise()
     resultado.nos = dict(nos_entrada)
@@ -146,13 +146,13 @@ def construir_e_resolver(
 
     modelo = FEModel3D()
 
-    # ----- Material -----
+    # ----- Material (E em Pa, comprimentos em m, forças em N, rho em kg/m^3) -----
     modelo.add_material(
         material.nome,
         material.e_pa,
         material.g_pa,
         material.nu,
-        material.rho_kg_m3 * 1e-9,  # PyNite usa t/mm³ → converter kg/m³ → t/mm³
+        material.rho_kg_m3,  # kg/m^3: consistente com E em Pa e lengths em m
         fy=material.fy_pa,
     )
 
@@ -235,8 +235,8 @@ def construir_e_resolver(
 
     # ----- Lâmina d'água (NBR 6120 item 5.6) -----
     if water_lamina_mm > 0 and nos_banzo_superior:
-        # Peso = lamina(mm) * 10 N/m² por mm * área tributária.
-        carga_agua = water_lamina_mm * 10.0  # N/m²
+        # Peso = lamina(mm) * 10 N/m^2 por mm * área tributária.
+        carga_agua = water_lamina_mm * 10.0  # N/m^2
         xs = [nos_entrada[nid].x for nid in nos_banzo_superior if nid in nos_entrada]
         zs = [nos_entrada[nid].z for nid in nos_banzo_superior if nid in nos_entrada]
         if xs and zs:
@@ -307,7 +307,7 @@ def construir_e_resolver(
         try:
             modelo.add_load_combo(nome, fatores)
         except Exception:
-            pass  # Caso de carga sem componente — ignora silenciosamente.
+            pass  # Caso de carga sem componente: ignora silenciosamente.
 
     # ----- Análise -----
     try:
@@ -333,7 +333,7 @@ def construir_e_resolver(
 
     # Limite de divergência numérica.
     if max_flecha > 2.0:
-        resultado.erro = "Deslocamento excessivo — possível instabilidade."
+        resultado.erro = "Deslocamento excessivo: possível instabilidade."
         return resultado
 
     resultado.flecha_maxima = max_flecha
