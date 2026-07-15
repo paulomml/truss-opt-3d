@@ -5,20 +5,20 @@ A tarefa otimizar_trelice recebe um payload JSON serializável, executa
 o algoritmo genético e persiste o resultado no PostgreSQL. O frontend
 pode acompanhar progresso via WebSocket ou polling na API de status.
 """
+
 from __future__ import annotations
 
 import json
 import logging
 import time
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import select
 
 from core.celery_app import app_celery
 from core.database import SessionLocal
-from core.memoria import CanceladorOtimizacao, verificar_memoria
-from db.modelos import TarefaOtimizacao, Material, Perfil
+from core.memoria import CanceladorOtimizacao
+from db.modelos import Material, Perfil, TarefaOtimizacao
 from engineering.modelos_fisicos import (
     BarraFisica,
     NoFisico,
@@ -27,7 +27,6 @@ from engineering.modelos_fisicos import (
 )
 from engineering.standards.nbr_6123 import ParametrosVento
 from optimization.algoritmo_genetico import otimizar_trelice_ga
-from api.schemas import RespostaOtimizacao, BarraResultado, NoResultado
 
 _logger = logging.getLogger(__name__)
 
@@ -36,10 +35,10 @@ def _atualizar_status_tarefa(
     tarefa_id: int,
     status: str,
     progresso: float = 0.0,
-    mensagem: Optional[str] = None,
-    resultado: Optional[dict] = None,
-    erro: Optional[str] = None,
-    logs: Optional[str] = None,
+    mensagem: str | None = None,
+    resultado: dict | None = None,
+    erro: str | None = None,
+    logs: str | None = None,
 ) -> None:
     """Atualiza o registro da tarefa no banco de dados."""
     with SessionLocal() as sessao:
@@ -109,12 +108,8 @@ def otimizar_trelice(self, tarefa_id: int, payload: dict) -> dict:
 
         # Carrega materiais e perfis do banco (com restrições opcionais).
         with SessionLocal() as sessao:
-            materiais_orm = list(sessao.scalars(
-                select(Material).where(Material.ativo.is_(True))
-            ))
-            perfis_orm = list(sessao.scalars(
-                select(Perfil).where(Perfil.ativo.is_(True))
-            ))
+            materiais_orm = list(sessao.scalars(select(Material).where(Material.ativo.is_(True))))
+            perfis_orm = list(sessao.scalars(select(Perfil).where(Perfil.ativo.is_(True))))
 
         restricoes = payload.get("restricoes") or {}
         # Filtra materiais.
@@ -186,7 +181,9 @@ def otimizar_trelice(self, tarefa_id: int, payload: dict) -> dict:
                     "total_geracoes": total,
                     "melhor_fitness": min_fit,
                     "melhor_do_material": material_best,
-                    "melhor_global_fitness": melhor_global_fitness if melhor_global_fitness != float("inf") else None,
+                    "melhor_global_fitness": melhor_global_fitness
+                    if melhor_global_fitness != float("inf")
+                    else None,
                     "melhor_global_material": melhor_global_material,
                     "materiais_nomes": [m.nome for m in materiais_fisicos],
                 }
@@ -226,7 +223,7 @@ def otimizar_trelice(self, tarefa_id: int, payload: dict) -> dict:
             if resultado.erro:
                 linha_sumario = f"[{material.nome}] Falhou: {resultado.erro}"
             else:
-                linha_sumario = f"[{material.nome}] Concluído. Custo: R$ {resultado.peso_total_kg * material.custo_kg:.2f} ({resultado.peso_total_kg:.1f} kg x R$ {material.custo_kg:.2f}/kg) | Utilização: {resultado.utilizacao_maxima*100:.1f}%"
+                linha_sumario = f"[{material.nome}] Concluído. Custo: R$ {resultado.peso_total_kg * material.custo_kg:.2f} ({resultado.peso_total_kg:.1f} kg x R$ {material.custo_kg:.2f}/kg) | Utilização: {resultado.utilizacao_maxima * 100:.1f}%"
             all_logs_acumulados.append(linha_sumario)
             _atualizar_status_tarefa(
                 tarefa_id,
@@ -291,7 +288,7 @@ def _construir_resposta(
     resultado,
     material_nome: str,
     material_custo_kg: float,
-    perfil_por_grupo: Optional[dict],
+    perfil_por_grupo: dict | None,
     logs: list[str],
     tempo_execucao: float,
     num_perfis_distintos: int,
@@ -301,24 +298,26 @@ def _construir_resposta(
     # Mapa barra -> perfil (para preencher nome do material).
     barras_saida = []
     for b in resultado.barras:
-        barras_saida.append({
-            "id": b.id,
-            "node_start": b.node_start,
-            "node_end": b.node_end,
-            "group": b.group,
-            "profile": b.profile_name,
-            "material": material_nome,
-            "axial_force": b.axial_force,
-            "my": b.my,
-            "mz": b.mz,
-            "utilization": b.utilization,
-            "stress_type": b.stress_type,
-            "n_rd": b.n_rd,
-            "m_rd": b.m_rd,
-            "esbeltez": b.esbeltez,
-            "fator_chi": b.fator_chi,
-            "fator_q": b.fator_q,
-        })
+        barras_saida.append(
+            {
+                "id": b.id,
+                "node_start": b.node_start,
+                "node_end": b.node_end,
+                "group": b.group,
+                "profile": b.profile_name,
+                "material": material_nome,
+                "axial_force": b.axial_force,
+                "my": b.my,
+                "mz": b.mz,
+                "utilization": b.utilization,
+                "stress_type": b.stress_type,
+                "n_rd": b.n_rd,
+                "m_rd": b.m_rd,
+                "esbeltez": b.esbeltez,
+                "fator_chi": b.fator_chi,
+                "fator_q": b.fator_q,
+            }
+        )
 
     nos_saida = {
         nid: {
@@ -336,10 +335,11 @@ def _construir_resposta(
 
     return {
         "is_structurally_stable": not resultado.erro and resultado.utilizacao_maxima <= 1.0,
-        "status_message": resultado.erro or (
+        "status_message": resultado.erro
+        or (
             f"Otimização concluída com material {material_nome} "
             f"(R$ {material_custo_kg:.2f}/kg). "
-            f"Utilização máxima: {resultado.utilizacao_maxima*100:.1f}%."
+            f"Utilização máxima: {resultado.utilizacao_maxima * 100:.1f}%."
         ),
         "total_weight": resultado.peso_total_kg,
         "total_cost": resultado.peso_total_kg * material_custo_kg,

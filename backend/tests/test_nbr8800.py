@@ -8,7 +8,6 @@ Cobrem:
 - Interação N + M (Item 5.5.1.2).
 - Verificação ELS (flecha).
 """
-import math
 
 import pytest
 
@@ -27,8 +26,12 @@ def material_a36():
     """Material A36 padrão para testes."""
     return MaterialFisico(
         nome="A36",
-        e_gpa=200.0, g_gpa=76.9, nu=0.30,
-        fy_mpa=250.0, fu_mpa=400.0, rho_kg_m3=7850.0,
+        e_gpa=200.0,
+        g_gpa=76.9,
+        nu=0.30,
+        fy_mpa=250.0,
+        fu_mpa=400.0,
+        rho_kg_m3=7850.0,
         custo_kg=8.45,
     )
 
@@ -37,17 +40,28 @@ def material_a36():
 def perfil_l25():
     """Cantoneira L25x3.18 para testes."""
     return PerfilFisico(
-        id=1, nome="L25x3.18", familia="L",
-        h_mm=25, bf_mm=25, d_mm=0, t_mm=3.18,
-        area_m2=1.49e-4, ix_m4=7.49e-9, iy_m4=7.49e-9, j_m4=5.02e-10,
+        id=1,
+        nome="L25x3.18",
+        familia="L",
+        h_mm=25,
+        bf_mm=25,
+        d_mm=0,
+        t_mm=3.18,
+        area_m2=1.49e-4,
+        ix_m4=7.49e-9,
+        iy_m4=7.49e-9,
+        j_m4=5.02e-10,
     )
 
 
 def test_esbeltez_maxima_compressao(material_a36, perfil_l25):
     """Barra com lambda > 200 em compressão deve retornar U = 999."""
     barra = BarraFisica(
-        id=1, node_start="A", node_end="B",
-        group="Diagonal", length=2.5,
+        id=1,
+        node_start="A",
+        node_end="B",
+        group="Diagonal",
+        length=2.5,
         axial_force=-1000.0,  # compressão
     )
     # lk = 2.5 m; raio de giração ~= 7.1 mm; lambda ~= 350.
@@ -59,8 +73,11 @@ def test_esbeltez_maxima_compressao(material_a36, perfil_l25):
 def test_esbeltez_maxima_tracao(material_a36, perfil_l25):
     """Barra com lambda > 300 em tração deve retornar U = 999."""
     barra = BarraFisica(
-        id=1, node_start="A", node_end="B",
-        group="Diagonal", length=2.5,
+        id=1,
+        node_start="A",
+        node_end="B",
+        group="Diagonal",
+        length=2.5,
         axial_force=1000.0,  # tração
     )
     resultado = verificar_barra_nbr8800(barra, perfil_l25, material_a36)
@@ -76,9 +93,17 @@ def test_fator_q_secao_compacta(material_a36, perfil_l25):
 def test_fator_q_seção_esbelta(material_a36):
     """Seção muito esbelta (b/t > lambdar) deve ter Q < 1.0."""
     perfil_esbelto = PerfilFisico(
-        id=2, nome="Test_Esbelto", familia="L",
-        h_mm=100, bf_mm=100, d_mm=0, t_mm=1.0,  # b/t = 100
-        area_m2=4e-4, ix_m4=1e-7, iy_m4=1e-7, j_m4=1e-9,
+        id=2,
+        nome="Test_Esbelto",
+        familia="L",
+        h_mm=100,
+        bf_mm=100,
+        d_mm=0,
+        t_mm=1.0,  # b/t = 100
+        area_m2=4e-4,
+        ix_m4=1e-7,
+        iy_m4=1e-7,
+        j_m4=1e-9,
     )
     q = calcular_fator_q(perfil_esbelto, material_a36)
     assert 0 < q < 1.0
@@ -102,10 +127,14 @@ def test_n_rd_tracao_vs_compressao(material_a36, perfil_l25):
 def test_interacao_nm_alta_compressao(material_a36, perfil_l25):
     """Barra com N/N_rd >= 0.2 deve usar Eq. 5.5.1.2-a."""
     barra = BarraFisica(
-        id=1, node_start="A", node_end="B",
-        group="Banzo", length=1.0,
+        id=1,
+        node_start="A",
+        node_end="B",
+        group="Banzo",
+        length=1.0,
         axial_force=-20000.0,  # alta compressão
-        mz=50.0, my=0.0,
+        mz=50.0,
+        my=0.0,
     )
     resultado = verificar_barra_nbr8800(barra, perfil_l25, material_a36)
     assert "5.5.1.2-a" in resultado.detalhes or resultado.utilization > 1.0

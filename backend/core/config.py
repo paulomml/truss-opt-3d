@@ -5,10 +5,10 @@ Todas as configurações sensíveis são lidas de variáveis de ambiente, com
 valores padrão adequados para o desenvolvimento local. Em produção, o
 docker-compose injeta as variáveis corretas para cada container.
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import List
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -111,7 +111,7 @@ class Configuracoes(BaseSettings):
         return f"redis://{self.redis_host}:{self.redis_porta}/{self.redis_db}"
 
     @property
-    def cors_lista(self) -> List[str]:
+    def cors_lista(self) -> list[str]:
         """Converte a string CSV de origens em lista."""
         if self.origens_cors == "*":
             return ["*"]

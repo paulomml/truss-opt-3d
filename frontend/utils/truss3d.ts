@@ -1,6 +1,6 @@
 // utils/truss3d.ts: Funções utilitárias para renderização 3D.
-import { Vector3, Quaternion } from "three";
-import type { BarraResultado, BarraBruta, NoResultado, NoBruto } from "@/types/truss";
+import { Vector3, Quaternion } from 'three';
+import type { BarraResultado, BarraBruta, NoResultado, NoBruto } from '@/types/truss';
 
 /**
  * Calcula os dados geométricos de um cilindro que representa uma barra.
@@ -37,10 +37,7 @@ export function getCylinderData(
 
   // Alinha o eixo Y (default do CylinderGeometry) com a direção da barra.
   const yAxis = new Vector3(0, 1, 0);
-  const quaternion = new Quaternion().setFromUnitVectors(
-    yAxis,
-    direction.clone().normalize(),
-  );
+  const quaternion = new Quaternion().setFromUnitVectors(yAxis, direction.clone().normalize());
 
   return { position: midpoint, quaternion, length };
 }
@@ -58,21 +55,21 @@ export function getMemberColor(utilization: number): string {
     const r = Math.round(59 + (34 - 59) * t); // #3b82f6 -> #22c55e
     const g = Math.round(130 + (197 - 130) * t);
     const b = Math.round(246 + (94 - 246) * t);
-    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
   } else if (u < 0.8) {
     // Verde (0.5) -> Amarelo (0.8).
     const t = (u - 0.5) / 0.3;
     const r = Math.round(34 + (234 - 34) * t); // #22c55e -> #eab308
     const g = Math.round(197 + (179 - 197) * t);
     const b = Math.round(94 + (8 - 94) * t);
-    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
   } else {
     // Amarelo (0.8) -> Vermelho (1.0).
     const t = (u - 0.8) / 0.2;
     const r = Math.round(234 + (239 - 234) * t); // #eab308 -> #ef4444
     const g = Math.round(179 + (68 - 179) * t);
     const b = Math.round(8 + (68 - 8) * t);
-    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
   }
 }
 
@@ -84,14 +81,14 @@ export function getContrastColor(hexColor: string): string {
   const g = parseInt(hexColor.slice(3, 5), 16);
   const b = parseInt(hexColor.slice(5, 7), 16);
   const luminancia = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminancia > 0.5 ? "#111827" : "#ffffff";
+  return luminancia > 0.5 ? '#111827' : '#ffffff';
 }
 
 /**
  * Formata um número em notação brasileira.
  */
 export function formatarNumero(valor: number, casas = 2): string {
-  return valor.toLocaleString("pt-BR", {
+  return valor.toLocaleString('pt-BR', {
     minimumFractionDigits: casas,
     maximumFractionDigits: casas,
   });
@@ -101,8 +98,8 @@ export function formatarNumero(valor: number, casas = 2): string {
  * Formata um valor monetário em Real brasileiro.
  */
 export function formatarMoeda(valor: number): string {
-  return valor.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
+  return valor.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
   });
 }

@@ -5,16 +5,15 @@ A análise MEF + Algoritmo Genético pode consumir muita RAM quando o catálogo
 de perfis é grande ou a população é numerosa. Este módulo fornece um check
 centralizado que deve ser chamado a cada geração do GA.
 """
+
 from __future__ import annotations
 
 import logging
 import threading
-from typing import Callable, Optional
 
 import psutil
 
 from core.config import configuracoes
-
 
 _logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ class CanceladorOtimizacao:
 
     def __init__(self) -> None:
         self._evento = threading.Event()
-        self._motivo: Optional[str] = None
+        self._motivo: str | None = None
 
     def cancelar(self, motivo: str = "Cancelado pelo usuário.") -> None:
         """Marca o cancelamento e armazena o motivo."""
@@ -64,7 +63,7 @@ class CanceladorOtimizacao:
         return self._evento.is_set()
 
     @property
-    def motivo(self) -> Optional[str]:
+    def motivo(self) -> str | None:
         """Motivo do cancelamento (se houver)."""
         return self._motivo
 

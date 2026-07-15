@@ -4,10 +4,10 @@ Modelos ORM do TRUSS-OPT 3D: PostgreSQL via SQLAlchemy 2.0.
 Estes modelos substituem os antigos materials.csv e profiles.csv,
 fornecendo um catálogo relacional consultável pela API e pelo otimizador.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
 
 from sqlalchemy import (
     BigInteger,
@@ -36,31 +36,38 @@ class Material(Base):
     custo por kg (R$/kg) utilizado pelo GA na função objetivo para
     minimizar o custo total da estrutura.
     """
+
     __tablename__ = "materiais"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nome: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
-    norma_referencia: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    observacao: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    norma_referencia: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    observacao: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Propriedades mecânicas (unidades SI no sistema internacional).
     e_gpa: Mapped[float] = mapped_column(Float, nullable=False, comment="Módulo de Young (GPa)")
-    g_gpa: Mapped[float] = mapped_column(Float, nullable=False, comment="Módulo de cisalhamento (GPa)")
+    g_gpa: Mapped[float] = mapped_column(
+        Float, nullable=False, comment="Módulo de cisalhamento (GPa)"
+    )
     nu: Mapped[float] = mapped_column(Float, nullable=False, comment="Coeficiente de Poisson")
-    fy_mpa: Mapped[float] = mapped_column(Float, nullable=False, comment="Tensão de escoamento (MPa)")
+    fy_mpa: Mapped[float] = mapped_column(
+        Float, nullable=False, comment="Tensão de escoamento (MPa)"
+    )
     fu_mpa: Mapped[float] = mapped_column(Float, nullable=False, comment="Tensão de ruptura (MPa)")
-    rho_kg_m3: Mapped[float] = mapped_column(Float, nullable=False, comment="Massa específica (kg/m³)")
+    rho_kg_m3: Mapped[float] = mapped_column(
+        Float, nullable=False, comment="Massa específica (kg/m³)"
+    )
     custo_kg: Mapped[float] = mapped_column(
-        Float, nullable=False, default=8.5,
-        comment="Custo unitário (R$/kg): utilizado pelo GA na função objetivo para minimizar custo total."
+        Float,
+        nullable=False,
+        default=8.5,
+        comment="Custo unitário (R$/kg): utilizado pelo GA na função objetivo para minimizar custo total.",
     )
 
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    criado_em: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
-    )
+    criado_em: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
-    perfis: Mapped[List["Perfil"]] = relationship(
+    perfis: Mapped[list[Perfil]] = relationship(
         "Perfil", back_populates="material", cascade="all, delete-orphan"
     )
 
@@ -88,6 +95,7 @@ class Perfil(Base):
     de fabricantes nacionais (Gerdau, Villares, Valmont) e usadas diretamente
     pelo solver MEF e pelas verificações de flambagem local (NBR 8800 Anexo F).
     """
+
     __tablename__ = "perfis"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -104,25 +112,29 @@ class Perfil(Base):
 
     # Propriedades de seção (unidades SI: m^2, m^4).
     area_m2: Mapped[float] = mapped_column(Float, nullable=False)
-    ix_m4: Mapped[float] = mapped_column(Float, nullable=False, comment="Inércia em torno do eixo forte X")
-    iy_m4: Mapped[float] = mapped_column(Float, nullable=False, comment="Inércia em torno do eixo fraco Y")
-    j_m4: Mapped[float] = mapped_column(Float, nullable=False, comment="Momento de inércia à torção")
+    ix_m4: Mapped[float] = mapped_column(
+        Float, nullable=False, comment="Inércia em torno do eixo forte X"
+    )
+    iy_m4: Mapped[float] = mapped_column(
+        Float, nullable=False, comment="Inércia em torno do eixo fraco Y"
+    )
+    j_m4: Mapped[float] = mapped_column(
+        Float, nullable=False, comment="Momento de inércia à torção"
+    )
 
     # Metadados de uso recomendado (ex.: "Banzo", "Montante/Diagonal").
-    uso_recomendado: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    chapa_referencia: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    uso_recomendado: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    chapa_referencia: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # Associação opcional com material (perfil pode ser específico de um aço).
-    material_id: Mapped[Optional[int]] = mapped_column(
+    material_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("materiais.id", ondelete="SET NULL"), nullable=True
     )
 
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    criado_em: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
-    )
+    criado_em: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
-    material: Mapped[Optional[Material]] = relationship("Material", back_populates="perfis")
+    material: Mapped[Material | None] = relationship("Material", back_populates="perfis")
 
     __table_args__ = (
         Index("ix_perfis_familia", "familia"),
@@ -156,17 +168,20 @@ class TarefaOtimizacao(Base):
     Permite ao frontend consultar status, progresso e resultado final mesmo
     após a conexão WebSocket ter sido fechada.
     """
+
     __tablename__ = "tarefas_otimizacao"
 
     id: Mapped[int] = mapped_column(
-        BigInteger().with_variant(Integer(), "sqlite"),
-        primary_key=True, autoincrement=True
+        BigInteger().with_variant(Integer(), "sqlite"), primary_key=True, autoincrement=True
     )
-    celery_task_id: Mapped[Optional[str]] = mapped_column(
+    celery_task_id: Mapped[str | None] = mapped_column(
         String(128), unique=True, index=True, nullable=True
     )
     status: Mapped[str] = mapped_column(
-        String(32), default="PENDENTE", nullable=False, index=True,
+        String(32),
+        default="PENDENTE",
+        nullable=False,
+        index=True,
         comment="PENDENTE | EM_ANDAMENTO | CONCLUIDO | FALHOU | CANCELADO",
     )
     progresso: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
@@ -175,21 +190,17 @@ class TarefaOtimizacao(Base):
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
 
     # Resultado final (JSON serializado da OptimizationResponse).
-    resultado_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    mensagem_erro: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    resultado_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    mensagem_erro: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Logs de progresso em formato texto (acumulados durante a execução).
-    logs: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    logs: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    criado_em: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
-    )
-    iniciado_em: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    finalizado_em: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    iniciado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    finalizado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    __table_args__ = (
-        Index("ix_tarefas_status_criado", "status", "criado_em"),
-    )
+    __table_args__ = (Index("ix_tarefas_status_criado", "status", "criado_em"),)
 
 
 class MemorialCalculo(Base):
@@ -198,11 +209,11 @@ class MemorialCalculo(Base):
 
     Armazena metadados do PDF/DOCX para download posterior via API.
     """
+
     __tablename__ = "memoriais_calculo"
 
     id: Mapped[int] = mapped_column(
-        BigInteger().with_variant(Integer(), "sqlite"),
-        primary_key=True, autoincrement=True
+        BigInteger().with_variant(Integer(), "sqlite"), primary_key=True, autoincrement=True
     )
     tarefa_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("tarefas_otimizacao.id", ondelete="CASCADE"), nullable=False
@@ -211,10 +222,6 @@ class MemorialCalculo(Base):
     nome_arquivo: Mapped[str] = mapped_column(String(256), nullable=False)
     conteudo_b64: Mapped[str] = mapped_column(Text, nullable=False, comment="Base64 do arquivo")
     tamanho_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    criado_em: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
-    )
+    criado_em: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
-    __table_args__ = (
-        UniqueConstraint("tarefa_id", "formato", name="uq_memorial_tarefa_formato"),
-    )
+    __table_args__ = (UniqueConstraint("tarefa_id", "formato", name="uq_memorial_tarefa_formato"),)

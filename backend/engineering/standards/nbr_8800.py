@@ -12,14 +12,13 @@ Implementa:
 
 Referências diretas às equações da norma são mantidas nos comentários.
 """
+
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional
 
 from engineering.modelos_fisicos import BarraFisica, MaterialFisico, PerfilFisico
-
 
 # Coeficiente de ponderação gamma_a1 para combinações normais (NBR 8800 Tabela 4).
 GAMMA_A1 = 1.10
@@ -28,6 +27,7 @@ GAMMA_A1 = 1.10
 @dataclass
 class ResultadoVerificacao:
     """Resultado consolidado das verificações normativas de uma barra."""
+
     utilization: float
     n_rd: float
     m_rd: float
@@ -63,12 +63,7 @@ def calcular_fator_q(perfil: PerfilFisico, material: MaterialFisico) -> float:
         return 1.0
 
     # Largura efetiva (Anexo F, Eq. F.3: versão simplificada).
-    bef = (
-        1.92
-        * t
-        * math.sqrt(e_pa / fy_pa)
-        * (1.0 - (0.38 / lamb) * math.sqrt(e_pa / fy_pa))
-    )
+    bef = 1.92 * t * math.sqrt(e_pa / fy_pa) * (1.0 - (0.38 / lamb) * math.sqrt(e_pa / fy_pa))
     bef = min(bef, b_flat)
     a_ef = perfil.area_m2 - 4 * (b_flat - bef) * t
     q_a = max(a_ef / perfil.area_m2, 0.001)
@@ -103,10 +98,7 @@ def calcular_fator_chi(
     lambda_0 = math.sqrt((a * fy_pa) / n_e)
 
     # chi (Item 5.3.3.1).
-    if lambda_0 <= 1.5:
-        chi = 0.658 ** (lambda_0**2)
-    else:
-        chi = 0.877 / (lambda_0**2)
+    chi = 0.658 ** (lambda_0**2) if lambda_0 <= 1.5 else 0.877 / (lambda_0**2)
 
     # Esbeltez física (L/r).
     r_x = perfil.raio_giracao_x
@@ -163,8 +155,8 @@ def verificar_barra_nbr8800(
     barra: BarraFisica,
     perfil: PerfilFisico,
     material: MaterialFisico,
-    lkx: Optional[float] = None,
-    lky: Optional[float] = None,
+    lkx: float | None = None,
+    lky: float | None = None,
 ) -> ResultadoVerificacao:
     """
     Executa todas as verificações NBR 8800 para uma barra.
@@ -184,26 +176,28 @@ def verificar_barra_nbr8800(
     fator_q = calcular_fator_q(perfil, material)
 
     # 2) Fator chi e esbeltez.
-    chi, lambda_0, esbeltez_max = calcular_fator_chi(
-        perfil, material, lkx, lky, fator_q
-    )
+    chi, lambda_0, esbeltez_max = calcular_fator_chi(perfil, material, lkx, lky, fator_q)
 
     # 3) Limites de esbeltez.
     if not tracao and esbeltez_max > 200.0:
         return ResultadoVerificacao(
             utilization=999.0,
-            n_rd=0.0, m_rd=0.0,
+            n_rd=0.0,
+            m_rd=0.0,
             esbeltez=esbeltez_max,
-            fator_chi=chi, fator_q=fator_q,
+            fator_chi=chi,
+            fator_q=fator_q,
             violacao_normativa=True,
             detalhes=f"Esbeltez {esbeltez_max:.0f} > 200 (compressão, NBR 8800 5.3.4.1).",
         )
     if tracao and esbeltez_max > 300.0:
         return ResultadoVerificacao(
             utilization=999.0,
-            n_rd=0.0, m_rd=0.0,
+            n_rd=0.0,
+            m_rd=0.0,
             esbeltez=esbeltez_max,
-            fator_chi=chi, fator_q=fator_q,
+            fator_chi=chi,
+            fator_q=fator_q,
             violacao_normativa=True,
             detalhes=f"Esbeltez {esbeltez_max:.0f} > 300 (tração, NBR 8800 5.2.8.1).",
         )
@@ -216,9 +210,11 @@ def verificar_barra_nbr8800(
     if n_rd <= 0:
         return ResultadoVerificacao(
             utilization=999.0,
-            n_rd=0.0, m_rd=m_rd,
+            n_rd=0.0,
+            m_rd=m_rd,
             esbeltez=esbeltez_max,
-            fator_chi=chi, fator_q=fator_q,
+            fator_chi=chi,
+            fator_q=fator_q,
             violacao_normativa=True,
             detalhes="N_rd nulo: instabilidade.",
         )
@@ -239,8 +235,8 @@ def verificar_barra_nbr8800(
 
     violacao = utilization > 1.0
     detalhes = (
-        f"{eq_ref} | N_sd={n_sd/1000:.2f} kN, N_rd={n_rd/1000:.2f} kN, "
-        f"M_sd={m_sd/1000:.2f} kN*m, M_rd={m_rd/1000:.2f} kN*m, "
+        f"{eq_ref} | N_sd={n_sd / 1000:.2f} kN, N_rd={n_rd / 1000:.2f} kN, "
+        f"M_sd={m_sd / 1000:.2f} kN*m, M_rd={m_rd / 1000:.2f} kN*m, "
         f"chi={chi:.3f}, Q={fator_q:.3f}, lambda_0={lambda_0:.2f}, lambda={esbeltez_max:.0f}."
     )
 
@@ -275,7 +271,11 @@ def verificar_flecha_els(
         return (
             False,
             flecha_limite,
-            f"Flecha {flecha_maxima*1000:.2f} mm > L/{limite_divisor:.0f} "
-            f"({flecha_limite*1000:.2f} mm): ELS violado.",
+            f"Flecha {flecha_maxima * 1000:.2f} mm > L/{limite_divisor:.0f} "
+            f"({flecha_limite * 1000:.2f} mm): ELS violado.",
         )
-    return True, flecha_limite, f"Flecha {flecha_maxima*1000:.2f} mm <= L/{limite_divisor:.0f}: ELS atendido."
+    return (
+        True,
+        flecha_limite,
+        f"Flecha {flecha_maxima * 1000:.2f} mm <= L/{limite_divisor:.0f}: ELS atendido.",
+    )

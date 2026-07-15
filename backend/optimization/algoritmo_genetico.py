@@ -10,16 +10,14 @@ Indivíduo: vetor de inteiros (índices no catálogo de perfis), um por grupo.
 Fitness: peso_total_kg x custo_kg_material + penalidades (minimiza R$).
 Penalidades: violação NBR 8800/6120/6123, flecha ELS, diversidade de perfis.
 """
+
 from __future__ import annotations
 
 import logging
-import math
 import random
-import time
-from typing import Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
 
 from deap import algorithms, base, creator, tools
-from sqlalchemy.orm import Session
 
 from core.config import configuracoes
 from core.memoria import CanceladorOtimizacao, verificar_memoria
@@ -30,7 +28,6 @@ from engineering.modelos_fisicos import (
     NoFisico,
     PerfilFisico,
     ResultadoAnalise,
-    perfil_dict_para_fisico,
 )
 from engineering.standards.nbr_6123 import ParametrosVento
 from engineering.standards.nbr_8800 import verificar_flecha_els
@@ -57,9 +54,9 @@ def _garantiar_classes_deap() -> None:
 
 
 def _filtrar_perfis(
-    perfis_disponiveis: List[PerfilFisico],
-    restricoes: Optional[dict],
-) -> List[PerfilFisico]:
+    perfis_disponiveis: list[PerfilFisico],
+    restricoes: dict | None,
+) -> list[PerfilFisico]:
     """Aplica restrições do usuário ao espaço de busca."""
     if not restricoes:
         return perfis_disponiveis
@@ -74,8 +71,8 @@ def _filtrar_perfis(
 
 
 def _calcular_peso_total(
-    barras: List[BarraFisica],
-    perfil_por_grupo: Dict[str, PerfilFisico],
+    barras: list[BarraFisica],
+    perfil_por_grupo: dict[str, PerfilFisico],
     material: MaterialFisico,
 ) -> float:
     """Calcula o peso total da estrutura em kg."""
@@ -87,30 +84,30 @@ def _calcular_peso_total(
     return peso
 
 
-def _contar_perfis_distintos(individuo: List[int], perfis: List[PerfilFisico]) -> int:
+def _contar_perfis_distintos(individuo: list[int], perfis: list[PerfilFisico]) -> int:
     """Conta quantos perfis distintos um indivíduo utiliza."""
     indices = set(individuo)
     return len({perfis[i].nome for i in indices if 0 <= i < len(perfis)})
 
 
 def _avaliar_individuo(
-    individuo: List[int],
-    grupos: List[str],
-    perfis: List[PerfilFisico],
+    individuo: list[int],
+    grupos: list[str],
+    perfis: list[PerfilFisico],
     material: MaterialFisico,
-    nos: Dict[str, NoFisico],
-    barras: List[BarraFisica],
-    nos_banzo_superior: List[str],
-    nos_fachada: List[str],
-    casos_carga: List[dict],
-    parametros_vento: Optional[ParametrosVento],
+    nos: dict[str, NoFisico],
+    barras: list[BarraFisica],
+    nos_banzo_superior: list[str],
+    nos_fachada: list[str],
+    casos_carga: list[dict],
+    parametros_vento: ParametrosVento | None,
     water_lamina_mm: float,
     solo_tipo: str,
-    custom_ks: Optional[float],
+    custom_ks: float | None,
     footing_b: float,
     footing_l: float,
     usar_penalidade_diversidade: bool,
-) -> Tuple[float]:
+) -> tuple[float]:
     """
     Função objetivo do GA.
 
@@ -118,7 +115,7 @@ def _avaliar_individuo(
     Fitness = peso_total_kg x custo_kg_material + penalidades (minimiza custo em R$).
     """
     # Mapa grupo -> perfil (a partir do indivíduo).
-    perfil_por_grupo: Dict[str, PerfilFisico] = {}
+    perfil_por_grupo: dict[str, PerfilFisico] = {}
     for i, grupo in enumerate(grupos):
         idx = individuo[i] if i < len(individuo) else 0
         idx = max(0, min(idx, len(perfis) - 1))
@@ -161,7 +158,11 @@ def _avaliar_individuo(
         limite_divisor=configuracoes.nbr_flecha_limite,
     )
     if not atendido:
-        excesso_flecha = resultado.flecha_maxima / max(resultado.vano_real / configuracoes.nbr_flecha_limite, 0.001) - 1.0
+        excesso_flecha = (
+            resultado.flecha_maxima
+            / max(resultado.vano_real / configuracoes.nbr_flecha_limite, 0.001)
+            - 1.0
+        )
         penalidade += configuracoes.ag_penalidade_violacao_normativa * excesso_flecha
 
     # 3) Penalidade por diversidade de perfis (padronização).
@@ -176,27 +177,27 @@ def _avaliar_individuo(
 
 
 def otimizar_trelice_ga(
-    nos: Dict[str, NoFisico],
-    barras: List[BarraFisica],
-    grupos: List[str],
-    perfis_disponiveis: List[PerfilFisico],
+    nos: dict[str, NoFisico],
+    barras: list[BarraFisica],
+    grupos: list[str],
+    perfis_disponiveis: list[PerfilFisico],
     material: MaterialFisico,
-    casos_carga: List[dict],
-    nos_banzo_superior: List[str],
-    nos_fachada: List[str],
-    parametros_vento: Optional[ParametrosVento] = None,
+    casos_carga: list[dict],
+    nos_banzo_superior: list[str],
+    nos_fachada: list[str],
+    parametros_vento: ParametrosVento | None = None,
     water_lamina_mm: float = 0.0,
     solo_tipo: str = "Rocha",
-    custom_ks: Optional[float] = None,
+    custom_ks: float | None = None,
     footing_b: float = 0.6,
     footing_l: float = 0.6,
-    restricoes: Optional[dict] = None,
-    geracoes: Optional[int] = None,
-    tamanho_populacao: Optional[int] = None,
-    cancelador: Optional[CanceladorOtimizacao] = None,
-    callback_progresso: Optional[Callable[[int, int, float, str], None]] = None,
-    usar_refinamento_local: Optional[bool] = None,
-) -> Tuple[ResultadoAnalise, Dict[str, PerfilFisico], List[str]]:
+    restricoes: dict | None = None,
+    geracoes: int | None = None,
+    tamanho_populacao: int | None = None,
+    cancelador: CanceladorOtimizacao | None = None,
+    callback_progresso: Callable[[int, int, float, str], None] | None = None,
+    usar_refinamento_local: bool | None = None,
+) -> tuple[ResultadoAnalise, dict[str, PerfilFisico], list[str]]:
     """
     Executa o algoritmo genético memético completo.
 
@@ -224,7 +225,7 @@ def otimizar_trelice_ga(
     geracoes = geracoes or configuracoes.ag_geracoes
     tamanho_populacao = tamanho_populacao or configuracoes.ag_populacao_tamanho
 
-    logs: List[str] = []
+    logs: list[str] = []
     logs.append(
         f"GA {'memético' if usar_refinamento_local else 'puro'} inicializado: "
         f"{num_grupos} grupos, {num_perfis} perfis, "
@@ -236,18 +237,30 @@ def otimizar_trelice_ga(
     # Cache de avaliação (evita re-calcular FEA para mesmos perfis).
     # Resetado a cada execução do GA.
     # ----------------------------------------------------------------
-    _cache_avaliacao: Dict[Tuple[int, ...], Tuple[float, ...]] = {}
+    _cache_avaliacao: dict[tuple[int, ...], tuple[float, ...]] = {}
 
-    def _avaliar_com_cache(individuo: List[int]) -> Tuple[float, ...]:
+    def _avaliar_com_cache(individuo: list[int]) -> tuple[float, ...]:
         """Envolve _avaliar_individuo com cache por combinação de perfis."""
         chave = tuple(individuo)
         if chave in _cache_avaliacao:
             return _cache_avaliacao[chave]
         resultado = _avaliar_individuo(
-            individuo, grupos, perfis, material, nos, barras,
-            nos_banzo_superior, nos_fachada, casos_carga,
-            parametros_vento, water_lamina_mm, solo_tipo,
-            custom_ks, footing_b, footing_l, usar_penalidade_diversidade,
+            individuo,
+            grupos,
+            perfis,
+            material,
+            nos,
+            barras,
+            nos_banzo_superior,
+            nos_fachada,
+            casos_carga,
+            parametros_vento,
+            water_lamina_mm,
+            solo_tipo,
+            custom_ks,
+            footing_b,
+            footing_l,
+            usar_penalidade_diversidade,
         )
         _cache_avaliacao[chave] = resultado
         return resultado
@@ -255,7 +268,7 @@ def otimizar_trelice_ga(
     # ----------------------------------------------------------------
     # Busca local (hill climbing first-improvement com reinício).
     # ----------------------------------------------------------------
-    def _refinamento_local(individuo: List[int], max_iter: int = 2000) -> float:
+    def _refinamento_local(individuo: list[int], max_iter: int = 2000) -> float:
         """
         Hill climbing first-improvement com reinício de varredura.
 
@@ -317,15 +330,22 @@ def otimizar_trelice_ga(
     # Crossover de 2 pontos: apropriado para variáveis discretas (índices).
     toolbox.register("mate", tools.cxTwoPoint)
     # Mutação uniforme: substitui um gene por um índice aleatório.
-    toolbox.register("mutate", tools.mutUniformInt, low=0, up=max(num_perfis - 1, 0),
-                     indpb=1.0 / max(num_grupos, 1))
+    toolbox.register(
+        "mutate",
+        tools.mutUniformInt,
+        low=0,
+        up=max(num_perfis - 1, 0),
+        indpb=1.0 / max(num_grupos, 1),
+    )
     toolbox.register("select", tools.selTournament, tournsize=configuracoes.ag_indice_torneio)
 
     # População inicial.
     populacao = toolbox.population(n=tamanho_populacao)
 
     # Estatísticas: fitness.values é uma tupla, extraímos o escalar.
-    stats = tools.Statistics(lambda ind: ind.fitness.values[0] if ind.fitness.values else float("inf"))
+    stats = tools.Statistics(
+        lambda ind: ind.fitness.values[0] if ind.fitness.values else float("inf")
+    )
     stats.register("min", lambda x: min(x) if x else float("inf"))
     stats.register("avg", lambda x: sum(x) / len(x) if x else float("inf"))
 
@@ -373,8 +393,7 @@ def otimizar_trelice_ga(
         min_fit_init = record_init["min"] if record_init else float("inf")
         avg_init = record_init["avg"] if record_init else float("inf")
         msg_init = (
-            f"Geração 0/{geracoes} (inicial) | min=R$ {min_fit_init:.2f} | "
-            f"avg=R$ {avg_init:.2f}"
+            f"Geração 0/{geracoes} (inicial) | min=R$ {min_fit_init:.2f} | avg=R$ {avg_init:.2f}"
             if record_init
             else f"Geração 0/{geracoes} (inicial)"
         )
@@ -384,14 +403,14 @@ def otimizar_trelice_ga(
         # Verifica cancelamento.
         if cancelador:
             try:
-                cancelador.verificar(contexto=f"geração {geracao+1}/{geracoes}")
+                cancelador.verificar(contexto=f"geração {geracao + 1}/{geracoes}")
             except InterruptedError as e:
-                logs.append(f"GA cancelado na geração {geracao+1}: {e}")
+                logs.append(f"GA cancelado na geração {geracao + 1}: {e}")
                 break
 
         # Verifica memória.
         try:
-            verificar_memoria(contexto=f"geração {geracao+1}")
+            verificar_memoria(contexto=f"geração {geracao + 1}")
         except Exception as e:
             logs.append(f"GA interrompido por limite de memória: {e}")
             break
@@ -399,9 +418,12 @@ def otimizar_trelice_ga(
         # --------------------------------------------------------
         # FASE GENÉTICA: variação (crossover + mutação)
         # --------------------------------------------------------
-        offspring = algorithms.varAnd(populacao, toolbox,
-                                      cxpb=configuracoes.ag_probabilidade_cruzamento,
-                                      mutpb=configuracoes.ag_probabilidade_mutacao)
+        offspring = algorithms.varAnd(
+            populacao,
+            toolbox,
+            cxpb=configuracoes.ag_probabilidade_cruzamento,
+            mutpb=configuracoes.ag_probabilidade_mutacao,
+        )
 
         # Avaliação dos inválidos.
         invalidos = [ind for ind in offspring if not ind.fitness.valid]
@@ -415,7 +437,10 @@ def otimizar_trelice_ga(
         # --------------------------------------------------------
         if usar_refinamento_local:
             # Ordena por fitness (menor = melhor) e seleciona top 30%.
-            ordenados = sorted(offspring, key=lambda ind: ind.fitness.values[0] if ind.fitness.valid else float("inf"))
+            ordenados = sorted(
+                offspring,
+                key=lambda ind: ind.fitness.values[0] if ind.fitness.valid else float("inf"),
+            )
             n_refinar = max(1, len(ordenados) // 3)
             for ind in ordenados[:n_refinar]:
                 # Converte para lista mutável para a busca local.
@@ -442,9 +467,9 @@ def otimizar_trelice_ga(
             # = pior, pois o GA minimiza custo em R$).
             pior_idx = max(
                 range(len(populacao)),
-                key=lambda i: populacao[i].fitness.values[0]
-                if populacao[i].fitness.valid
-                else float("-inf"),
+                key=lambda i: (
+                    populacao[i].fitness.values[0] if populacao[i].fitness.valid else float("-inf")
+                ),
             )
             pior_fit = (
                 populacao[pior_idx].fitness.values[0]
@@ -461,25 +486,24 @@ def otimizar_trelice_ga(
 
         # Estatísticas.
         record = stats.compile(populacao)
-        logbook.record(gen=geracao+1, nevals=len(invalidos), **(record or {}))
+        logbook.record(gen=geracao + 1, nevals=len(invalidos), **(record or {}))
 
         if callback_progresso:
             min_fit = record["min"] if record else float("inf")
             avg_fit = record["avg"] if record else float("inf")
             msg = (
-                f"Geração {geracao+1}/{geracoes} | min=R$ {min_fit:.2f} | "
-                f"avg=R$ {avg_fit:.2f}"
+                f"Geração {geracao + 1}/{geracoes} | min=R$ {min_fit:.2f} | avg=R$ {avg_fit:.2f}"
                 if record
-                else f"Geração {geracao+1}/{geracoes}"
+                else f"Geração {geracao + 1}/{geracoes}"
             )
-            callback_progresso(geracao+1, geracoes, min_fit, msg)
+            callback_progresso(geracao + 1, geracoes, min_fit, msg)
 
         if record and record["min"] < melhor_fitness_historico:
             melhor_fitness_historico = record["min"]
 
     # Reconstrói o melhor resultado.
     melhor_individuo = hof[0] if hof else populacao[0]
-    perfil_por_grupo: Dict[str, PerfilFisico] = {}
+    perfil_por_grupo: dict[str, PerfilFisico] = {}
     for i, grupo in enumerate(grupos):
         idx = max(0, min(int(melhor_individuo[i]), num_perfis - 1))
         perfil_por_grupo[grupo] = perfis[idx]

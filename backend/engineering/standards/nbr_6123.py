@@ -19,14 +19,13 @@ Onde:
     Ci : coeficiente de forma interno
     Ca : coeficiente de arrasto
 """
+
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
 
 from engineering.modelos_fisicos import NoFisico
-
 
 # Densidade do ar ao nível do mar (kg/m^3): NBR 6123 Item 4.1.c.
 RHO_AR = 1.225  # kg/m^3
@@ -35,6 +34,7 @@ RHO_AR = 1.225  # kg/m^3
 @dataclass
 class ForcaVento:
     """Força de vento aplicada em um nó."""
+
     no_id: str
     direction: str  # 'FX' | 'FY' | 'FZ'
     valor: float  # em Newtons
@@ -43,14 +43,15 @@ class ForcaVento:
 @dataclass
 class ParametrosVento:
     """Parâmetros de vento NBR 6123."""
+
     v0_mps: float = 40.0  # Velocidade básica (default: região centro-oeste).
-    s1: float = 1.0       # Fator topográfico.
-    s2: float = 1.0       # Fator de rugosidade.
-    s3: float = 1.0       # Fator estatístico.
+    s1: float = 1.0  # Fator topográfico.
+    s2: float = 1.0  # Fator de rugosidade.
+    s3: float = 1.0  # Fator estatístico.
     direcao_vento_graus: float = 0.0  # Direção do vento (0 = eixo +X).
-    ce_externo: float = 0.8      # Coeficiente de pressão externa (sobrepressão).
-    ci_interno: float = 0.0      # Coeficiente de pressão interna.
-    ca_arrasto: float = 1.3      # Coeficiente de arrasto (treliças 3D).
+    ce_externo: float = 0.8  # Coeficiente de pressão externa (sobrepressão).
+    ci_interno: float = 0.0  # Coeficiente de pressão interna.
+    ca_arrasto: float = 1.3  # Coeficiente de arrasto (treliças 3D).
 
     @property
     def velocidade_caracteristica(self) -> float:
@@ -63,7 +64,7 @@ class ParametrosVento:
         return 0.613 * self.velocidade_caracteristica**2
 
 
-def decompor_direcao_vento(direcao_graus: float) -> Tuple[float, float]:
+def decompor_direcao_vento(direcao_graus: float) -> tuple[float, float]:
     """
     Decompõe a direção do vento em componentes X e Z (vento horizontal).
 
@@ -74,7 +75,7 @@ def decompor_direcao_vento(direcao_graus: float) -> Tuple[float, float]:
 
 
 def calcular_area_frontal(
-    nos: Dict[str, NoFisico],
+    nos: dict[str, NoFisico],
     direcao_graus: float,
 ) -> float:
     """
@@ -96,11 +97,11 @@ def calcular_area_frontal(
 
 
 def calcular_forcas_vento_3d(
-    nos: Dict[str, NoFisico],
+    nos: dict[str, NoFisico],
     parametros: ParametrosVento,
-    nos_banzo_superior: List[str],
-    nos_fachada: List[str] | None = None,
-) -> List[ForcaVento]:
+    nos_banzo_superior: list[str],
+    nos_fachada: list[str] | None = None,
+) -> list[ForcaVento]:
     """
     Modela as forças de vento em 3D sobre a treliça.
 
@@ -118,7 +119,7 @@ def calcular_forcas_vento_3d(
     if not nos:
         return []
 
-    forcas: List[ForcaVento] = []
+    forcas: list[ForcaVento] = []
     q = parametros.pressao_dinamica
     fx_dir, fz_dir = decompor_direcao_vento(parametros.direcao_vento_graus)
 
@@ -135,11 +136,13 @@ def calcular_forcas_vento_3d(
             forca_vertical = (parametros.ce_externo - parametros.ci_interno) * q * area_por_no
             for nid in nos_banzo_superior:
                 if nid in nos:
-                    forcas.append(ForcaVento(
-                        no_id=nid,
-                        direction="FY",
-                        valor=-abs(forca_vertical),  # Sucção para cima.
-                    ))
+                    forcas.append(
+                        ForcaVento(
+                            no_id=nid,
+                            direction="FY",
+                            valor=-abs(forca_vertical),  # Sucção para cima.
+                        )
+                    )
 
     # 2) Pressão horizontal nas fachadas (montantes de torres).
     if nos_fachada:
@@ -151,17 +154,21 @@ def calcular_forcas_vento_3d(
             for nid in nos_fachada:
                 if nid in nos:
                     # Componente X (na direção do vento).
-                    forcas.append(ForcaVento(
-                        no_id=nid,
-                        direction="FX",
-                        valor=forca_horizontal * fx_dir,
-                    ))
+                    forcas.append(
+                        ForcaVento(
+                            no_id=nid,
+                            direction="FX",
+                            valor=forca_horizontal * fx_dir,
+                        )
+                    )
                     # Componente Z (perpendicular).
-                    forcas.append(ForcaVento(
-                        no_id=nid,
-                        direction="FZ",
-                        valor=forca_horizontal * fz_dir,
-                    ))
+                    forcas.append(
+                        ForcaVento(
+                            no_id=nid,
+                            direction="FZ",
+                            valor=forca_horizontal * fz_dir,
+                        )
+                    )
 
     # 3) Arrasto global aplicado nos nós do plano perpendicular.
     area_arrasto = calcular_area_frontal(nos, parametros.direcao_vento_graus)
@@ -171,24 +178,28 @@ def calcular_forcas_vento_3d(
         if nos:
             por_no = forca_arrasto / max(len(nos), 1)
             for nid in nos:
-                forcas.append(ForcaVento(
-                    no_id=nid,
-                    direction="FX",
-                    valor=por_no * fx_dir,
-                ))
-                forcas.append(ForcaVento(
-                    no_id=nid,
-                    direction="FZ",
-                    valor=por_no * fz_dir,
-                ))
+                forcas.append(
+                    ForcaVento(
+                        no_id=nid,
+                        direction="FX",
+                        valor=por_no * fx_dir,
+                    )
+                )
+                forcas.append(
+                    ForcaVento(
+                        no_id=nid,
+                        direction="FZ",
+                        valor=por_no * fz_dir,
+                    )
+                )
 
     return forcas
 
 
 def identificar_fachadas_perpendiculares(
-    nos: Dict[str, NoFisico],
+    nos: dict[str, NoFisico],
     direcao_graus: float,
-) -> List[str]:
+) -> list[str]:
     """
     Identifica os nós pertencentes às fachadas perpendiculares à direção do vento.
 
@@ -204,8 +215,5 @@ def identificar_fachadas_perpendiculares(
     p_max = max(proj.values())
     # Tolerância de 5% da largura.
     tol = 0.05 * (p_max - p_min) if p_max > p_min else 0.1
-    fachadas = [
-        nid for nid, p in proj.items()
-        if abs(p - p_min) < tol or abs(p - p_max) < tol
-    ]
+    fachadas = [nid for nid, p in proj.items() if abs(p - p_min) < tol or abs(p - p_max) < tol]
     return fachadas

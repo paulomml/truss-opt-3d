@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import { useTrussStore } from "@/stores/useTrussStore";
-import { storeToRefs } from "pinia";
-import HelpModal from "./HelpModal.vue";
-import AboutModal from "./AboutModal.vue";
-import InfoTooltip from "./InfoTooltip.vue";
+import { useTrussStore } from '@/stores/useTrussStore';
+import { storeToRefs } from 'pinia';
+import HelpModal from './HelpModal.vue';
+import AboutModal from './AboutModal.vue';
+import InfoTooltip from './InfoTooltip.vue';
 
 const store = useTrussStore();
-const { form, loading, showMobileMenu, materiais, perfis, restricoes, parametrosVento, modoDesempenho } =
-  storeToRefs(store);
+const {
+  form,
+  loading,
+  showMobileMenu,
+  materiais,
+  perfis,
+  restricoes,
+  parametrosVento,
+  modoDesempenho,
+} = storeToRefs(store);
 
 const showHelpModal = ref(false);
 const showAboutModal = ref(false);
@@ -22,32 +30,32 @@ onMounted(() => {
 
 const templateCategories = [
   {
-    label: "Coberturas (Roof)",
+    label: 'Coberturas (Roof)',
     options: [
-      { value: "pratt_roof", label: "Tesoura Pratt" },
-      { value: "howe_roof", label: "Tesoura Howe" },
-      { value: "fink_roof", label: "Tesoura Fink" },
+      { value: 'pratt_roof', label: 'Tesoura Pratt' },
+      { value: 'howe_roof', label: 'Tesoura Howe' },
+      { value: 'fink_roof', label: 'Tesoura Fink' },
     ],
   },
   {
-    label: "Pontes (Bridge)",
+    label: 'Pontes (Bridge)',
     options: [
-      { value: "warren_bridge", label: "Ponte Warren" },
-      { value: "pratt_bridge", label: "Ponte Pratt" },
+      { value: 'warren_bridge', label: 'Ponte Warren' },
+      { value: 'pratt_bridge', label: 'Ponte Pratt' },
     ],
   },
   {
-    label: "Torres (Tower)",
+    label: 'Torres (Tower)',
     options: [
-      { value: "square_tower", label: "Torre Quadrada" },
-      { value: "triangular_tower", label: "Torre Triangular" },
+      { value: 'square_tower', label: 'Torre Quadrada' },
+      { value: 'triangular_tower', label: 'Torre Triangular' },
     ],
   },
   {
-    label: "Balanços (Cantilever)",
+    label: 'Balanços (Cantilever)',
     options: [
-      { value: "cantilever_pratt", label: "Balanço Pratt" },
-      { value: "cantilever_warren", label: "Balanço Warren" },
+      { value: 'cantilever_pratt', label: 'Balanço Pratt' },
+      { value: 'cantilever_warren', label: 'Balanço Warren' },
     ],
   },
 ];
@@ -56,24 +64,24 @@ const familiasDisponiveis = computed(() => {
   return [...new Set(perfis.value.map((p) => p.familia))].sort();
 });
 
-const isSpanActive = computed(() => !form.value.selectedTemplate.includes("tower"));
-const isPanelsActive = computed(() => !form.value.selectedTemplate.includes("fink"));
-const isTopWidthActive = computed(() => form.value.selectedTemplate.includes("tower"));
-const isSectionsActive = computed(() => form.value.selectedTemplate.includes("tower"));
+const isSpanActive = computed(() => !form.value.selectedTemplate.includes('tower'));
+const isPanelsActive = computed(() => !form.value.selectedTemplate.includes('fink'));
+const isTopWidthActive = computed(() => form.value.selectedTemplate.includes('tower'));
+const isSectionsActive = computed(() => form.value.selectedTemplate.includes('tower'));
 
 const isMobile = ref(false);
 onMounted(() => {
   isMobile.value = window.innerWidth < 768;
-  window.addEventListener("resize", () => {
+  window.addEventListener('resize', () => {
     isMobile.value = window.innerWidth < 768;
   });
 });
 
 const structuralSafetyAlerts = computed(() => {
-  const alerts: Array<{ message: string; type: "warning" | "danger" }> = [];
+  const alerts: Array<{ message: string; type: 'warning' | 'danger' }> = [];
 
   if (store.result && !store.result.is_structurally_stable && store.result.status_message) {
-    alerts.push({ message: store.result.status_message, type: "danger" });
+    alerts.push({ message: store.result.status_message, type: 'danger' });
   }
 
   const formAny = form.value as any;
@@ -82,34 +90,34 @@ const structuralSafetyAlerts = computed(() => {
   const live_load = formAny.live_load || 0;
   const current_total_load = dead_load + live_load;
 
-  if (selectedTemplate.includes("roof") && height > 0 && length / height > 10) {
+  if (selectedTemplate.includes('roof') && height > 0 && length / height > 10) {
     alerts.push({
-      message: "Comprimento muito grande para a altura — risco de envergamento excessivo.",
-      type: "warning",
+      message: 'Comprimento muito grande para a altura — risco de envergamento excessivo.',
+      type: 'warning',
     });
   }
-  if (selectedTemplate.includes("bridge") && height > 0 && length / height > 20) {
+  if (selectedTemplate.includes('bridge') && height > 0 && length / height > 20) {
     alerts.push({
-      message: "Vão longo para a altura — risco de vibrações severas.",
-      type: "warning",
+      message: 'Vão longo para a altura — risco de vibrações severas.',
+      type: 'warning',
     });
   }
-  if (selectedTemplate.includes("tower") && width > 0 && height / width > 10) {
+  if (selectedTemplate.includes('tower') && width > 0 && height / width > 10) {
     alerts.push({
-      message: "Torre muito alta para a base — risco de tombamento.",
-      type: "danger",
+      message: 'Torre muito alta para a base — risco de tombamento.',
+      type: 'danger',
     });
   }
-  if (!selectedTemplate.includes("tower") && divisions > 0 && length / divisions > 4) {
+  if (!selectedTemplate.includes('tower') && divisions > 0 && length / divisions > 4) {
     alerts.push({
-      message: "Painéis muito longos — risco de flambagem das barras.",
-      type: "warning",
+      message: 'Painéis muito longos — risco de flambagem das barras.',
+      type: 'warning',
     });
   }
-  if (current_total_load > 30000 && (soil_type === "Areia Fofa" || soil_type === "Argila Mole")) {
+  if (current_total_load > 30000 && (soil_type === 'Areia Fofa' || soil_type === 'Argila Mole')) {
     alerts.push({
-      message: "Carga elevada para solo mole — risco de recalque. Aumente a sapata.",
-      type: "warning",
+      message: 'Carga elevada para solo mole — risco de recalque. Aumente a sapata.',
+      type: 'warning',
     });
   }
 
@@ -124,7 +132,7 @@ const optimizeAndCloseMobile = () => {
 const sanitizeInput = (field: string, min: number) => {
   const formAny = form.value as any;
   const value = formAny[field];
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     formAny[field] = Math.max(min, value);
   }
 };
@@ -178,10 +186,16 @@ const toggleFamiliaPermitida = (familia: string) => {
           Dimensionamento e Otimização Paramétrica de Treliças Espaciais
         </p>
         <div class="flex gap-2 mt-3 justify-center">
-          <button @click="showHelpModal = true" class="flex-1 py-1.5 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md text-[10px] font-bold text-gray-300">
+          <button
+            @click="showHelpModal = true"
+            class="flex-1 py-1.5 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md text-[10px] font-bold text-gray-300"
+          >
             AJUDA
           </button>
-          <button @click="showAboutModal = true" class="flex-1 py-1.5 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md text-[10px] font-bold text-gray-300">
+          <button
+            @click="showAboutModal = true"
+            class="flex-1 py-1.5 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md text-[10px] font-bold text-gray-300"
+          >
             SOBRE
           </button>
         </div>
@@ -201,7 +215,9 @@ const toggleFamiliaPermitida = (familia: string) => {
             <div>
               <label class="block text-sm font-semibold text-gray-200 mb-2">
                 Tipo de Estrutura
-                <InfoTooltip text="Define a topologia da treliça. Pratt, Howe e Fink distribuem as diagonais de formas diferentes, afetando a rigidez e a eficiência sob carga. Veja o diagrama 3D ao lado." />
+                <InfoTooltip
+                  text="Define a topologia da treliça. Pratt, Howe e Fink distribuem as diagonais de formas diferentes, afetando a rigidez e a eficiência sob carga. Veja o diagrama 3D ao lado."
+                />
               </label>
               <select
                 v-model="(form as any).selectedTemplate"
@@ -219,50 +235,106 @@ const toggleFamiliaPermitida = (familia: string) => {
             <div :class="{ 'opacity-50 pointer-events-none': !isSpanActive || loading }">
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Vão (m)
-                <InfoTooltip text="Distância entre os apoios, em metros. Quanto maior o vão, maiores os esforços internos. Típico: 10–30 m para coberturas." />
+                <InfoTooltip
+                  text="Distância entre os apoios, em metros. Quanto maior o vão, maiores os esforços internos. Típico: 10–30 m para coberturas."
+                />
               </label>
-              <input v-model.number="form.length" @blur="sanitizeInput('length', 0.1)" :disabled="!isSpanActive || loading" type="number" step="0.5" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+              <input
+                v-model.number="form.length"
+                @blur="sanitizeInput('length', 0.1)"
+                :disabled="!isSpanActive || loading"
+                type="number"
+                step="0.5"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              />
             </div>
 
             <div :class="{ 'opacity-50 pointer-events-none': loading }">
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Altura (m)
-                <InfoTooltip text="Altura total da treliça. Uma altura maior reduz as forças nas barras mas aumenta o custo. Relação vão/altura ideal: 4 a 8." />
+                <InfoTooltip
+                  text="Altura total da treliça. Uma altura maior reduz as forças nas barras mas aumenta o custo. Relação vão/altura ideal: 4 a 8."
+                />
               </label>
-              <input v-model.number="form.height" @blur="sanitizeInput('height', 0.1)" :disabled="loading" type="number" step="0.1" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+              <input
+                v-model.number="form.height"
+                @blur="sanitizeInput('height', 0.1)"
+                :disabled="loading"
+                type="number"
+                step="0.1"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              />
             </div>
 
             <div :class="{ 'opacity-50 pointer-events-none': loading }">
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Largura (m)
                 <span class="text-xs text-blue-400">(0 = 2D)</span>
-                <InfoTooltip text="Largura transversal da treliça. Use 0 para análise 2D (plana). Para treliças espaciais 3D, informe a largura real em metros." />
+                <InfoTooltip
+                  text="Largura transversal da treliça. Use 0 para análise 2D (plana). Para treliças espaciais 3D, informe a largura real em metros."
+                />
               </label>
-              <input v-model.number="form.width" @blur="sanitizeInput('width', 0)" :disabled="loading" type="number" step="0.1" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+              <input
+                v-model.number="form.width"
+                @blur="sanitizeInput('width', 0)"
+                :disabled="loading"
+                type="number"
+                step="0.1"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              />
             </div>
 
             <div :class="{ 'opacity-50 pointer-events-none': !isTopWidthActive || loading }">
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Largura do Topo (m)
-                <InfoTooltip text="Largura do topo da torre (só para torres). Uma base mais larga que o topo melhora a estabilidade lateral." />
+                <InfoTooltip
+                  text="Largura do topo da torre (só para torres). Uma base mais larga que o topo melhora a estabilidade lateral."
+                />
               </label>
-              <input v-model.number="(form as any).topWidth" @blur="sanitizeInput('topWidth', 0.01)" :disabled="!isTopWidthActive || loading" type="number" step="0.1" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+              <input
+                v-model.number="(form as any).topWidth"
+                @blur="sanitizeInput('topWidth', 0.01)"
+                :disabled="!isTopWidthActive || loading"
+                type="number"
+                step="0.1"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              />
             </div>
 
             <div :class="{ 'opacity-50 pointer-events-none': !isPanelsActive || loading }">
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Painéis
-                <InfoTooltip text="Subdivisões do vão. Mais painéis = distribuição de cargas mais refinada, porém mais barras e juntas. Típico: 4–12." />
+                <InfoTooltip
+                  text="Subdivisões do vão. Mais painéis = distribuição de cargas mais refinada, porém mais barras e juntas. Típico: 4–12."
+                />
               </label>
-              <input v-model.number="form.divisions" @blur="sanitizeInput('divisions', 2)" :disabled="!isPanelsActive || loading" type="number" min="2" max="20" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+              <input
+                v-model.number="form.divisions"
+                @blur="sanitizeInput('divisions', 2)"
+                :disabled="!isPanelsActive || loading"
+                type="number"
+                min="2"
+                max="20"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              />
             </div>
 
             <div :class="{ 'opacity-50 pointer-events-none': !isSectionsActive || loading }">
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Andares (Torres)
-                <InfoTooltip text="Módulos verticais da torre (só para torres). Cada andar representa uma seção repetitiva da estrutura." />
+                <InfoTooltip
+                  text="Módulos verticais da torre (só para torres). Cada andar representa uma seção repetitiva da estrutura."
+                />
               </label>
-              <input v-model.number="(form as any).sections" @blur="sanitizeInput('sections', 1)" :disabled="!isSectionsActive || loading" type="number" min="1" max="20" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+              <input
+                v-model.number="(form as any).sections"
+                @blur="sanitizeInput('sections', 1)"
+                :disabled="!isSectionsActive || loading"
+                type="number"
+                min="1"
+                max="20"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              />
             </div>
           </div>
         </div>
@@ -278,25 +350,52 @@ const toggleFamiliaPermitida = (familia: string) => {
           <div :class="{ 'opacity-50 pointer-events-none': loading }">
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Carga Permanente G (kgf)
-              <InfoTooltip text="Peso próprio dos elementos construtivos sobre a treliça: telhas, terças, forro, instalações. Valor típico: 1.000–3.000 kgf por nó do banzo superior." />
+              <InfoTooltip
+                text="Peso próprio dos elementos construtivos sobre a treliça: telhas, terças, forro, instalações. Valor típico: 1.000–3.000 kgf por nó do banzo superior."
+              />
             </label>
-            <input v-model.number="(form as any).dead_load" @blur="sanitizeInput('dead_load', 0)" :disabled="loading" type="number" step="100" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+            <input
+              v-model.number="(form as any).dead_load"
+              @blur="sanitizeInput('dead_load', 0)"
+              :disabled="loading"
+              type="number"
+              step="100"
+              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+            />
           </div>
 
           <div :class="{ 'opacity-50 pointer-events-none': loading }">
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Sobrecarga Q (kgf)
-              <InfoTooltip text="Carga variável por uso (NBR 6120): pessoas, móveis, equipamentos. Para coberturas sem acesso, a norma recomenda mínimo de 25 kgf/m² de projeção horizontal." />
+              <InfoTooltip
+                text="Carga variável por uso (NBR 6120): pessoas, móveis, equipamentos. Para coberturas sem acesso, a norma recomenda mínimo de 25 kgf/m² de projeção horizontal."
+              />
             </label>
-            <input v-model.number="(form as any).live_load" @blur="sanitizeInput('live_load', 0)" :disabled="loading" type="number" step="100" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+            <input
+              v-model.number="(form as any).live_load"
+              @blur="sanitizeInput('live_load', 0)"
+              :disabled="loading"
+              type="number"
+              step="100"
+              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+            />
           </div>
 
           <div :class="{ 'opacity-50 pointer-events-none': loading }">
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Lâmina d'Água (mm)
-              <InfoTooltip text="Altura da lâmina de água acumulada na cobertura, simulando chuva intensa. Consulte a NBR 6120 item 6.3 para valores mínimos de projeto." />
+              <InfoTooltip
+                text="Altura da lâmina de água acumulada na cobertura, simulando chuva intensa. Consulte a NBR 6120 item 6.3 para valores mínimos de projeto."
+              />
             </label>
-            <input v-model.number="form.water_lamina" @blur="sanitizeInput('water_lamina', 0)" :disabled="loading" type="number" step="10" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+            <input
+              v-model.number="form.water_lamina"
+              @blur="sanitizeInput('water_lamina', 0)"
+              :disabled="loading"
+              type="number"
+              step="10"
+              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+            />
           </div>
 
           <!-- Vento (NBR 6123) — expansível -->
@@ -306,63 +405,136 @@ const toggleFamiliaPermitida = (familia: string) => {
               class="w-full flex items-center justify-between text-xs font-bold text-gray-400 hover:text-blue-400 transition-colors uppercase"
             >
               <span>Vento (NBR 6123)</span>
-              <Icon :name="showVentoAvancado ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="w-4 h-4" />
+              <Icon
+                :name="showVentoAvancado ? 'lucide:chevron-up' : 'lucide:chevron-down'"
+                class="w-4 h-4"
+              />
             </button>
 
             <div v-if="showVentoAvancado" class="mt-3 space-y-3">
               <div>
                 <label class="block text-xs text-gray-300 mb-1">
                   V₀ (m/s)
-                  <InfoTooltip text="Velocidade básica do vento na região, conforme mapa eólico da NBR 6123. No Brasil, varia de 30 a 50 m/s dependendo da localidade." />
+                  <InfoTooltip
+                    text="Velocidade básica do vento na região, conforme mapa eólico da NBR 6123. No Brasil, varia de 30 a 50 m/s dependendo da localidade."
+                  />
                 </label>
-                <input v-model.number="parametrosVento.v0_mps" type="number" step="1" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                <input
+                  v-model.number="parametrosVento.v0_mps"
+                  type="number"
+                  step="1"
+                  class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                />
               </div>
               <div class="grid grid-cols-3 gap-2">
                 <div>
                   <label class="block text-xs text-gray-300 mb-1">
                     S₁
-                    <InfoTooltip text="Fator topográfico da NBR 6123. Considera se a edificação está em topo de morro, vale ou terreno plano. Varia de 0,85 a 1,15." />
+                    <InfoTooltip
+                      text="Fator topográfico da NBR 6123. Considera se a edificação está em topo de morro, vale ou terreno plano. Varia de 0,85 a 1,15."
+                    />
                   </label>
-                  <input v-model.number="parametrosVento.s1" type="number" step="0.05" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                  <input
+                    v-model.number="parametrosVento.s1"
+                    type="number"
+                    step="0.05"
+                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                  />
                 </div>
                 <div>
                   <label class="block text-xs text-gray-300 mb-1">
                     S₂
-                    <InfoTooltip text="Fator de rugosidade do terreno da NBR 6123. Considera obstáculos (prédios, árvores) e altura da edificação. Varia conforme a categoria do terreno." />
+                    <InfoTooltip
+                      text="Fator de rugosidade do terreno da NBR 6123. Considera obstáculos (prédios, árvores) e altura da edificação. Varia conforme a categoria do terreno."
+                    />
                   </label>
-                  <input v-model.number="parametrosVento.s2" type="number" step="0.05" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                  <input
+                    v-model.number="parametrosVento.s2"
+                    type="number"
+                    step="0.05"
+                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                  />
                 </div>
                 <div>
                   <label class="block text-xs text-gray-300 mb-1">
                     S₃
-                    <InfoTooltip text="Fator estatístico da NBR 6123. Baseado na vida útil e probabilidade de ocorrência do vento máximo. Edificações comuns usam S₃ = 1,00." />
+                    <InfoTooltip
+                      text="Fator estatístico da NBR 6123. Baseado na vida útil e probabilidade de ocorrência do vento máximo. Edificações comuns usam S₃ = 1,00."
+                    />
                   </label>
-                  <input v-model.number="parametrosVento.s3" type="number" step="0.05" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                  <input
+                    v-model.number="parametrosVento.s3"
+                    type="number"
+                    step="0.05"
+                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                  />
                 </div>
               </div>
               <div>
                 <label class="block text-xs text-gray-300 mb-1">Direção (graus)</label>
-                <input v-model.number="parametrosVento.direcao_vento_graus" type="number" step="15" min="0" max="345" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                <input
+                  v-model.number="parametrosVento.direcao_vento_graus"
+                  type="number"
+                  step="15"
+                  min="0"
+                  max="345"
+                  class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                />
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="block text-xs text-gray-300 mb-1">
                     Ce (externo)
-                    <InfoTooltip text="Coeficiente de pressão externa da NBR 6123. Determina a sucção ou pressão do vento nas faces externas da edificação." />
+                    <InfoTooltip
+                      text="Coeficiente de pressão externa da NBR 6123. Determina a sucção ou pressão do vento nas faces externas da edificação."
+                    />
                   </label>
-                  <input v-model.number="parametrosVento.ce_externo" type="number" step="0.1" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                  <input
+                    v-model.number="parametrosVento.ce_externo"
+                    type="number"
+                    step="0.1"
+                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                  />
                 </div>
                 <div>
                   <label class="block text-xs text-gray-300 mb-1">
                     Ci (interno)
-                    <InfoTooltip text="Coeficiente de pressão interna da NBR 6123. Depende da permeabilidade das vedações (paredes, janelas). Edificações fechadas usam Ci próximo de 0." />
+                    <InfoTooltip
+                      text="Coeficiente de pressão interna da NBR 6123. Depende da permeabilidade das vedações (paredes, janelas). Edificações fechadas usam Ci próximo de 0."
+                    />
                   </label>
-                  <input v-model.number="parametrosVento.ci_interno" type="number" step="0.1" class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white" />
+                  <input
+                    v-model.number="parametrosVento.ci_interno"
+                    type="number"
+                    step="0.1"
+                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                  />
                 </div>
               </div>
               <div class="text-[10px] text-gray-400 italic">
-                Vk = V₀·S₁·S₂·S₃ = {{ (parametrosVento.v0_mps * parametrosVento.s1 * parametrosVento.s2 * parametrosVento.s3).toFixed(1) }} m/s
-                | q = 0,613·Vk² = {{ (0.613 * Math.pow(parametrosVento.v0_mps * parametrosVento.s1 * parametrosVento.s2 * parametrosVento.s3, 2)).toFixed(1) }} N/m²
+                Vk = V₀·S₁·S₂·S₃ =
+                {{
+                  (
+                    parametrosVento.v0_mps *
+                    parametrosVento.s1 *
+                    parametrosVento.s2 *
+                    parametrosVento.s3
+                  ).toFixed(1)
+                }}
+                m/s | q = 0,613·Vk² =
+                {{
+                  (
+                    0.613 *
+                    Math.pow(
+                      parametrosVento.v0_mps *
+                        parametrosVento.s1 *
+                        parametrosVento.s2 *
+                        parametrosVento.s3,
+                      2,
+                    )
+                  ).toFixed(1)
+                }}
+                N/m²
               </div>
             </div>
           </div>
@@ -372,16 +544,20 @@ const toggleFamiliaPermitida = (familia: string) => {
         <!-- SEÇÃO 3: FUNDAÇÃO                           -->
         <!-- ═══════════════════════════════════════════ -->
         <div class="pt-3 border-t border-gray-700 space-y-3">
-          <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider">
-            3. Fundação
-          </h3>
+          <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider">3. Fundação</h3>
 
           <div :class="{ 'opacity-50 pointer-events-none': loading }">
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Tipo de Solo
-              <InfoTooltip text="Classificação do solo de apoio. Determina o coeficiente de reação do subleito (ks) usado nos apoios elásticos (Modelo de Winkler). Solos moles geram maiores recalques." />
+              <InfoTooltip
+                text="Classificação do solo de apoio. Determina o coeficiente de reação do subleito (ks) usado nos apoios elásticos (Modelo de Winkler). Solos moles geram maiores recalques."
+              />
             </label>
-            <select v-model="form.soil_type" :disabled="loading" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white">
+            <select
+              v-model="form.soil_type"
+              :disabled="loading"
+              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+            >
               <option>Areia Fofa</option>
               <option>Areia Compacta</option>
               <option>Argila Mole</option>
@@ -391,28 +567,57 @@ const toggleFamiliaPermitida = (familia: string) => {
             </select>
           </div>
 
-          <div v-if="form.soil_type === 'Customizado'" :class="{ 'opacity-50 pointer-events-none': loading }">
+          <div
+            v-if="form.soil_type === 'Customizado'"
+            :class="{ 'opacity-50 pointer-events-none': loading }"
+          >
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               ks (kN/m³)
-              <InfoTooltip text="Coeficiente de reação do subleito. Só usado quando Tipo de Solo = Customizado. Valores típicos: areia fofa ~8.000, rocha ~100.000 kN/m³." />
+              <InfoTooltip
+                text="Coeficiente de reação do subleito. Só usado quando Tipo de Solo = Customizado. Valores típicos: areia fofa ~8.000, rocha ~100.000 kN/m³."
+              />
             </label>
-            <input v-model.number="form.custom_ks" type="number" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+            <input
+              v-model.number="form.custom_ks"
+              type="number"
+              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+            />
           </div>
 
           <div class="grid grid-cols-2 gap-2">
             <div :class="{ 'opacity-50 pointer-events-none': loading }">
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Sapata B (m)
-                <InfoTooltip text="Dimensão da base da sapata no eixo X. Usada no cálculo da rigidez rotacional dos apoios. Sapatas maiores reduzem recalques." />
+                <InfoTooltip
+                  text="Dimensão da base da sapata no eixo X. Usada no cálculo da rigidez rotacional dos apoios. Sapatas maiores reduzem recalques."
+                />
               </label>
-              <input v-model.number="form.footing_b" @blur="sanitizeInput('footing_b', 0.3)" :disabled="loading" type="number" step="0.1" min="0.3" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+              <input
+                v-model.number="form.footing_b"
+                @blur="sanitizeInput('footing_b', 0.3)"
+                :disabled="loading"
+                type="number"
+                step="0.1"
+                min="0.3"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              />
             </div>
             <div :class="{ 'opacity-50 pointer-events-none': loading }">
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Sapata L (m)
-                <InfoTooltip text="Dimensão da base da sapata no eixo Z. Junto com B, define a rigidez rotacional dos apoios. Sapatas maiores reduzem recalques." />
+                <InfoTooltip
+                  text="Dimensão da base da sapata no eixo Z. Junto com B, define a rigidez rotacional dos apoios. Sapatas maiores reduzem recalques."
+                />
               </label>
-              <input v-model.number="form.footing_l" @blur="sanitizeInput('footing_l', 0.3)" :disabled="loading" type="number" step="0.1" min="0.3" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white" />
+              <input
+                v-model.number="form.footing_l"
+                @blur="sanitizeInput('footing_l', 0.3)"
+                :disabled="loading"
+                type="number"
+                step="0.1"
+                min="0.3"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              />
             </div>
           </div>
         </div>
@@ -421,15 +626,15 @@ const toggleFamiliaPermitida = (familia: string) => {
         <!-- SEÇÃO 4: OTIMIZADOR                         -->
         <!-- ═══════════════════════════════════════════ -->
         <div class="pt-3 border-t border-gray-700 space-y-3">
-          <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider">
-            4. Otimizador
-          </h3>
+          <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider">4. Otimizador</h3>
 
           <!-- Modo de Desempenho -->
           <div>
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Modo de Desempenho
-              <InfoTooltip text="Controla a velocidade × qualidade da otimização. Rápido: 5 gerações (testes rápidos). Normal: 25 gerações (padrão). Preciso: 50 gerações (máxima qualidade). Customizado: você define gerações e população manualmente." />
+              <InfoTooltip
+                text="Controla a velocidade × qualidade da otimização. Rápido: 5 gerações (testes rápidos). Normal: 25 gerações (padrão). Preciso: 50 gerações (máxima qualidade). Customizado: você define gerações e população manualmente."
+              />
             </label>
             <select
               v-model="store.modoDesempenho"
@@ -448,9 +653,18 @@ const toggleFamiliaPermitida = (familia: string) => {
             <div :class="{ 'opacity-50 pointer-events-none': loading }">
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Gerações: {{ form.ag_geracoes }}
-                <InfoTooltip text="Número de iterações do Algoritmo Genético. Mais gerações = solução mais otimizada, porém maior tempo de processamento. Típico: 5–100." />
+                <InfoTooltip
+                  text="Número de iterações do Algoritmo Genético. Mais gerações = solução mais otimizada, porém maior tempo de processamento. Típico: 5–100."
+                />
               </label>
-              <input v-model.number="form.ag_geracoes" :disabled="loading" type="range" min="1" max="200" class="w-full accent-blue-500" />
+              <input
+                v-model.number="form.ag_geracoes"
+                :disabled="loading"
+                type="range"
+                min="1"
+                max="200"
+                class="w-full accent-blue-500"
+              />
               <div class="flex justify-between text-[10px] text-gray-500">
                 <span>1</span><span>50</span><span>100</span><span>200</span>
               </div>
@@ -458,9 +672,18 @@ const toggleFamiliaPermitida = (familia: string) => {
             <div :class="{ 'opacity-50 pointer-events-none': loading }">
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 População: {{ form.ag_populacao }}
-                <InfoTooltip text="Número de soluções candidatas por geração. Populações maiores exploram melhor o espaço de busca, mas cada geração demora mais. Típico: 10–100." />
+                <InfoTooltip
+                  text="Número de soluções candidatas por geração. Populações maiores exploram melhor o espaço de busca, mas cada geração demora mais. Típico: 10–100."
+                />
               </label>
-              <input v-model.number="form.ag_populacao" :disabled="loading" type="range" min="4" max="200" class="w-full accent-blue-500" />
+              <input
+                v-model.number="form.ag_populacao"
+                :disabled="loading"
+                type="range"
+                min="4"
+                max="200"
+                class="w-full accent-blue-500"
+              />
               <div class="flex justify-between text-[10px] text-gray-500">
                 <span>4</span><span>50</span><span>100</span><span>200</span>
               </div>
@@ -474,7 +697,10 @@ const toggleFamiliaPermitida = (familia: string) => {
               class="w-full flex items-center justify-between text-xs font-bold text-gray-400 hover:text-blue-400 transition-colors uppercase"
             >
               <span>Restrições Avançadas</span>
-              <Icon :name="showRestricoesAvancadas ? 'lucide:chevron-up' : 'lucide:chevron-down'" class="w-4 h-4" />
+              <Icon
+                :name="showRestricoesAvancadas ? 'lucide:chevron-up' : 'lucide:chevron-down'"
+                class="w-4 h-4"
+              />
             </button>
 
             <div v-if="showRestricoesAvancadas" class="mt-3 space-y-3">
@@ -482,7 +708,9 @@ const toggleFamiliaPermitida = (familia: string) => {
               <div>
                 <label class="block text-xs text-gray-300 mb-1">
                   Materiais Permitidos
-                  <InfoTooltip text="Seleciona quais aços estruturais o GA pode usar (A36, MR250, SAC300…). Cada um tem resistência (fy) e custo diferentes. O otimizador escolhe o de melhor custo-benefício. Vazio = todos disponíveis." />
+                  <InfoTooltip
+                    text="Seleciona quais aços estruturais o GA pode usar (A36, MR250, SAC300…). Cada um tem resistência (fy) e custo diferentes. O otimizador escolhe o de melhor custo-benefício. Vazio = todos disponíveis."
+                  />
                 </label>
                 <div class="space-y-1 max-h-32 overflow-y-auto">
                   <label
@@ -496,10 +724,18 @@ const toggleFamiliaPermitida = (familia: string) => {
                       @change="toggleMaterialPermitido(mat.nome)"
                       class="rounded"
                     />
-                    <span>{{ mat.nome }} <span class="text-gray-500">({{ mat.fy_mpa }} MPa · R$ {{ mat.custo_kg.toFixed(2) }}/kg)</span></span>
+                    <span
+                      >{{ mat.nome }}
+                      <span class="text-gray-500"
+                        >({{ mat.fy_mpa }} MPa · R$ {{ mat.custo_kg.toFixed(2) }}/kg)</span
+                      ></span
+                    >
                   </label>
                 </div>
-                <p v-if="!restricoes.materiais_permitidos" class="text-[10px] text-gray-500 italic mt-1">
+                <p
+                  v-if="!restricoes.materiais_permitidos"
+                  class="text-[10px] text-gray-500 italic mt-1"
+                >
                   Vazio = todos os materiais
                 </p>
               </div>
@@ -508,7 +744,9 @@ const toggleFamiliaPermitida = (familia: string) => {
               <div>
                 <label class="block text-xs text-gray-300 mb-1">
                   Famílias de Perfis
-                  <InfoTooltip text="Restringe as famílias de perfis disponíveis: L (cantoneiras), RHS (tubos retangulares), Ue (U enrijecido). Menos famílias = busca mais rápida. Vazio = todas disponíveis." />
+                  <InfoTooltip
+                    text="Restringe as famílias de perfis disponíveis: L (cantoneiras), RHS (tubos retangulares), Ue (U enrijecido). Menos famílias = busca mais rápida. Vazio = todas disponíveis."
+                  />
                 </label>
                 <div class="flex flex-wrap gap-2">
                   <label
@@ -524,7 +762,10 @@ const toggleFamiliaPermitida = (familia: string) => {
                     {{ fam }}
                   </label>
                 </div>
-                <p v-if="!restricoes.familias_permitidas" class="text-[10px] text-gray-500 italic mt-1">
+                <p
+                  v-if="!restricoes.familias_permitidas"
+                  class="text-[10px] text-gray-500 italic mt-1"
+                >
                   Vazio = todas as famílias
                 </p>
               </div>
@@ -534,7 +775,9 @@ const toggleFamiliaPermitida = (familia: string) => {
                 <input type="checkbox" v-model="restricoes.usar_penalidade_diversidade" />
                 <span>
                   Penalizar muitos perfis distintos
-                  <InfoTooltip text="Ativa penalidade no GA para soluções com muitos tipos de perfis diferentes. Incentiva a padronização, reduzindo complexidade e custo de fabricação." />
+                  <InfoTooltip
+                    text="Ativa penalidade no GA para soluções com muitos tipos de perfis diferentes. Incentiva a padronização, reduzindo complexidade e custo de fabricação."
+                  />
                 </span>
               </label>
               <p class="text-[10px] text-gray-500 italic">
@@ -553,13 +796,18 @@ const toggleFamiliaPermitida = (familia: string) => {
             :key="idx"
             :class="[
               'p-3 rounded-lg border',
-              alert.type === 'danger' ? 'bg-red-900/20 border-red-700/50' : 'bg-yellow-900/20 border-yellow-700/50',
+              alert.type === 'danger'
+                ? 'bg-red-900/20 border-red-700/50'
+                : 'bg-yellow-900/20 border-yellow-700/50',
             ]"
           >
             <div class="flex items-start gap-2">
               <Icon
                 :name="alert.type === 'danger' ? 'lucide:alert-octagon' : 'lucide:alert-triangle'"
-                :class="['w-4 h-4 shrink-0 mt-0.5', alert.type === 'danger' ? 'text-red-400' : 'text-yellow-400']"
+                :class="[
+                  'w-4 h-4 shrink-0 mt-0.5',
+                  alert.type === 'danger' ? 'text-red-400' : 'text-yellow-400',
+                ]"
               />
               <p class="text-xs leading-relaxed text-gray-200">{{ alert.message }}</p>
             </div>
@@ -574,7 +822,7 @@ const toggleFamiliaPermitida = (familia: string) => {
           :disabled="loading"
           class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg disabled:bg-gray-600 text-base"
         >
-          {{ loading ? "Analisando..." : "Iniciar Análise Estrutural" }}
+          {{ loading ? 'Analisando...' : 'Iniciar Análise Estrutural' }}
         </button>
         <button
           @click="store.resetParameters()"
@@ -588,7 +836,11 @@ const toggleFamiliaPermitida = (familia: string) => {
   </aside>
 
   <!-- Overlay mobile -->
-  <div v-if="showMobileMenu" @click="showMobileMenu = false" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"></div>
+  <div
+    v-if="showMobileMenu"
+    @click="showMobileMenu = false"
+    class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+  ></div>
 
   <HelpModal :show="showHelpModal" @close="showHelpModal = false" />
   <AboutModal :show="showAboutModal" @close="showAboutModal = false" />

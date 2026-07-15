@@ -4,6 +4,7 @@ App FastAPI principal: ponto de entrada do backend.
 Importa configurações, middlewares e roteadores. Executado via
 uvicorn api.main:app no container Docker.
 """
+
 from __future__ import annotations
 
 import logging
@@ -14,8 +15,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.endpoints import router
 from core.config import configuracoes
-from core.database import inicializar_banco
-
 
 # Configuração de logging estruturado.
 logging.basicConfig(
@@ -31,6 +30,7 @@ async def ciclo_vida(app: FastAPI):
     try:
         # Importa seed para garantir tabelas + dados.
         from seed.popular_banco import popular_banco
+
         popular_banco()
         _logger.info("Banco de dados inicializado com sucesso.")
     except Exception as e:

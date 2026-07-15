@@ -10,17 +10,26 @@ Rotas:
 - GET  /api/health           : health check
 - WS   /api/ws/otimizar      : otimização com streaming WebSocket
 """
+
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
-from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status, Response
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Response,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from api.memorial import codificar_base64, gerar_memorial_docx, gerar_memorial_pdf
 from api.schemas import (
     MaterialSchema,
     PerfilSchema,
@@ -28,13 +37,11 @@ from api.schemas import (
     RespostaOtimizacao,
     StatusTarefa,
 )
-from core.cache import gerar_chave_cache, obter_do_cache, salvar_no_cache
-from core.database import obter_sessao
+from core.cache import gerar_chave_cache, obter_do_cache
 from core.celery_app import app_celery
-from db.modelos import Material, Perfil, TarefaOtimizacao
-from worker.tarefas import otimizar_trelice, _atualizar_status_tarefa
-from api.memorial import gerar_memorial_pdf, gerar_memorial_docx, codificar_base64
-from db.modelos import MemorialCalculo
+from core.database import obter_sessao
+from db.modelos import Material, MemorialCalculo, Perfil, TarefaOtimizacao
+from worker.tarefas import _atualizar_status_tarefa, otimizar_trelice
 
 _logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -46,18 +53,18 @@ async def health() -> dict:
     return {"status": "ok", "servico": "TRUSS-OPT 3D API", "versao": "1.0.0"}
 
 
-@router.get("/materiais", response_model=List[MaterialSchema])
-async def listar_materiais(sessao: Session = Depends(obter_sessao)) -> List[Material]:
+@router.get("/materiais", response_model=list[MaterialSchema])
+async def listar_materiais(sessao: Session = Depends(obter_sessao)) -> list[Material]:
     """Lista todos os materiais estruturais ativos."""
     stmt = select(Material).where(Material.ativo.is_(True)).order_by(Material.nome)
     return list(sessao.scalars(stmt))
 
 
-@router.get("/perfis", response_model=List[PerfilSchema])
+@router.get("/perfis", response_model=list[PerfilSchema])
 async def listar_perfis(
     familia: str | None = None,
     sessao: Session = Depends(obter_sessao),
-) -> List[Perfil]:
+) -> list[Perfil]:
     """Lista perfis cadastrados, opcionalmente filtrados por família."""
     stmt = select(Perfil).where(Perfil.ativo.is_(True))
     if familia:
@@ -204,14 +211,17 @@ async def baixar_memorial(
     existente = sessao.scalars(stmt).first()
     if existente:
         from api.memorial import decodificar_base64
+
         conteudo = decodificar_base64(existente.conteudo_b64)
-        media_tipo = "application/pdf" if formato == "pdf" else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        media_tipo = (
+            "application/pdf"
+            if formato == "pdf"
+            else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
         return Response(
             content=conteudo,
             media_type=media_tipo,
-            headers={
-                "Content-Disposition": f'attachment; filename="{existente.nome_arquivo}"'
-            },
+            headers={"Content-Disposition": f'attachment; filename="{existente.nome_arquivo}"'},
         )
 
     # Gera o memorial.
@@ -263,6 +273,7 @@ async def websocket_otimizar(websocket: WebSocket) -> None:
 
         # Cria tarefa no banco.
         from core.database import SessionLocal
+
         with SessionLocal() as sessao:
             tarefa = TarefaOtimizacao(
                 status="PENDENTE",
@@ -284,7 +295,9 @@ async def websocket_otimizar(websocket: WebSocket) -> None:
             with SessionLocal() as sessao:
                 tarefa = sessao.get(TarefaOtimizacao, tarefa_id)
                 if not tarefa:
-                    await websocket.send_json({"type": "error", "message": "Tarefa não encontrada."})
+                    await websocket.send_json(
+                        {"type": "error", "message": "Tarefa não encontrada."}
+                    )
                     break
 
                 if tarefa.progresso != ultimo_progresso:
@@ -296,30 +309,36 @@ async def websocket_otimizar(websocket: WebSocket) -> None:
                         except (json.JSONDecodeError, TypeError):
                             meta = {"mensagem_erro": tarefa.mensagem_erro}
 
-                    await websocket.send_json({
-                        "type": "progress",
-                        "data": {
-                            "task_id": str(tarefa.id),
-                            "progress": tarefa.progresso,
-                            "status": tarefa.status,
-                            "logs": tarefa.logs or "",
-                            **meta,
-                        },
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "progress",
+                            "data": {
+                                "task_id": str(tarefa.id),
+                                "progress": tarefa.progresso,
+                                "status": tarefa.status,
+                                "logs": tarefa.logs or "",
+                                **meta,
+                            },
+                        }
+                    )
                     ultimo_progresso = tarefa.progresso
 
                 if tarefa.status == "CONCLUIDO":
                     resultado = json.loads(tarefa.resultado_json) if tarefa.resultado_json else {}
-                    await websocket.send_json({
-                        "type": "result",
-                        "data": resultado,
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "result",
+                            "data": resultado,
+                        }
+                    )
                     break
                 elif tarefa.status in ("FALHOU", "CANCELADO"):
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": tarefa.mensagem_erro or "Tarefa falhou.",
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "message": tarefa.mensagem_erro or "Tarefa falhou.",
+                        }
+                    )
                     break
 
     except WebSocketDisconnect:

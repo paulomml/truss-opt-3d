@@ -1,4 +1,4 @@
-export type ToastType = "success" | "error" | "warning" | "info";
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 export interface Toast {
   id: number;
@@ -9,7 +9,7 @@ export interface Toast {
 const toasts = ref<Toast[]>([]);
 
 export const useToast = () => {
-  const addToast = (message: string, type: ToastType = "info") => {
+  const addToast = (message: string, type: ToastType = 'info') => {
     const id = Date.now();
     toasts.value.push({ id, message, type });
 

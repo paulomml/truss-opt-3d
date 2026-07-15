@@ -5,13 +5,13 @@ O Celery utiliza Redis como broker e backend de resultados. As tarefas de
 otimização são CPU-bound (MEF + GA), portanto cada worker consome uma tarefa
 por vez (concorrência=1) para evitar estouro de memória.
 """
+
 from __future__ import annotations
 
 from celery import Celery
 from kombu import Queue
 
 from core.config import configuracoes
-
 
 # Instância global do Celery: importada por worker.tarefas.
 app_celery = Celery(

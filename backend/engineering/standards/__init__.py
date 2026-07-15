@@ -6,19 +6,11 @@ Cada norma vive em seu próprio módulo:
 - nbr_6120.py: Ações em edificações (cargas, assimetrias, combinações).
 - nbr_6123.py: Vento em edificações (pressão dinâmica, arrasto).
 """
-from engineering.standards.nbr_8800 import (
-    ResultadoVerificacao,
-    calcular_fator_chi,
-    calcular_fator_q,
-    calcular_m_rd,
-    calcular_n_rd,
-    verificar_barra_nbr8800,
-    verificar_flecha_els,
-)
+
 from engineering.standards.nbr_6120 import (
     calcular_carga_cobertura,
-    combinacoes_elu,
     combinacoes_els,
+    combinacoes_elu,
     gerar_casos_assimetricos,
     gerar_casos_manutencao,
     verificar_empozamento,
@@ -30,6 +22,15 @@ from engineering.standards.nbr_6123 import (
     calcular_forcas_vento_3d,
     decompor_direcao_vento,
     identificar_fachadas_perpendiculares,
+)
+from engineering.standards.nbr_8800 import (
+    ResultadoVerificacao,
+    calcular_fator_chi,
+    calcular_fator_q,
+    calcular_m_rd,
+    calcular_n_rd,
+    verificar_barra_nbr8800,
+    verificar_flecha_els,
 )
 
 __all__ = [

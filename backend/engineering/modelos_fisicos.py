@@ -5,15 +5,16 @@ Estes dataclasses são usados internamente pelo solver e pelos verificadores
 normativos. São mutáveis e otimizados para performance (sem overhead Pydantic
 em loops internos do GA).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 
 @dataclass
 class NoFisico:
     """Nó estrutural com coordenadas cartesianas."""
+
     id: str
     x: float
     y: float
@@ -24,6 +25,7 @@ class NoFisico:
 @dataclass
 class BarraFisica:
     """Barra estrutural conectando dois nós."""
+
     id: int
     node_start: str
     node_end: str
@@ -53,6 +55,7 @@ class BarraFisica:
 @dataclass
 class MaterialFisico:
     """Material estrutural com propriedades mecânicas."""
+
     nome: str
     e_gpa: float
     g_gpa: float
@@ -61,7 +64,7 @@ class MaterialFisico:
     fu_mpa: float
     rho_kg_m3: float
     custo_kg: float = 8.5
-    norma_ref: Optional[str] = None
+    norma_ref: str | None = None
 
     @property
     def e_pa(self) -> float:
@@ -87,6 +90,7 @@ class MaterialFisico:
 @dataclass
 class PerfilFisico:
     """Perfil estrutural padronizado."""
+
     id: int
     nome: str
     familia: str
@@ -115,17 +119,18 @@ class PerfilFisico:
 @dataclass
 class ResultadoAnalise:
     """Resultado completo de uma análise MEF."""
-    barras: List[BarraFisica] = field(default_factory=list)
-    nos: Dict[str, NoFisico] = field(default_factory=dict)
+
+    barras: list[BarraFisica] = field(default_factory=list)
+    nos: dict[str, NoFisico] = field(default_factory=dict)
     peso_total_kg: float = 0.0
     flecha_maxima: float = 0.0
     vano_real: float = 0.0
     contraflecha: float = 0.0
     utilizacao_maxima: float = 0.0
-    erro: Optional[str] = None
-    logs: List[str] = field(default_factory=list)
+    erro: str | None = None
+    logs: list[str] = field(default_factory=list)
     # Deslocamentos nodais para visualização.
-    deslocamentos: Dict[str, Tuple[float, float, float]] = field(default_factory=dict)
+    deslocamentos: dict[str, tuple[float, float, float]] = field(default_factory=dict)
 
 
 def perfil_dict_para_fisico(dados: dict) -> PerfilFisico:

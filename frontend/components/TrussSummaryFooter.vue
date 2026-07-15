@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount } from "vue";
-import { useTrussStore } from "@/stores/useTrussStore";
-import { getCylinderData, formatarNumero, formatarMoeda } from "@/utils/truss3d";
-import type { BarraResultado, NoResultado } from "@/types/truss";
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
+import { useTrussStore } from '@/stores/useTrussStore';
+import { getCylinderData, formatarNumero, formatarMoeda } from '@/utils/truss3d';
+import type { BarraResultado, NoResultado } from '@/types/truss';
 
 const store = useTrussStore();
 const isExpanded = ref(false);
@@ -15,20 +15,22 @@ onMounted(() => {
     else isExpanded.value = false;
   };
   checkMobile();
-  window.addEventListener("resize", checkMobile);
-  onBeforeUnmount(() => window.removeEventListener("resize", checkMobile));
+  window.addEventListener('resize', checkMobile);
+  onBeforeUnmount(() => window.removeEventListener('resize', checkMobile));
 });
 
 const trussResult = computed(() => store.result);
 
 const getMemberLength = (member: BarraResultado, nodes: Record<string, NoResultado>): number => {
   const directLength = (member as any).length;
-  if (typeof directLength === "number" && directLength >= 0) return directLength;
+  if (typeof directLength === 'number' && directLength >= 0) return directLength;
   return getCylinderData(member, nodes).length ?? 0;
 };
 
 const totalMembers = computed(() => trussResult.value?.members?.length ?? 0);
-const totalNodes = computed(() => trussResult.value?.nodes ? Object.keys(trussResult.value.nodes).length : 0);
+const totalNodes = computed(() =>
+  trussResult.value?.nodes ? Object.keys(trussResult.value.nodes).length : 0,
+);
 
 const totalLength = computed(() => {
   if (!trussResult.value?.members?.length || !trussResult.value?.nodes) return 0;
@@ -46,7 +48,7 @@ const flechaRatio = computed(() => {
 });
 
 function formatarTempo(segundos: number): string {
-  if (!segundos) return "—";
+  if (!segundos) return '—';
   const min = Math.floor(segundos / 60);
   const seg = Math.round(segundos % 60);
   if (min > 0) return `${min}m ${seg}s`;
@@ -58,7 +60,7 @@ function formatarPeso(valor: number): string {
   return `${formatarNumero(valor)} kg`;
 }
 
-const baixarMemorial = (formato: "pdf" | "docx") => {
+const baixarMemorial = (formato: 'pdf' | 'docx') => {
   store.baixarMemorial(formato);
 };
 </script>
@@ -79,7 +81,9 @@ const baixarMemorial = (formato: "pdf" | "docx") => {
       >
         <span class="font-bold uppercase tracking-wider">
           Resumo da Análise
-          <span v-if="trussResult.is_structurally_stable" class="ml-2 text-green-400">✓ Estável</span>
+          <span v-if="trussResult.is_structurally_stable" class="ml-2 text-green-400"
+            >✓ Estável</span
+          >
           <span v-else class="ml-2 text-red-400">✗ Instável</span>
         </span>
         <Icon :name="isExpanded ? 'lucide:chevron-down' : 'lucide:chevron-up'" class="w-4 h-4" />
@@ -186,7 +190,10 @@ const baixarMemorial = (formato: "pdf" | "docx") => {
       </div>
 
       <!-- Botões de Memorial -->
-      <div v-if="isExpanded && trussResult.is_structurally_stable" class="mt-3 flex gap-2 justify-end">
+      <div
+        v-if="isExpanded && trussResult.is_structurally_stable"
+        class="mt-3 flex gap-2 justify-end"
+      >
         <button
           @click="baixarMemorial('pdf')"
           class="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg"

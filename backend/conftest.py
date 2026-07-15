@@ -4,6 +4,7 @@ Configuração do pytest para o backend.
 - Converte DB para SQLite em memória (testes unitários não dependem de PostgreSQL).
 - Configura asyncio mode=auto.
 """
+
 import os
 import sys
 from pathlib import Path
@@ -24,12 +25,11 @@ os.environ.setdefault("REDIS_PORTA", "6379")
 
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from core.database import Base, SessionLocal, engine
 from core import database as db_module
 from core.cache import definir_cliente_redis
+from core.database import Base, SessionLocal
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -49,14 +49,17 @@ def configurar_banco_testes():
     db_module.SessionLocal.configure(bind=engine_teste)
     # Cria tabelas.
     from db import modelos  # noqa: F401
+
     Base.metadata.create_all(bind=engine_teste)
     # Popula com dados padrão.
     from seed.popular_banco import popular_banco
+
     popular_banco()
 
     # Substitui o cliente Redis por fakeredis (sem dependência externa).
     try:
         import fakeredis
+
         cliente_fake = fakeredis.FakeRedis(decode_responses=True)
         definir_cliente_redis(cliente_fake)
     except ImportError:
@@ -70,17 +73,19 @@ def configurar_banco_testes():
 def mock_celery_delay(monkeypatch):
     """Mocka otimizar_trelice.delay para não disparar Celery real em testes."""
     from worker import tarefas
+
     def _delay_mock(*args, **kwargs):
         class _ResultadoFalso:
             id = "fake-celery-task-id"
+
         return _ResultadoFalso()
+
     monkeypatch.setattr(tarefas.otimizar_trelice, "delay", _delay_mock)
 
 
 @pytest.fixture
 def sessao_teste():
     """Sessão de banco isolada por teste."""
-    from core.database import SessionLocal
     sessao = SessionLocal()
     try:
         yield sessao

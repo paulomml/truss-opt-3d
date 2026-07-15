@@ -5,15 +5,15 @@ O engine é criado uma única vez por processo (pool de conexões reutilizável)
 A fábrica de sessões SessionLocal deve ser utilizada via dependência FastAPI
 em obter_sessao para garantir o fechamento adequado após cada requisição.
 """
+
 from __future__ import annotations
 
-from typing import Generator
+from collections.abc import Generator
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from core.config import configuracoes
-
 
 # Engine global: o pool padrão do SQLAlchemy gerencia concorrência e reuso.
 engine = create_engine(
@@ -36,6 +36,7 @@ SessionLocal = sessionmaker(
 
 class Base(DeclarativeBase):
     """Classe base para todos os modelos ORM do projeto."""
+
     pass
 
 

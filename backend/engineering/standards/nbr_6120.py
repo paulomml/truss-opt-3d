@@ -9,21 +9,19 @@ Foco em:
   envoltória mais desfavorável em treliças (meia carga, carga lateral).
 - Empoçamento progressivo (Anexo D).
 """
+
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
-from typing import List, Tuple
-
 
 # Coeficientes de combinação NBR 8681 (referenciados pela NBR 6120).
-PSI_0 = 0.7   # Sobrecarga de uso (valor de cálculo reduzido para combinações).
-PSI_1 = 0.5   # Sobrecarga freqüente.
-PSI_2 = 0.3   # Sobrecarga quase-permanente.
+PSI_0 = 0.7  # Sobrecarga de uso (valor de cálculo reduzido para combinações).
+PSI_1 = 0.5  # Sobrecarga freqüente.
+PSI_2 = 0.3  # Sobrecarga quase-permanente.
 
 # Coeficientes de ponderação para combinações últimas (ELU).
-GAMMA_G = 1.35   # Carga permanente (desfavorável).
-GAMMA_Q = 1.50   # Carga variável principal.
+GAMMA_G = 1.35  # Carga permanente (desfavorável).
+GAMMA_Q = 1.50  # Carga variável principal.
 GAMMA_G_FAV = 1.0  # Carga permanente favorável (alívio).
 
 # Coeficientes para combinações de serviço (ELS).
@@ -35,10 +33,11 @@ GAMMA_Q_SLS_PERM = 0.3
 @dataclass
 class CasoCargaNormalizado:
     """Caso de carga normalizado para o solver."""
+
     tipo: str  # 'G' | 'Q' | 'G2' (permanente adicional) | 'W' (vento) | 'M' (manutenção)
     direction: str  # 'FX' | 'FY' | 'FZ'
     valor: float  # em Newtons
-    nos: List[str] | None = None  # None = distribuir no banzo superior
+    nos: list[str] | None = None  # None = distribuir no banzo superior
 
 
 def calcular_carga_cobertura(inclinacao_percentual: float) -> float:
@@ -62,9 +61,9 @@ def calcular_carga_cobertura(inclinacao_percentual: float) -> float:
 
 
 def gerar_casos_manutencao(
-    nos_banzo_superior: List[str],
+    nos_banzo_superior: list[str],
     carga_kn: float = 1.0,
-) -> List[CasoCargaNormalizado]:
+) -> list[CasoCargaNormalizado]:
     """
     Gera casos de carga concentrada de manutenção (Item 6.4).
 
@@ -74,20 +73,22 @@ def gerar_casos_manutencao(
     carga_n = carga_kn * 1000.0  # kN -> N
     casos = []
     for nid in nos_banzo_superior:
-        casos.append(CasoCargaNormalizado(
-            tipo="M",
-            direction="FY",
-            valor=-carga_n,
-            nos=[nid],
-        ))
+        casos.append(
+            CasoCargaNormalizado(
+                tipo="M",
+                direction="FY",
+                valor=-carga_n,
+                nos=[nid],
+            )
+        )
     return casos
 
 
 def gerar_casos_assimetricos(
-    nos_banzo_superior: List[str],
+    nos_banzo_superior: list[str],
     carga_distribuida_n: float,
     eixo_x: bool = True,
-) -> List[CasoCargaNormalizado]:
+) -> list[CasoCargaNormalizado]:
     """
     Gera casos de carga assimétrica (NBR 6120: envoltória).
 
@@ -105,26 +106,32 @@ def gerar_casos_assimetricos(
 
     casos = []
     # Caso 1: metade esquerda carregada.
-    casos.append(CasoCargaNormalizado(
-        tipo="Q",
-        direction="FY",
-        valor=-carga_distribuida_n,
-        nos=nos_banzo_superior[:meio],
-    ))
+    casos.append(
+        CasoCargaNormalizado(
+            tipo="Q",
+            direction="FY",
+            valor=-carga_distribuida_n,
+            nos=nos_banzo_superior[:meio],
+        )
+    )
     # Caso 2: metade direita carregada.
-    casos.append(CasoCargaNormalizado(
-        tipo="Q",
-        direction="FY",
-        valor=-carga_distribuida_n,
-        nos=nos_banzo_superior[meio:],
-    ))
+    casos.append(
+        CasoCargaNormalizado(
+            tipo="Q",
+            direction="FY",
+            valor=-carga_distribuida_n,
+            nos=nos_banzo_superior[meio:],
+        )
+    )
     # Caso 3: nós alternados (1 sim, 1 não).
-    casos.append(CasoCargaNormalizado(
-        tipo="Q",
-        direction="FY",
-        valor=-carga_distribuida_n * 2,  # compensação de nós vazios
-        nos=[nid for i, nid in enumerate(nos_banzo_superior) if i % 2 == 0],
-    ))
+    casos.append(
+        CasoCargaNormalizado(
+            tipo="Q",
+            direction="FY",
+            valor=-carga_distribuida_n * 2,  # compensação de nós vazios
+            nos=[nid for i, nid in enumerate(nos_banzo_superior) if i % 2 == 0],
+        )
+    )
     return casos
 
 
@@ -134,7 +141,7 @@ def verificar_empozamento(
     inclinacao_projeto: float,
     contraflecha: float,
     carga_chuva_kn_m2: float = 0.0,
-) -> Tuple[bool, str]:
+) -> tuple[bool, str]:
     """
     Verifica empoçamento progressivo (Anexo D: NBR 6120).
 
@@ -159,22 +166,22 @@ def verificar_empozamento(
     return True, f"Inclinação efetiva {inclinacao_efetiva:.2f}% >= 1% (Anexo D)."
 
 
-def combinacoes_elu() -> List[Tuple[str, dict]]:
+def combinacoes_elu() -> list[tuple[str, dict]]:
     """
     Define as combinações últimas (ELU) conforme NBR 8681/6120.
 
     Retorna lista de (nome, fatores) para PyNite.
     """
     return [
-        ("ELU_Normal",       {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50, "Wind": 1.40}),
-        ("ELU_Secundario",   {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.40, "Wind": 1.40}),
-        ("ELU_Alivio",       {"Dead1": 1.00, "Dead2": 1.00, "Live": 1.50, "Wind": 0.00}),
-        ("ELU_Sem_Vento",    {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50}),
+        ("ELU_Normal", {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50, "Wind": 1.40}),
+        ("ELU_Secundario", {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.40, "Wind": 1.40}),
+        ("ELU_Alivio", {"Dead1": 1.00, "Dead2": 1.00, "Live": 1.50, "Wind": 0.00}),
+        ("ELU_Sem_Vento", {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50}),
         ("ELU_Vento_Dominante", {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.00, "Wind": 1.40}),
     ]
 
 
-def combinacoes_els() -> List[Tuple[str, dict]]:
+def combinacoes_els() -> list[tuple[str, dict]]:
     """
     Define as combinações de serviço (ELS) para verificação de flecha.
 
@@ -184,8 +191,8 @@ def combinacoes_els() -> List[Tuple[str, dict]]:
     - Rara: G + Q  (flecha total)
     """
     return [
-        ("ELS_Flecha_Total",       {"Dead1": 1.00, "Dead2": 1.00, "Live": 1.00}),
-        ("ELS_Flecha_Frequente",   {"Dead1": 1.00, "Dead2": 1.00, "Live": PSI_1}),
-        ("ELS_Flecha_Permanente",  {"Dead1": 1.00, "Dead2": 1.00, "Live": PSI_2}),
-        ("ELS_Permanente",         {"Dead1": 1.00, "Dead2": 1.00}),
+        ("ELS_Flecha_Total", {"Dead1": 1.00, "Dead2": 1.00, "Live": 1.00}),
+        ("ELS_Flecha_Frequente", {"Dead1": 1.00, "Dead2": 1.00, "Live": PSI_1}),
+        ("ELS_Flecha_Permanente", {"Dead1": 1.00, "Dead2": 1.00, "Live": PSI_2}),
+        ("ELS_Permanente", {"Dead1": 1.00, "Dead2": 1.00}),
     ]

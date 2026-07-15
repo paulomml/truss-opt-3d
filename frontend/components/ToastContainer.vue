@@ -28,12 +28,7 @@ const { toasts, removeToast } = useToast();
           @click="removeToast(toast.id)"
           class="text-gray-400 hover:text-gray-300 transition-colors flex-shrink-0"
         >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"

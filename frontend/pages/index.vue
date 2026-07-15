@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useTrussStore } from "@/stores/useTrussStore";
+import { useTrussStore } from '@/stores/useTrussStore';
 
 const store = useTrussStore();
 const { showMobileMenu } = storeToRefs(store);

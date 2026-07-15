@@ -4,17 +4,12 @@ export default defineNuxtConfig({
   ssr: false,
 
   // Módulos Nuxt.
-  modules: [
-    "@nuxtjs/tailwindcss",
-    "@tresjs/nuxt",
-    "@pinia/nuxt",
-    "@nuxt/icon",
-  ],
+  modules: ['@nuxtjs/tailwindcss', '@tresjs/nuxt', '@pinia/nuxt', '@nuxt/icon'],
 
   // Variáveis de runtime expostas ao client.
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.API_URL_BASE || "http://localhost:8000",
+      apiBaseUrl: process.env.API_URL_BASE || 'http://localhost:8000',
     },
   },
 
@@ -24,8 +19,8 @@ export default defineNuxtConfig({
       // Ative usePolling se for rodar npm run dev dentro do Docker.
       // watch: { usePolling: true, interval: 1000 },
       proxy: {
-        "/api": {
-          target: process.env.API_URL_BASE || "http://localhost:8000",
+        '/api': {
+          target: process.env.API_URL_BASE || 'http://localhost:8000',
           changeOrigin: true,
           ws: true,
         },
@@ -41,14 +36,14 @@ export default defineNuxtConfig({
   // Configurações de build.
   app: {
     head: {
-      title: "TRUSS-OPT 3D — Otimizador de Treliças 3D",
+      title: 'TRUSS-OPT 3D — Otimizador de Treliças 3D',
       meta: [
-        { charset: "utf-8" },
-        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         {
-          name: "description",
+          name: 'description',
           content:
-            "Otimização de treliças 3D via Algoritmo Genético com verificação NBR 8800/6120/6123.",
+            'Otimização de treliças 3D via Algoritmo Genético com verificação NBR 8800/6120/6123.',
         },
       ],
     },
@@ -61,5 +56,5 @@ export default defineNuxtConfig({
   },
 
   // Compatibilidade de data.
-  compatibilityDate: "2025-01-01",
+  compatibilityDate: '2025-01-01',
 });

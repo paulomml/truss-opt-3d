@@ -7,12 +7,11 @@ Cobrem:
 - Combinações ELU e ELS.
 - Verificação de empoçamento progressivo (Anexo D).
 """
-import pytest
 
 from engineering.standards.nbr_6120 import (
     calcular_carga_cobertura,
-    combinacoes_elu,
     combinacoes_els,
+    combinacoes_elu,
     gerar_casos_assimetricos,
     gerar_casos_manutencao,
     verificar_empozamento,

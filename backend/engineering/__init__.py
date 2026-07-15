@@ -6,6 +6,7 @@ Submódulos:
 - standards/       : Verificações NBR 8800, 6120, 6123 (modular).
 - modelos_fisicos  : Dataclasses de domínio (NoFisico, BarraFisica, etc).
 """
+
 from engineering.modelos_fisicos import (
     BarraFisica,
     MaterialFisico,

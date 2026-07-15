@@ -1,4 +1,5 @@
 """Teste de integração do Algoritmo Genético com o solver MEF."""
+
 import pytest
 
 from engineering.modelos_fisicos import BarraFisica, MaterialFisico, NoFisico, PerfilFisico
@@ -41,8 +42,12 @@ def trelica_simples():
 def material_a36():
     return MaterialFisico(
         nome="A36",
-        e_gpa=200.0, g_gpa=76.9, nu=0.30,
-        fy_mpa=250.0, fu_mpa=400.0, rho_kg_m3=7850.0,
+        e_gpa=200.0,
+        g_gpa=76.9,
+        nu=0.30,
+        fy_mpa=250.0,
+        fu_mpa=400.0,
+        rho_kg_m3=7850.0,
         custo_kg=8.45,
     )
 
@@ -54,8 +59,12 @@ def perfis_curtos():
         PerfilFisico(1, "L25x3.18", "L", 25, 25, 0, 3.18, 1.49e-4, 7.49e-9, 7.49e-9, 5.02e-10),
         PerfilFisico(2, "L32x3.18", "L", 32, 32, 0, 3.18, 1.92e-4, 1.60e-8, 1.60e-8, 6.47e-10),
         PerfilFisico(3, "L51x3.18", "L", 51, 51, 0, 3.18, 3.06e-4, 6.55e-8, 6.55e-8, 9.95e-10),
-        PerfilFisico(4, "RHS50x30x2.00", "RHS", 50, 30, 0, 2.00, 2.96e-4, 5.60e-8, 2.08e-8, 5.50e-8),
-        PerfilFisico(5, "RHS60x40x2.00", "RHS", 60, 40, 0, 2.00, 3.76e-4, 1.11e-7, 5.43e-8, 1.28e-7),
+        PerfilFisico(
+            4, "RHS50x30x2.00", "RHS", 50, 30, 0, 2.00, 2.96e-4, 5.60e-8, 2.08e-8, 5.50e-8
+        ),
+        PerfilFisico(
+            5, "RHS60x40x2.00", "RHS", 60, 40, 0, 2.00, 3.76e-4, 1.11e-7, 5.43e-8, 1.28e-7
+        ),
     ]
 
 
@@ -116,6 +125,7 @@ def test_ga_respeita_restricoes_familia(trelica_simples, material_a36, perfis_cu
 # =====================================================================
 # Testes de regressão: algoritmo memético
 # =====================================================================
+
 
 def test_ga_populacao_inicial_eh_avaliada(trelica_simples, material_a36, perfis_curtos):
     """População inicial é avaliada antes do loop evolutivo."""
@@ -181,7 +191,7 @@ def test_ga_elitismo_preserva_melhor_entre_geracoes(trelica_simples, material_a3
     for i in range(1, len(fitness_por_geracao)):
         assert fitness_por_geracao[i] <= fitness_por_geracao[i - 1] + 1e-6, (
             f"Elitismo quebrado: geração {i} tem fitness "
-            f"{fitness_por_geracao[i]:.4f} > {fitness_por_geracao[i-1]:.4f} "
+            f"{fitness_por_geracao[i]:.4f} > {fitness_por_geracao[i - 1]:.4f} "
             f"(geração anterior)"
         )
 
@@ -242,7 +252,9 @@ def test_ga_memetico_nao_termina_infinito(trelica_simples, material_a36, perfis_
     duracao = time.time() - inicio
 
     # Deve terminar em menos de 60 segundos para uma treliça simples.
-    assert duracao < 60.0, f"GA memético demorou {duracao:.1f}s: possível loop infinito na busca local"
+    assert duracao < 60.0, (
+        f"GA memético demorou {duracao:.1f}s: possível loop infinito na busca local"
+    )
 
 
 def test_ga_zero_geracoes_avalia_populacao_inicial(trelica_simples, material_a36, perfis_curtos):

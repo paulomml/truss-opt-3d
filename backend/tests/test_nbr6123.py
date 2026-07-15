@@ -8,9 +8,6 @@ Cobrem:
 - Cálculo de forças de vento 3D.
 - Identificação de fachadas perpendiculares.
 """
-import math
-
-import pytest
 
 from engineering.modelos_fisicos import NoFisico
 from engineering.standards.nbr_6123 import (

@@ -1,6 +1,6 @@
 // types/truss.ts: Tipos TypeScript espelhando os schemas Pydantic do backend.
 
-export type SupportType = "Pinned" | "Roller" | "Fixed" | "None";
+export type SupportType = 'Pinned' | 'Roller' | 'Fixed' | 'None';
 
 export interface NoBruto {
   id: string;
@@ -23,8 +23,8 @@ export interface TrelicaBruta {
 }
 
 export interface CasoCarga {
-  type: "G" | "Q";
-  direction: "FX" | "FY" | "FZ" | "MX" | "MY" | "MZ";
+  type: 'G' | 'Q';
+  direction: 'FX' | 'FY' | 'FZ' | 'MX' | 'MY' | 'MZ';
   value: number;
   nodes?: string[] | null;
 }
@@ -87,7 +87,7 @@ export interface BarraResultado {
   my?: number;
   mz?: number;
   utilization: number;
-  stress_type: "Tração" | "Compressão";
+  stress_type: 'Tração' | 'Compressão';
   n_rd: number;
   m_rd: number;
   esbeltez: number;
@@ -113,12 +113,7 @@ export interface RespostaOtimizacao {
   logs: string[];
 }
 
-export type StatusTarefaTipo =
-  | "PENDENTE"
-  | "EM_ANDAMENTO"
-  | "CONCLUIDO"
-  | "FALHOU"
-  | "CANCELADO";
+export type StatusTarefaTipo = 'PENDENTE' | 'EM_ANDAMENTO' | 'CONCLUIDO' | 'FALHOU' | 'CANCELADO';
 
 export interface StatusTarefa {
   task_id: string;

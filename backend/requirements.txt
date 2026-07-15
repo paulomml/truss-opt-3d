@@ -36,6 +36,7 @@ python-docx
 # Cliente HTTP para testes
 httpx
 
-# Testes
+# Testes e formatação
 pytest
 pytest-asyncio
+ruff

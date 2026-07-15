@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { getCylinderData, getMemberColor, formatarNumero } from "@/utils/truss3d";
-import type { BarraResultado, BarraBruta, NoResultado, NoBruto } from "@/types/truss";
-import { Vector3, Quaternion } from "three";
+import { getCylinderData, getMemberColor, formatarNumero } from '@/utils/truss3d';
+import type { BarraResultado, BarraBruta, NoResultado, NoBruto } from '@/types/truss';
+import { Vector3, Quaternion } from 'three';
 
 const store = useTrussStore();
 const cameraRef = ref();
 const controlsRef = ref();
 
 // Modo de visualização: 'tensao' (utilização) | 'deformada' (deslocamentos).
-const modoVisualizacao = ref<"tensao" | "deformada">("tensao");
+const modoVisualizacao = ref<'tensao' | 'deformada'>('tensao');
 
 // Fator de escala para visualização da deformada (ampliação visual).
 const fatorDeformada = ref(50);
@@ -23,7 +23,7 @@ const membersWithData = computed(() => {
       let valorHeatmap = m.utilization;
 
       // Modo deformada: usa deslocamentos nodais relativos.
-      if (modoVisualizacao.value === "deformada" && store.result?.nodes) {
+      if (modoVisualizacao.value === 'deformada' && store.result?.nodes) {
         const noStart = store.result.nodes[m.node_start];
         const noEnd = store.result.nodes[m.node_end];
         if (noStart && noEnd) {
@@ -54,7 +54,7 @@ const rawMembersWithData = computed(() => {
       return {
         ...m,
         ...cylinderData,
-        color: "#9CA3AF",
+        color: '#9CA3AF',
       };
     })
     .filter((m) => m.length > 0);
@@ -62,7 +62,7 @@ const rawMembersWithData = computed(() => {
 
 // Nós com deslocamento ampliado (para visualização da deformada).
 const nodesDeformed = computed(() => {
-  if (!store.result?.nodes || modoVisualizacao.value !== "deformada") return null;
+  if (!store.result?.nodes || modoVisualizacao.value !== 'deformada') return null;
   const resultado: Record<string, NoResultado> = {};
   for (const [id, n] of Object.entries(store.result.nodes)) {
     resultado[id] = {
@@ -82,7 +82,7 @@ const activeNodes = computed(() => {
 
 function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
   ev.stopPropagation();
-  if ("utilization" in member) {
+  if ('utilization' in member) {
     store.selectMember(member as BarraResultado);
   }
 }
@@ -127,9 +127,11 @@ function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
       class="absolute bottom-4 left-4 z-10 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg p-3"
     >
       <div class="text-[10px] text-gray-300 font-bold mb-2 uppercase">
-        {{ modoVisualizacao === "tensao" ? "Utilização" : "Deslocamento" }}
+        {{ modoVisualizacao === 'tensao' ? 'Utilização' : 'Deslocamento' }}
       </div>
-      <div class="w-40 h-3 rounded-full mb-1 bg-gradient-to-r from-blue-500 via-green-500 via-yellow-500 to-red-500" />
+      <div
+        class="w-40 h-3 rounded-full mb-1 bg-gradient-to-r from-blue-500 via-green-500 via-yellow-500 to-red-500"
+      />
       <div class="flex justify-between text-[9px] text-gray-400">
         <span>0%</span>
         <span>50%</span>
@@ -154,15 +156,24 @@ function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
         Material: <span class="font-mono">{{ store.selectedMember.material }}</span>
       </div>
       <div class="text-gray-300 text-xs">
-        Força axial: <span class="font-mono">{{ formatarNumero(store.selectedMember.axial_force / 1000, 1) }} kN</span>
+        Força axial:
+        <span class="font-mono"
+          >{{ formatarNumero(store.selectedMember.axial_force / 1000, 1) }} kN</span
+        >
       </div>
       <div class="text-gray-300 text-xs">
-        Utilização: <span class="font-mono">{{ formatarNumero(store.selectedMember.utilization * 100, 1) }}%</span>
+        Utilização:
+        <span class="font-mono"
+          >{{ formatarNumero(store.selectedMember.utilization * 100, 1) }}%</span
+        >
       </div>
     </div>
 
     <TresCanvas
-      v-if="(store.result && store.result.members.length > 0) || (store.rawTruss && store.rawTruss.members.length > 0)"
+      v-if="
+        (store.result && store.result.members.length > 0) ||
+        (store.rawTruss && store.rawTruss.members.length > 0)
+      "
       alpha
       clear-color="#111827"
       shadows
@@ -176,7 +187,11 @@ function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
       <TresGridHelper :args="[40, 40, '#374151', '#1f2937']" :position="[0, -0.01, 0]" />
 
       <!-- Nós (esferas) -->
-      <template v-if="activeNodes" v-for="node in Object.values(activeNodes)" :key="`node-${node.id}`">
+      <template
+        v-if="activeNodes"
+        v-for="node in Object.values(activeNodes)"
+        :key="`node-${node.id}`"
+      >
         <TresMesh :position="[node.x, node.y, node.z]">
           <TresSphereGeometry :args="[0.08, 16, 16]" />
           <TresMeshStandardMaterial color="#ffffff" :metalness="0.8" :roughness="0.2" />
@@ -188,7 +203,10 @@ function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
             <TresConeGeometry :args="[0.15, 0.3, 4]" />
             <TresMeshStandardMaterial color="#EF4444" />
           </TresMesh>
-          <TresGroup v-else-if="node.support === 'Roller'" :position="[node.x, node.y - 0.2, node.z]">
+          <TresGroup
+            v-else-if="node.support === 'Roller'"
+            :position="[node.x, node.y - 0.2, node.z]"
+          >
             <TresMesh>
               <TresBoxGeometry :args="[0.6, 0.1, 0.6]" />
               <TresMeshStandardMaterial color="#F59E0B" />
@@ -222,7 +240,11 @@ function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
         <template v-for="member in rawMembersWithData" :key="`raw-${member.id}`">
           <TresMesh :position="member.position" :quaternion="member.quaternion">
             <TresCylinderGeometry :args="[0.03, 0.03, member.length, 8]" />
-            <TresMeshStandardMaterial :color="member.color" :emissive="member.color" :emissive-intensity="0.2" />
+            <TresMeshStandardMaterial
+              :color="member.color"
+              :emissive="member.color"
+              :emissive-intensity="0.2"
+            />
           </TresMesh>
         </template>
       </template>
@@ -235,8 +257,8 @@ function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
     >
       <Icon name="lucide:building-2" class="w-16 h-16 mb-4 text-gray-500" />
       <p class="max-w-md text-gray-300">
-        Selecione um <b>Tipo de Estrutura</b> no painel lateral, defina os
-        parâmetros e clique em <b>Iniciar Análise Estrutural</b>.
+        Selecione um <b>Tipo de Estrutura</b> no painel lateral, defina os parâmetros e clique em
+        <b>Iniciar Análise Estrutural</b>.
       </p>
     </div>
   </div>

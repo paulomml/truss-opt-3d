@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { ref, computed, reactive, watchEffect, onMounted, onUnmounted } from "vue";
-import { useTrussStore } from "@/stores/useTrussStore";
+import { ref, computed, reactive, watchEffect, onMounted, onUnmounted } from 'vue';
+import { useTrussStore } from '@/stores/useTrussStore';
 
 const store = useTrussStore();
 
 // Frases rotativas de status
 const loadingPhrases = [
-  "Analisando a estabilidade estrutural...",
-  "Calculando a distribuição de esforços internos...",
-  "Otimizando as seções transversais dos perfis...",
-  "Avaliando o comportamento sob as cargas aplicadas...",
-  "Verificando os limites de esbeltez e resistência...",
-  "Simulando a interação da estrutura com os apoios...",
-  "Processando múltiplas alternativas de materiais...",
-  "Buscando a configuração de melhor custo-benefício...",
-  "Verificando a conformidade com as normas técnicas...",
-  "Realizando cálculos de deslocamentos e deformações...",
+  'Analisando a estabilidade estrutural...',
+  'Calculando a distribuição de esforços internos...',
+  'Otimizando as seções transversais dos perfis...',
+  'Avaliando o comportamento sob as cargas aplicadas...',
+  'Verificando os limites de esbeltez e resistência...',
+  'Simulando a interação da estrutura com os apoios...',
+  'Processando múltiplas alternativas de materiais...',
+  'Buscando a configuração de melhor custo-benefício...',
+  'Verificando a conformidade com as normas técnicas...',
+  'Realizando cálculos de deslocamentos e deformações...',
 ];
 
 const currentPhraseIndex = ref(0);
@@ -23,8 +23,7 @@ let phraseInterval: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
   phraseInterval = setInterval(() => {
-    currentPhraseIndex.value =
-      (currentPhraseIndex.value + 1) % loadingPhrases.length;
+    currentPhraseIndex.value = (currentPhraseIndex.value + 1) % loadingPhrases.length;
   }, 3000);
 });
 
@@ -40,9 +39,7 @@ let timerInterval: ReturnType<typeof setInterval> | null = null;
 onMounted(() => {
   timerInterval = setInterval(() => {
     if (store.tempoInicio > 0) {
-      elapsedSeconds.value = Math.floor(
-        (Date.now() - store.tempoInicio) / 1000,
-      );
+      elapsedSeconds.value = Math.floor((Date.now() - store.tempoInicio) / 1000);
     }
   }, 1000);
 });
@@ -50,13 +47,13 @@ onMounted(() => {
 // Parsing dos logs acumulados agrupados por material
 const materiaisLogs = computed(() => {
   if (!store.logsTexto) return {};
-  const lines = store.logsTexto.split("\n").filter((l) => l.trim());
+  const lines = store.logsTexto.split('\n').filter((l) => l.trim());
   const result: Record<string, string[]> = {};
   for (const line of lines) {
     const match = line.match(/^\[([^\]]+)\]\s*(.*)/);
     if (match) {
       const mat = match[1]!;
-      const content = match[2] ?? "";
+      const content = match[2] ?? '';
       if (!result[mat]) result[mat] = [];
       result[mat].push(content);
     }
@@ -66,14 +63,12 @@ const materiaisLogs = computed(() => {
 
 const linhasGerais = computed(() => {
   if (!store.logsTexto) return [];
-  const lines = store.logsTexto.split("\n").filter((l) => l.trim());
-  return lines.filter((l) => !l.startsWith("["));
+  const lines = store.logsTexto.split('\n').filter((l) => l.trim());
+  return lines.filter((l) => !l.startsWith('['));
 });
 
 const materiaisOrdenados = computed(() => {
-  const fromMeta = store.dadosProgresso.materiais_nomes as
-    | string[]
-    | undefined;
+  const fromMeta = store.dadosProgresso.materiais_nomes as string[] | undefined;
   if (fromMeta && fromMeta.length) return fromMeta;
   return Object.keys(materiaisLogs.value);
 });
@@ -90,16 +85,16 @@ const materiaisStatus = computed(() => {
   for (let i = 0; i < names.length; i++) {
     const name = names[i]!;
     const materialLines = logs[name] || [];
-    const lastLine = materialLines[materialLines.length - 1] || "";
+    const lastLine = materialLines[materialLines.length - 1] || '';
 
-    if (lastLine.includes("Falhou")) {
-      status[name] = "erro";
+    if (lastLine.includes('Falhou')) {
+      status[name] = 'erro';
     } else if (i < (dp.indice_material ?? 0)) {
-      status[name] = "concluido";
+      status[name] = 'concluido';
     } else if (i === (dp.indice_material ?? 0)) {
-      status[name] = "processando";
+      status[name] = 'processando';
     } else {
-      status[name] = "aguardando";
+      status[name] = 'aguardando';
     }
   }
   return status;
@@ -134,9 +129,9 @@ const globalBestDisplay = computed(() => {
   const fit = dp.melhor_global_fitness;
   const mat = dp.melhor_global_material;
   if (fit != null && fit !== Infinity && mat) {
-    return `${Number(fit).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg (${mat})`;
+    return `${Number(fit).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg (${mat})`;
   }
-  return "—";
+  return '—';
 });
 
 const currentMaterialDisplay = computed(() => {
@@ -147,12 +142,12 @@ const currentMaterialDisplay = computed(() => {
   if (mat) {
     return `${mat}: ${gen}/${total}`;
   }
-  return "—";
+  return '—';
 });
 
 const elapsedDisplay = computed(() => {
   const s = elapsedSeconds.value;
-  if (s <= 0) return "—";
+  if (s <= 0) return '—';
   const min = Math.floor(s / 60);
   const sec = s % 60;
   if (min > 0) return `${min}m ${sec}s`;
@@ -166,39 +161,39 @@ function getMaterialLines(name: string): string[] {
 
 function getMaterialSummary(name: string): string {
   const lines = getMaterialLines(name);
-  const last = lines[lines.length - 1] || "";
+  const last = lines[lines.length - 1] || '';
   const status = materiaisStatus.value[name];
 
-  if (status === "concluido") {
+  if (status === 'concluido') {
     const bestMatch = last.match(/Melhor:\s*([\d.]+)\s*kg/);
     if (bestMatch) return `${bestMatch[1]} kg`;
-    return "Concluído";
+    return 'Concluído';
   }
-  if (status === "erro") {
-    return "Falhou";
+  if (status === 'erro') {
+    return 'Falhou';
   }
-  if (status === "processando") {
+  if (status === 'processando') {
     const dp = store.dadosProgresso;
     const best = dp.melhor_do_material;
     if (best != null && best !== Infinity) {
-      return `melhor: ${Number(best).toLocaleString("pt-BR", { minimumFractionDigits: 1 })} kg`;
+      return `melhor: ${Number(best).toLocaleString('pt-BR', { minimumFractionDigits: 1 })} kg`;
     }
-    return "processando...";
+    return 'processando...';
   }
-  return "aguardando";
+  return 'aguardando';
 }
 
 function getStatusDotClass(name: string): string {
-  const status = materiaisStatus.value[name] || "aguardando";
+  const status = materiaisStatus.value[name] || 'aguardando';
   switch (status) {
-    case "concluido":
-      return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
-    case "erro":
-      return "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]";
-    case "processando":
-      return "bg-yellow-500 animate-pulse shadow-[0_0_8px_rgba(234,179,8,0.6)]";
+    case 'concluido':
+      return 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]';
+    case 'erro':
+      return 'bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]';
+    case 'processando':
+      return 'bg-yellow-500 animate-pulse shadow-[0_0_8px_rgba(234,179,8,0.6)]';
     default:
-      return "bg-gray-500 shadow-[0_0_8px_rgba(107,114,128,0.4)]";
+      return 'bg-gray-500 shadow-[0_0_8px_rgba(107,114,128,0.4)]';
   }
 }
 </script>
@@ -278,34 +273,26 @@ function getStatusDotClass(name: string): string {
               class="w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-300"
               :class="getStatusDotClass(mat)"
             ></span>
-            <span
-              class="text-blue-400 font-bold truncate min-w-0 shrink-0"
-              :title="mat"
-            >
+            <span class="text-blue-400 font-bold truncate min-w-0 shrink-0" :title="mat">
               {{ mat }}
             </span>
             <span class="text-gray-500 text-xs truncate ml-2 min-w-0">
               {{ getMaterialSummary(mat) }}
             </span>
             <span class="ml-auto text-gray-600 shrink-0 text-xs">
-              {{ isExpanded(mat) ? "▼" : "▶" }}
+              {{ isExpanded(mat) ? '▼' : '▶' }}
             </span>
           </div>
 
           <!-- Linhas de geração (só visíveis quando expandido) -->
-          <div
-            v-if="isExpanded(mat) && getMaterialLines(mat).length"
-            class="pb-2"
-          >
+          <div v-if="isExpanded(mat) && getMaterialLines(mat).length" class="pb-2">
             <div
               v-for="(line, idx) in getMaterialLines(mat)"
               :key="'l-' + idx"
               class="flex items-start px-2 py-0.5 hover:bg-white/[0.02]"
             >
               <span class="text-gray-600 mr-2 select-none shrink-0">›</span>
-              <span class="text-gray-300 leading-relaxed break-words">{{
-                line
-              }}</span>
+              <span class="text-gray-300 leading-relaxed break-words">{{ line }}</span>
             </div>
           </div>
         </div>

@@ -158,12 +158,12 @@ Onde $W(\mathbf{x})$ é o peso total da estrutura em kg, $c_{kg}$ é o custo uni
 
 #### 2.4.3 Fase Genética (Exploração Global)
 
-| Operador | Método | Parâmetro |
-|----------|--------|-----------|
-| Seleção | Torneio (k=3) | AG_INDICE_TORNEIO |
-| Crossover | 2 pontos (cxTwoPoint) | AG_PROBABILIDADE_CRUZAMENTO (0,7) |
-| Mutação | Uniforme inteira (mutUniformInt, indpb=1/N) | AG_PROBABILIDADE_MUTACAO (0,15) |
-| Elitismo | Hall of Fame (top 1) | Sempre preserva o melhor |
+| Operador  | Método                                      | Parâmetro                         |
+| --------- | ------------------------------------------- | --------------------------------- |
+| Seleção   | Torneio (k=3)                               | AG_INDICE_TORNEIO                 |
+| Crossover | 2 pontos (cxTwoPoint)                       | AG_PROBABILIDADE_CRUZAMENTO (0,7) |
+| Mutação   | Uniforme inteira (mutUniformInt, indpb=1/N) | AG_PROBABILIDADE_MUTACAO (0,15)   |
+| Elitismo  | Hall of Fame (top 1)                        | Sempre preserva o melhor          |
 
 #### 2.4.4 Fase Memética (Refinamento Local)
 
@@ -282,23 +282,23 @@ sequenceDiagram
 
 ### 3.3 Stack Tecnológico
 
-| Camada | Tecnologia |
-|--------|-----------|
-| Frontend | Nuxt + Vue + TypeScript |
-| Visualização 3D | Three.js (@tresjs) |
-| Estado | Pinia |
-| Estilos | Tailwind CSS |
-| Backend | FastAPI + Pydantic |
-| Servidor ASGI | Uvicorn |
-| Banco de Dados | PostgreSQL 16 |
-| ORM | SQLAlchemy |
-| Broker e Cache | Redis 7 |
-| Fila de Tarefas | Celery |
-| MEF | PyNiteFEA |
-| Otimização | DEAP |
-| Relatórios | ReportLab + python-docx |
-| Proxy Reverso | Nginx |
-| Runtime | Python 3.12 + Node.js 24 |
+| Camada          | Tecnologia               |
+| --------------- | ------------------------ |
+| Frontend        | Nuxt + Vue + TypeScript  |
+| Visualização 3D | Three.js (@tresjs)       |
+| Estado          | Pinia                    |
+| Estilos         | Tailwind CSS             |
+| Backend         | FastAPI + Pydantic       |
+| Servidor ASGI   | Uvicorn                  |
+| Banco de Dados  | PostgreSQL 16            |
+| ORM             | SQLAlchemy               |
+| Broker e Cache  | Redis 7                  |
+| Fila de Tarefas | Celery                   |
+| MEF             | PyNiteFEA                |
+| Otimização      | DEAP                     |
+| Relatórios      | ReportLab + python-docx  |
+| Proxy Reverso   | Nginx                    |
+| Runtime         | Python 3.12 + Node.js 24 |
 
 ### 3.4 Estrutura de Diretórios
 
@@ -329,14 +329,14 @@ O banco de dados PostgreSQL armazena 6 aços estruturais nacionais e 32 perfis c
 
 ### 4.1 Materiais Estruturais
 
-| Material | fy (MPa) | fu (MPa) | E (GPa) | Rho (kg/m³) | Custo (R$/kg) | Norma |
-|----------|----------|----------|---------|-------------|---------------|-------|
-| A36 | 250 | 400 | 200 | 7850 | 8,45 | ASTM A36 |
-| A572-Gr50 | 345 | 450 | 200 | 7850 | 12,95 | ASTM A572 Gr.50 |
-| MR250 | 250 | 400 | 200 | 7850 | 8,80 | NBR 8800 / NBR 7007 |
-| MR350 | 350 | 450 | 200 | 7850 | 10,50 | NBR 8800 / NBR 7007 |
-| SAC300 | 300 | 420 | 200 | 7850 | 9,70 | NBR 8800 |
-| SAC350 | 350 | 420 | 200 | 7850 | 11,10 | NBR 8800 |
+| Material  | fy (MPa) | fu (MPa) | E (GPa) | Rho (kg/m³) | Custo (R$/kg) | Norma               |
+| --------- | -------- | -------- | ------- | ----------- | ------------- | ------------------- |
+| A36       | 250      | 400      | 200     | 7850        | 8,45          | ASTM A36            |
+| A572-Gr50 | 345      | 450      | 200     | 7850        | 12,95         | ASTM A572 Gr.50     |
+| MR250     | 250      | 400      | 200     | 7850        | 8,80          | NBR 8800 / NBR 7007 |
+| MR350     | 350      | 450      | 200     | 7850        | 10,50         | NBR 8800 / NBR 7007 |
+| SAC300    | 300      | 420      | 200     | 7850        | 9,70          | NBR 8800            |
+| SAC350    | 350      | 420      | 200     | 7850        | 11,10         | NBR 8800            |
 
 ### 4.2 Perfis Comerciais
 
@@ -346,16 +346,16 @@ O catálogo contempla três famílias de perfis: cantoneiras de abas iguais (L, 
 
 ### 5.1 Endpoints Principais
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| GET | /api/health | Health check |
-| GET | /api/materiais | Lista materiais ativos |
-| GET | /api/perfis?familia=RHS | Lista perfis (opcionalmente filtrados por família) |
-| POST | /api/otimizar | Inicia otimização, retorna task_id |
-| GET | /api/tarefas/{id} | Consulta status da tarefa por polling |
-| POST | /api/tarefas/{id}/cancelar | Cancela tarefa em andamento |
-| GET | /api/tarefas/{id}/memorial/{formato} | Download do memorial (pdf ou docx) |
-| WS | /api/ws/otimizar | Streaming de progresso em tempo real |
+| Método | Rota                                 | Descrição                                          |
+| ------ | ------------------------------------ | -------------------------------------------------- |
+| GET    | /api/health                          | Health check                                       |
+| GET    | /api/materiais                       | Lista materiais ativos                             |
+| GET    | /api/perfis?familia=RHS              | Lista perfis (opcionalmente filtrados por família) |
+| POST   | /api/otimizar                        | Inicia otimização, retorna task_id                 |
+| GET    | /api/tarefas/{id}                    | Consulta status da tarefa por polling              |
+| POST   | /api/tarefas/{id}/cancelar           | Cancela tarefa em andamento                        |
+| GET    | /api/tarefas/{id}/memorial/{formato} | Download do memorial (pdf ou docx)                 |
+| WS     | /api/ws/otimizar                     | Streaming de progresso em tempo real               |
 
 ### 5.2 Exemplo de Payload
 
@@ -366,15 +366,20 @@ O catálogo contempla três famílias de perfis: cantoneiras de abas iguais (L, 
   "width": 2.0,
   "divisions": 6,
   "load_cases": [
-    {"type": "G", "direction": "FY", "value": -20000.0},
-    {"type": "Q", "direction": "FY", "value": -50000.0}
+    { "type": "G", "direction": "FY", "value": -20000.0 },
+    { "type": "Q", "direction": "FY", "value": -50000.0 }
   ],
   "soil_type": "Rocha",
   "footing_b": 0.6,
   "footing_l": 0.6,
   "parametros_vento": {
-    "v0_mps": 40.0, "s1": 1.0, "s2": 1.0, "s3": 1.0,
-    "direcao_vento_graus": 0.0, "ce_externo": 0.8, "ci_interno": 0.0
+    "v0_mps": 40.0,
+    "s1": 1.0,
+    "s2": 1.0,
+    "s3": 1.0,
+    "direcao_vento_graus": 0.0,
+    "ce_externo": 0.8,
+    "ci_interno": 0.0
   },
   "restricoes": {
     "familias_permitidas": ["RHS"],
@@ -471,12 +476,12 @@ Isso reconstrói as imagens e reinicia apenas os containers alterados.
 
 **Acessos após a inicialização:**
 
-| Recurso | URL |
-|---------|-----|
-| Frontend (via Nginx) | http://localhost:80 |
-| Frontend (direto) | http://localhost:3000 |
-| Documentação da API (Swagger) | http://localhost:8000/docs |
-| Health check | http://localhost:8000/api/health |
+| Recurso                       | URL                              |
+| ----------------------------- | -------------------------------- |
+| Frontend (via Nginx)          | http://localhost:80              |
+| Frontend (direto)             | http://localhost:3000            |
+| Documentação da API (Swagger) | http://localhost:8000/docs       |
+| Health check                  | http://localhost:8000/api/health |
 
 ### 9.3 Desenvolvimento Local (sem Docker)
 
@@ -528,25 +533,25 @@ Com a aplicação rodando, siga este roteiro rápido:
 
 Todas as variáveis são opcionais (têm defaults) e lidas via pydantic-settings:
 
-| Variável | Default | Descrição |
-|----------|---------|-----------|
-| POSTGRES_HOST | postgres | Host do PostgreSQL |
-| POSTGRES_USUARIO / POSTGRES_SENHA | truss | Credenciais do Postgres |
-| POSTGRES_BANCO | truss_opt | Nome do banco |
-| REDIS_HOST | redis | Host do Redis |
-| CELERY_MAX_CONCORRENCIA | 1 | Processos por worker (MEF é CPU bound) |
-| LIMITE_MEMORIA_PERCENTUAL | 85.0 | Aborta GA acima deste percentual de RAM |
-| AG_POPULACAO_TAMANHO | 30 | Tamanho da população do GA |
-| AG_GERACOES | 25 | Número de gerações |
-| AG_PROBABILIDADE_CRUZAMENTO | 0.7 | Probabilidade de crossover |
-| AG_PROBABILIDADE_MUTACAO | 0.2 | Probabilidade de mutação |
-| AG_PENALIDADE_VIOLACAO_NORMATIVA | 1.0e6 | Penalidade por violação NBR (R$) |
-| AG_PENALIDADE_DIVERSIDADE_PERFIS | 5.0e3 | Penalidade por perfis distintos extras (R$) |
-| AG_MAX_PERFIS_DISTINTOS | 4 | Limite de perfis distintos antes de aplicar multa |
-| AG_USAR_REFINAMENTO_LOCAL | true | Ativa busca local (algoritmo memético) |
-| NBR_FLECHA_LIMITE | 250.0 | Divisor do vão para ELS (L/250) |
-| NBR_ESBELTEZ_MAX_COMPRESSAO | 200.0 | Limite de lambda para compressão (NBR 8800 5.3.4.1) |
-| NBR_ESBELTEZ_MAX_TRACAO | 300.0 | Limite de lambda para tração (NBR 8800 5.2.8.1) |
+| Variável                          | Default   | Descrição                                           |
+| --------------------------------- | --------- | --------------------------------------------------- |
+| POSTGRES_HOST                     | postgres  | Host do PostgreSQL                                  |
+| POSTGRES_USUARIO / POSTGRES_SENHA | truss     | Credenciais do Postgres                             |
+| POSTGRES_BANCO                    | truss_opt | Nome do banco                                       |
+| REDIS_HOST                        | redis     | Host do Redis                                       |
+| CELERY_MAX_CONCORRENCIA           | 1         | Processos por worker (MEF é CPU bound)              |
+| LIMITE_MEMORIA_PERCENTUAL         | 85.0      | Aborta GA acima deste percentual de RAM             |
+| AG_POPULACAO_TAMANHO              | 30        | Tamanho da população do GA                          |
+| AG_GERACOES                       | 25        | Número de gerações                                  |
+| AG_PROBABILIDADE_CRUZAMENTO       | 0.7       | Probabilidade de crossover                          |
+| AG_PROBABILIDADE_MUTACAO          | 0.2       | Probabilidade de mutação                            |
+| AG_PENALIDADE_VIOLACAO_NORMATIVA  | 1.0e6     | Penalidade por violação NBR (R$)                    |
+| AG_PENALIDADE_DIVERSIDADE_PERFIS  | 5.0e3     | Penalidade por perfis distintos extras (R$)         |
+| AG_MAX_PERFIS_DISTINTOS           | 4         | Limite de perfis distintos antes de aplicar multa   |
+| AG_USAR_REFINAMENTO_LOCAL         | true      | Ativa busca local (algoritmo memético)              |
+| NBR_FLECHA_LIMITE                 | 250.0     | Divisor do vão para ELS (L/250)                     |
+| NBR_ESBELTEZ_MAX_COMPRESSAO       | 200.0     | Limite de lambda para compressão (NBR 8800 5.3.4.1) |
+| NBR_ESBELTEZ_MAX_TRACAO           | 300.0     | Limite de lambda para tração (NBR 8800 5.2.8.1)     |
 
 ## 11. Testes
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from "vue";
+import { ref, nextTick, onMounted } from 'vue';
 
 defineProps<{ text: string }>();
 
@@ -16,7 +16,9 @@ function toggle() {
   visible.value = !visible.value;
   if (visible.value) {
     if (isMobile.value) {
-      setTimeout(() => { visible.value = false; }, 5000);
+      setTimeout(() => {
+        visible.value = false;
+      }, 5000);
     }
     nextTick(() => atualizarPosicao());
   }

@@ -16,11 +16,12 @@ Notas sobre a API PyNite v3:
 - member.max_moment(direction, combo) onde direction é 'my' ou 'mz'.
 - node.DY[combo] é um dict mapeando combo -> deslocamento.
 """
+
 from __future__ import annotations
 
+import contextlib
 import logging
 import math
-from typing import Dict, List, Optional, Tuple
 
 from Pynite import FEModel3D
 
@@ -30,12 +31,6 @@ from engineering.modelos_fisicos import (
     NoFisico,
     PerfilFisico,
     ResultadoAnalise,
-    perfil_dict_para_fisico,
-)
-from engineering.standards.nbr_6120 import (
-    combinacoes_elu,
-    combinacoes_els,
-    gerar_casos_manutencao,
 )
 from engineering.standards.nbr_6123 import (
     ParametrosVento,
@@ -50,21 +45,21 @@ _logger = logging.getLogger(__name__)
 # Coeficiente de reação do subleito (Winkler): NBR 6122 referenciado pela 8800.
 # Valores em kN/m^3 (Padrão Terzaghi para placa 0.30x0.30 m).
 BANCO_SOLOS = {
-    "Areia Fofa":      {"ks1": 15000,  "tipo": "granular"},
-    "Areia Compacta":  {"ks1": 100000, "tipo": "granular"},
-    "Argila Mole":     {"ks1": 10000,  "tipo": "coesivo"},
-    "Argila Rija":     {"ks1": 40000,  "tipo": "coesivo"},
-    "Rocha":           {"ks1": 250000, "tipo": "rigido"},
-    "Customizado":     {"ks1": 50000,  "tipo": "coesivo"},  # fallback
+    "Areia Fofa": {"ks1": 15000, "tipo": "granular"},
+    "Areia Compacta": {"ks1": 100000, "tipo": "granular"},
+    "Argila Mole": {"ks1": 10000, "tipo": "coesivo"},
+    "Argila Rija": {"ks1": 40000, "tipo": "coesivo"},
+    "Rocha": {"ks1": 250000, "tipo": "rigido"},
+    "Customizado": {"ks1": 50000, "tipo": "coesivo"},  # fallback
 }
 
 
 def calcular_lk_banzos(
-    barras: List[BarraFisica],
-    nos: Dict[str, NoFisico],
-    grupos_banzo: Tuple[str, ...] = ("Banzo Superior", "Banzo Inferior"),
-    grupos_travamento: Tuple[str, ...] = ("Transversal", "Contraventamento"),
-) -> Dict[int, Tuple[float, float]]:
+    barras: list[BarraFisica],
+    nos: dict[str, NoFisico],
+    grupos_banzo: tuple[str, ...] = ("Banzo Superior", "Banzo Inferior"),
+    grupos_travamento: tuple[str, ...] = ("Transversal", "Contraventamento"),
+) -> dict[int, tuple[float, float]]:
     """
     Mapeia comprimentos de flambagem (Lkx, Lky) para cada barra.
 
@@ -81,13 +76,13 @@ def calcular_lk_banzos(
             nos_travados.add(b.node_end)
 
     # Grafo de adjacência dos banzos.
-    grafo_banzos: Dict[str, List[Tuple[str, float]]] = {}
+    grafo_banzos: dict[str, list[tuple[str, float]]] = {}
     for b in barras:
         if b.group in grupos_banzo:
             grafo_banzos.setdefault(b.node_start, []).append((b.node_end, b.length))
             grafo_banzos.setdefault(b.node_end, []).append((b.node_start, b.length))
 
-    lk_map: Dict[int, Tuple[float, float]] = {}
+    lk_map: dict[int, tuple[float, float]] = {}
     for b in barras:
         lky = b.length  # in-plane
         if b.group not in grupos_banzo:
@@ -100,7 +95,7 @@ def calcular_lk_banzos(
             curr, prev = start, other
             acumulado = 0.0
             while curr not in nos_travados:
-                vizinhos = [(n, l) for n, l in grafo_banzos.get(curr, []) if n != prev]
+                vizinhos = [(n, length) for n, length in grafo_banzos.get(curr, []) if n != prev]
                 if not vizinhos:
                     break
                 next_node, length = vizinhos[0]
@@ -114,17 +109,17 @@ def calcular_lk_banzos(
 
 
 def construir_e_resolver(
-    nos_entrada: Dict[str, NoFisico],
-    barras_entrada: List[BarraFisica],
-    perfil_por_grupo: Dict[str, PerfilFisico],
+    nos_entrada: dict[str, NoFisico],
+    barras_entrada: list[BarraFisica],
+    perfil_por_grupo: dict[str, PerfilFisico],
     material: MaterialFisico,
-    casos_carga_externos: List[dict],
-    parametros_vento: Optional[ParametrosVento] = None,
-    nos_banzo_superior: Optional[List[str]] = None,
-    nos_fachada: Optional[List[str]] = None,
+    casos_carga_externos: list[dict],
+    parametros_vento: ParametrosVento | None = None,
+    nos_banzo_superior: list[str] | None = None,
+    nos_fachada: list[str] | None = None,
     water_lamina_mm: float = 0.0,
     solo_tipo: str = "Rocha",
-    custom_ks: Optional[float] = None,
+    custom_ks: float | None = None,
     footing_b: float = 0.6,
     footing_l: float = 0.6,
 ) -> ResultadoAnalise:
@@ -135,10 +130,16 @@ def construir_e_resolver(
     """
     resultado = ResultadoAnalise()
     resultado.nos = dict(nos_entrada)
-    resultado.barras = [BarraFisica(
-        id=b.id, node_start=b.node_start, node_end=b.node_end,
-        group=b.group, length=b.length,
-    ) for b in barras_entrada]
+    resultado.barras = [
+        BarraFisica(
+            id=b.id,
+            node_start=b.node_start,
+            node_end=b.node_end,
+            group=b.group,
+            length=b.length,
+        )
+        for b in barras_entrada
+    ]
 
     if not barras_entrada:
         resultado.erro = "Nenhuma barra definida para análise."
@@ -180,7 +181,7 @@ def construir_e_resolver(
 
     # ----- Barras -----
     # Mapa perfil por barra (importante para relatório).
-    perfil_por_barra: Dict[int, PerfilFisico] = {}
+    perfil_por_barra: dict[int, PerfilFisico] = {}
     for b in barras_entrada:
         perfil = perfil_por_grupo.get(b.group) or next(iter(perfil_por_grupo.values()))
         perfil_por_barra[b.id] = perfil
@@ -198,17 +199,17 @@ def construir_e_resolver(
 
     # ----- Cálculo do vão real -----
     xs_apoios = [no.x for no in nos_entrada.values() if no.support != "None"]
-    vano_real = (max(xs_apoios) - min(xs_apoios)) if xs_apoios else max(
-        (abs(n.x) for n in nos_entrada.values()), default=0.0
+    vano_real = (
+        (max(xs_apoios) - min(xs_apoios))
+        if xs_apoios
+        else max((abs(n.x) for n in nos_entrada.values()), default=0.0)
     )
     resultado.vano_real = max(vano_real, 0.1)
 
     # ----- Identificação do banzo superior -----
     if nos_banzo_superior is None:
         y_max = max((n.y for n in nos_entrada.values()), default=0.0)
-        nos_banzo_superior = [
-            nid for nid, n in nos_entrada.items() if abs(n.y - y_max) < 0.05
-        ]
+        nos_banzo_superior = [nid for nid, n in nos_entrada.items() if abs(n.y - y_max) < 0.05]
 
     # ----- Casos de carga externos (G2 e Q) -----
     # PyNite exige um "case name" por caso de carga.
@@ -261,7 +262,7 @@ def construir_e_resolver(
                 modelo.add_node_load(f.no_id, f.direction, f.valor, case="Wind")
 
     # ----- Carga de manutenção NBR 6120 (1 kN por nó do banzo superior) -----
-    casos_manutencao: List[str] = []
+    casos_manutencao: list[str] = []
     for i, nid in enumerate(nos_banzo_superior):
         if nid in nos_entrada:
             case_name = f"Maint_{i}"
@@ -271,7 +272,7 @@ def construir_e_resolver(
     # ----- Peso próprio (G1) -----
     # Distribuído igualmente nos nós das extremidades de cada barra.
     peso_total = 0.0
-    pesos_nos: Dict[str, float] = {nid: 0.0 for nid in nos_entrada}
+    pesos_nos: dict[str, float] = {nid: 0.0 for nid in nos_entrada}
     for b in barras_entrada:
         perfil = perfil_por_barra[b.id]
         unit_weight_kg_m = perfil.area_m2 * material.rho_kg_m3
@@ -290,13 +291,25 @@ def construir_e_resolver(
 
     # ----- Combinações ELU e ELS -----
     fatores_combo = {
-        "ELU_Normal":       {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50, "Wind": 1.40, "Water": 1.40},
-        "ELU_Secundario":   {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.40, "Wind": 1.40, "Water": 1.40},
-        "ELU_Alivio":       {"Dead1": 1.00, "Dead2": 1.00, "Live": 1.50, "Wind": 0.00, "Water": 0.00},
-        "ELU_Sem_Vento":    {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50, "Wind": 0.00, "Water": 1.40},
-        "ELU_Vento_Dominante": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.00, "Wind": 1.40, "Water": 1.40},
-        "ELS_Flecha_Total":      {"Dead1": 1.00, "Dead2": 1.00, "Live": 1.00, "Wind": 0.00, "Water": 0.00},
-        "ELS_Permanente":        {"Dead1": 1.00, "Dead2": 1.00, "Wind": 0.00, "Water": 0.00},
+        "ELU_Normal": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50, "Wind": 1.40, "Water": 1.40},
+        "ELU_Secundario": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.40, "Wind": 1.40, "Water": 1.40},
+        "ELU_Alivio": {"Dead1": 1.00, "Dead2": 1.00, "Live": 1.50, "Wind": 0.00, "Water": 0.00},
+        "ELU_Sem_Vento": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50, "Wind": 0.00, "Water": 1.40},
+        "ELU_Vento_Dominante": {
+            "Dead1": 1.25,
+            "Dead2": 1.40,
+            "Live": 1.00,
+            "Wind": 1.40,
+            "Water": 1.40,
+        },
+        "ELS_Flecha_Total": {
+            "Dead1": 1.00,
+            "Dead2": 1.00,
+            "Live": 1.00,
+            "Wind": 0.00,
+            "Water": 0.00,
+        },
+        "ELS_Permanente": {"Dead1": 1.00, "Dead2": 1.00, "Wind": 0.00, "Water": 0.00},
     }
     # Adiciona combinações de manutenção (uma por caso Maint_i).
     for i, _ in enumerate(casos_manutencao):
@@ -304,10 +317,8 @@ def construir_e_resolver(
         fatores_combo[nome] = {"Dead1": 1.25, "Dead2": 1.40, f"Maint_{i}": 1.50, "Live": 0.00}
 
     for nome, fatores in fatores_combo.items():
-        try:
+        with contextlib.suppress(Exception):
             modelo.add_load_combo(nome, fatores)
-        except Exception:
-            pass  # Caso de carga sem componente: ignora silenciosamente.
 
     # ----- Análise -----
     try:
@@ -343,7 +354,9 @@ def construir_e_resolver(
     lk_map = calcular_lk_banzos(resultado.barras, resultado.nos)
 
     # ----- Envoltória de esforços por barra -----
-    combos_elu_nomes = [n for n in fatores_combo if n.startswith("ELU_") and not n.startswith("ELS_")]
+    combos_elu_nomes = [
+        n for n in fatores_combo if n.startswith("ELU_") and not n.startswith("ELS_")
+    ]
     utilizacao_maxima = 0.0
 
     for b in resultado.barras:
@@ -360,7 +373,9 @@ def construir_e_resolver(
                 axiais.append(membro.min_axial(c))
             except Exception:
                 pass
-        axiais = [a for a in axiais if not (isinstance(a, float) and (math.isnan(a) or math.isinf(a)))]
+        axiais = [
+            a for a in axiais if not (isinstance(a, float) and (math.isnan(a) or math.isinf(a)))
+        ]
         if not axiais:
             resultado.erro = f"Sem esforços na barra {b.id}."
             continue

@@ -3,6 +3,7 @@ Testes de integração da API FastAPI.
 
 Validam os endpoints REST com banco SQLite em memória.
 """
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -11,6 +12,7 @@ from fastapi.testclient import TestClient
 def cliente():
     """Cliente de teste FastAPI com SQLite em memória."""
     from api.main import app
+
     with TestClient(app) as c:
         yield c
 
