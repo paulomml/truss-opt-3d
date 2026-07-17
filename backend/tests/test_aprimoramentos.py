@@ -213,9 +213,7 @@ def test_cancelar_tarefa_inexistente_404(cliente, monkeypatch):
     # Mocka revoke para não tentar conectar ao Redis.
     from core import celery_app as celery_module
 
-    monkeypatch.setattr(
-        celery_module.app_celery.control, "revoke", lambda *a, **kw: None
-    )
+    monkeypatch.setattr(celery_module.app_celery.control, "revoke", lambda *a, **kw: None)
 
     r = cliente.post("/api/tarefas/999999/cancelar")
     assert r.status_code == 404

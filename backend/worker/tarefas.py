@@ -79,7 +79,9 @@ def otimizar_trelice(self, tarefa_id: int, payload: dict) -> dict:
     """
     inicio = time.time()
     _logger.info(f"Iniciando otimização para tarefa {tarefa_id}")
-    _atualizar_status_tarefa(tarefa_id, "EM_ANDAMENTO", progresso=0.0, logs="Inicializando análise estrutural...")
+    _atualizar_status_tarefa(
+        tarefa_id, "EM_ANDAMENTO", progresso=0.0, logs="Inicializando análise estrutural..."
+    )
 
     # Semente fixa para reprodutibilidade (afeta todo o processo).
     semente = payload.get("ag_semente")
@@ -616,9 +618,7 @@ def _executar_ga_material_inprocess(
     )
 
     # Serializa o resultado e o perfil_por_grupo para dict puro.
-    return _serializar_resultado_material(
-        resultado, perfil_por_grupo, logs, material, idx
-    )
+    return _serializar_resultado_material(resultado, perfil_por_grupo, logs, material, idx)
 
 
 def _executar_ga_material_subprocesso(args: tuple) -> dict:
@@ -782,9 +782,7 @@ def _serializar_resultado_material(
             }
             for nid, n in resultado.nos.items()
         },
-        "perfil_por_grupo": {
-            g: p.__dict__ for g, p in (perfil_por_grupo or {}).items()
-        },
+        "perfil_por_grupo": {g: p.__dict__ for g, p in (perfil_por_grupo or {}).items()},
         "logs": logs,
     }
 

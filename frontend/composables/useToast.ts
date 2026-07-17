@@ -13,7 +13,7 @@ export const useToast = () => {
     const id = Date.now();
     toasts.value.push({ id, message, type });
 
-  setTimeout(() => {
+    setTimeout(() => {
       removeToast(id);
     }, 5000);
   };

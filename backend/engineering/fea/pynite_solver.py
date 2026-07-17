@@ -136,9 +136,7 @@ class ModeloBaseFEA:
         # Banzo superior
         if nos_banzo_superior is None:
             y_max = max((n.y for n in nos.values()), default=0.0)
-            self.nos_banzo_superior = [
-                nid for nid, n in nos.items() if abs(n.y - y_max) < 0.05
-            ]
+            self.nos_banzo_superior = [nid for nid, n in nos.items() if abs(n.y - y_max) < 0.05]
         else:
             self.nos_banzo_superior = nos_banzo_superior
         self.nos_fachada = nos_fachada
@@ -263,9 +261,7 @@ class ModeloBaseFEA:
         if parametros_vento is not None:
             fachadas = nos_fachada
             if fachadas is None:
-                fachadas = identificar_fachadas_perpendiculares(
-                    nos, parametros_vento.direcao_graus
-                )
+                fachadas = identificar_fachadas_perpendiculares(nos, parametros_vento.direcao_graus)
             forcas = calcular_forcas_vento_3d(
                 nos, parametros_vento, self.nos_banzo_superior, fachadas
             )
@@ -287,20 +283,61 @@ class ModeloBaseFEA:
         # Combos core (sempre necessários para o GA).
         self.fatores_core = {
             "ELU_Normal": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50, "Wind": 1.40, "Water": 1.40},
-            "ELU_Secundario": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.40, "Wind": 1.40, "Water": 1.40},
+            "ELU_Secundario": {
+                "Dead1": 1.25,
+                "Dead2": 1.40,
+                "Live": 1.40,
+                "Wind": 1.40,
+                "Water": 1.40,
+            },
             "ELU_Alivio": {"Dead1": 1.00, "Dead2": 1.00, "Live": 1.50, "Wind": 0.00, "Water": 0.00},
-            "ELU_Sem_Vento": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50, "Wind": 0.00, "Water": 1.40},
-            "ELU_Vento_Dominante": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.00, "Wind": 1.40, "Water": 1.40},
-            "ELS_Flecha_Total": {"Dead1": 1.00, "Dead2": 1.00, "Live": 1.00, "Wind": 0.00, "Water": 0.00},
-            "ELS_Flecha_Frequente": {"Dead1": 1.00, "Dead2": 1.00, "Live": 0.5, "Wind": 0.00, "Water": 0.00},
-            "ELS_Flecha_Permanente": {"Dead1": 1.00, "Dead2": 1.00, "Live": 0.3, "Wind": 0.00, "Water": 0.00},
+            "ELU_Sem_Vento": {
+                "Dead1": 1.25,
+                "Dead2": 1.40,
+                "Live": 1.50,
+                "Wind": 0.00,
+                "Water": 1.40,
+            },
+            "ELU_Vento_Dominante": {
+                "Dead1": 1.25,
+                "Dead2": 1.40,
+                "Live": 1.00,
+                "Wind": 1.40,
+                "Water": 1.40,
+            },
+            "ELS_Flecha_Total": {
+                "Dead1": 1.00,
+                "Dead2": 1.00,
+                "Live": 1.00,
+                "Wind": 0.00,
+                "Water": 0.00,
+            },
+            "ELS_Flecha_Frequente": {
+                "Dead1": 1.00,
+                "Dead2": 1.00,
+                "Live": 0.5,
+                "Wind": 0.00,
+                "Water": 0.00,
+            },
+            "ELS_Flecha_Permanente": {
+                "Dead1": 1.00,
+                "Dead2": 1.00,
+                "Live": 0.3,
+                "Wind": 0.00,
+                "Water": 0.00,
+            },
             "ELS_Permanente": {"Dead1": 1.00, "Dead2": 1.00, "Wind": 0.00, "Water": 0.00},
         }
         # Combos de manutenção (separados, adicionados sob demanda).
         self.fatores_manutencao: dict[str, dict[str, float]] = {}
         for i, _ in enumerate(self.casos_manutencao):
             nome = f"ELU_Maint_{i}"
-            self.fatores_manutencao[nome] = {"Dead1": 1.25, "Dead2": 1.40, f"Maint_{i}": 1.50, "Live": 0.00}
+            self.fatores_manutencao[nome] = {
+                "Dead1": 1.25,
+                "Dead2": 1.40,
+                f"Maint_{i}": 1.50,
+                "Live": 0.00,
+            }
 
         # Adicionar apenas combos core ao modelo.
         for nome, fatores in self.fatores_core.items():
@@ -340,9 +377,7 @@ class ModeloBaseFEA:
         # Mapa perfil por barra
         perfil_por_barra: dict[int, PerfilFisico] = {}
         for b in self.barras:
-            perfil = perfil_por_grupo.get(b.group) or next(
-                iter(perfil_por_grupo.values())
-            )
+            perfil = perfil_por_grupo.get(b.group) or next(iter(perfil_por_grupo.values()))
             perfil_por_barra[b.id] = perfil
 
         # Atualizar seções das barras no modelo PyNite
@@ -355,9 +390,7 @@ class ModeloBaseFEA:
         # Remover cargas Dead1 anteriores e recalcular peso próprio.
         # PyNite v3 armazena cargas nodais em NodeLoads: list[(direction, P, case)].
         for node in self.modelo.nodes.values():
-            node.NodeLoads = [
-                ld for ld in node.NodeLoads if ld[2] != "Dead1"
-            ]
+            node.NodeLoads = [ld for ld in node.NodeLoads if ld[2] != "Dead1"]
 
         peso_total = 0.0
         pesos_nos: dict[str, float] = {nid: 0.0 for nid in self.nos}
@@ -371,9 +404,7 @@ class ModeloBaseFEA:
 
         for nid, peso_kg in pesos_nos.items():
             if peso_kg > 0 and nid in self.modelo.nodes:
-                self.modelo.nodes[nid].NodeLoads.append(
-                    ("FY", -peso_kg * 9.81, "Dead1")
-                )
+                self.modelo.nodes[nid].NodeLoads.append(("FY", -peso_kg * 9.81, "Dead1"))
 
         resultado.peso_total_kg = peso_total
 
@@ -428,9 +459,7 @@ class ModeloBaseFEA:
             else self.fatores_core
         )
         combos_elu_nomes = [
-            n
-            for n in fatores_ativos
-            if n.startswith("ELU_") and not n.startswith("ELS_")
+            n for n in fatores_ativos if n.startswith("ELU_") and not n.startswith("ELS_")
         ]
         utilizacao_maxima = 0.0
 
@@ -460,9 +489,7 @@ class ModeloBaseFEA:
                 except Exception:
                     pass
             axiais = [
-                a
-                for a in axiais
-                if not (isinstance(a, float) and (math.isnan(a) or math.isinf(a)))
+                a for a in axiais if not (isinstance(a, float) and (math.isnan(a) or math.isinf(a)))
             ]
             if not axiais:
                 resultado.erro = f"Sem esforços na barra {b.id}."
@@ -470,16 +497,12 @@ class ModeloBaseFEA:
             axial = max(axiais, key=abs)
 
             mys = [
-                m
-                for m in mys
-                if not (isinstance(m, float) and (math.isnan(m) or math.isinf(m)))
+                m for m in mys if not (isinstance(m, float) and (math.isnan(m) or math.isinf(m)))
             ]
             my = max(mys, key=abs) if mys else 0.0
 
             mzs = [
-                m
-                for m in mzs
-                if not (isinstance(m, float) and (math.isnan(m) or math.isinf(m)))
+                m for m in mzs if not (isinstance(m, float) and (math.isnan(m) or math.isinf(m)))
             ]
             mz = max(mzs, key=abs) if mzs else 0.0
 

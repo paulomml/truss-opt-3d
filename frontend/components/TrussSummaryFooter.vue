@@ -53,10 +53,7 @@ const baixarMemorial = (formato: 'pdf' | 'docx') => {
 </script>
 
 <template>
-  <footer
-    v-if="trussResult"
-    class="bg-gray-800/95 backdrop-blur-md border-t border-gray-700"
-  >
+  <footer v-if="trussResult" class="bg-gray-800/95 backdrop-blur-md border-t border-gray-700">
     <div class="px-4 py-2">
       <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-3">
         Resumo da Análise
@@ -165,10 +162,7 @@ const baixarMemorial = (formato: 'pdf' | 'docx') => {
       </div>
 
       <!-- Botões de Memorial -->
-      <div
-        v-if="trussResult.is_structurally_stable"
-        class="mt-3 flex gap-2 justify-end"
-      >
+      <div v-if="trussResult.is_structurally_stable" class="mt-3 flex gap-2 justify-end">
         <button
           @click="baixarMemorial('pdf')"
           class="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg"

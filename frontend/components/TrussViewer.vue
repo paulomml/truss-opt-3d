@@ -161,7 +161,7 @@ function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
       v-if="
         !store.loading &&
         ((store.result && store.result.members.length > 0) ||
-         (store.rawTruss && store.rawTruss.members.length > 0))
+          (store.rawTruss && store.rawTruss.members.length > 0))
       "
       alpha
       clear-color="#111827"

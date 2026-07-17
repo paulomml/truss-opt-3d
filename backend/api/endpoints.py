@@ -260,7 +260,9 @@ async def iniciar_otimizacao(
 @router.get("/tarefas", response_model=list[TarefaResumo])
 async def listar_tarefas(
     limite: int = Query(50, ge=1, le=500, description="Número máximo de tarefas retornadas."),
-    status_filtro: str | None = Query(None, description="Filtra por status (PENDENTE, EM_ANDAMENTO, ...)."),
+    status_filtro: str | None = Query(
+        None, description="Filtra por status (PENDENTE, EM_ANDAMENTO, ...)."
+    ),
     sessao: Session = Depends(obter_sessao),
 ) -> list[TarefaResumo]:
     """

@@ -303,9 +303,7 @@ def otimizar_trelice_ga(
         if probabilidade_mutacao is not None
         else configuracoes.ag_probabilidade_mutacao
     )
-    tournsize = (
-        indice_torneio if indice_torneio is not None else configuracoes.ag_indice_torneio
-    )
+    tournsize = indice_torneio if indice_torneio is not None else configuracoes.ag_indice_torneio
     max_perfis_distintos_cfg = (
         max_perfis_distintos
         if max_perfis_distintos is not None
@@ -355,11 +353,7 @@ def otimizar_trelice_ga(
     # Paralelismo: ThreadPoolExecutor para avaliar indivíduos.
     # Cada thread constrói seu ModeloBaseFEA local via _THREAD_LOCAL.
     executor = None
-    usar_paralelismo = (
-        usar_paralelismo
-        and modelo_base is not None
-        and tamanho_populacao >= 2
-    )
+    usar_paralelismo = usar_paralelismo and modelo_base is not None and tamanho_populacao >= 2
     if usar_paralelismo:
         from concurrent.futures import ThreadPoolExecutor
 
@@ -368,27 +362,29 @@ def otimizar_trelice_ga(
 
         # Contexto compartilhado entre threads (leitura apenas após init).
         _THREAD_CTX.clear()
-        _THREAD_CTX.update({
-            "grupos": grupos,
-            "perfis": perfis,
-            "material": material,
-            "nos": nos,
-            "barras": barras,
-            "nos_banzo_superior": nos_banzo_superior,
-            "nos_fachada": nos_fachada,
-            "casos_carga": casos_carga,
-            "parametros_vento": parametros_vento,
-            "water_lamina_mm": water_lamina_mm,
-            "solo_tipo": solo_tipo,
-            "custom_ks": custom_ks,
-            "footing_b": footing_b,
-            "footing_l": footing_l,
-            "usar_penalidade_diversidade": usar_penalidade_diversidade,
-            "max_perfis_distintos": max_perfis_distintos_cfg,
-            "modo_rapido": modo_rapido,
-            "perfis": perfis,
-            "cache": _cache_avaliacao,
-        })
+        _THREAD_CTX.update(
+            {
+                "grupos": grupos,
+                "perfis": perfis,
+                "material": material,
+                "nos": nos,
+                "barras": barras,
+                "nos_banzo_superior": nos_banzo_superior,
+                "nos_fachada": nos_fachada,
+                "casos_carga": casos_carga,
+                "parametros_vento": parametros_vento,
+                "water_lamina_mm": water_lamina_mm,
+                "solo_tipo": solo_tipo,
+                "custom_ks": custom_ks,
+                "footing_b": footing_b,
+                "footing_l": footing_l,
+                "usar_penalidade_diversidade": usar_penalidade_diversidade,
+                "max_perfis_distintos": max_perfis_distintos_cfg,
+                "modo_rapido": modo_rapido,
+                "perfis": perfis,
+                "cache": _cache_avaliacao,
+            }
+        )
         executor = ThreadPoolExecutor(max_workers=n_workers)
 
     # Busca local (hill climbing).
