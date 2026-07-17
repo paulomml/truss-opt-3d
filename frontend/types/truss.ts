@@ -2,6 +2,11 @@
 
 export type SupportType = 'Pinned' | 'Roller' | 'Fixed' | 'None';
 
+// Aliases de compatibilidade (usados em utils/trussGenerators.ts).
+export type RawNode = NoBruto;
+export type RawMember = BarraBruta;
+export type RawTruss = TrelicaBruta;
+
 export interface NoBruto {
   id: string;
   x: number;
@@ -63,6 +68,24 @@ export interface RequisicaoOtimizacao {
   restricoes?: RestricoesOtimizacao | null;
   ag_geracoes?: number | null;
   ag_populacao?: number | null;
+  // Refinamento local (algoritmo memético): ativa hill climbing por geração.
+  ag_usar_refinamento_local?: boolean | null;
+  // Probabilidade de cruzamento (0 a 1).
+  ag_probabilidade_cruzamento?: number | null;
+  // Probabilidade de mutação (0 a 1).
+  ag_probabilidade_mutacao?: number | null;
+  // Tamanho do torneio de seleção.
+  ag_indice_torneio?: number | null;
+  // Máximo de perfis distintos sem penalidade.
+  ag_max_perfis_distintos?: number | null;
+  // Paralelismo entre materiais (legado, não usado mais).
+  n_parallel?: number | null;
+  // Modo rápido: pula combos de manutenção (1 kN/nó) durante o GA.
+  modo_rapido?: boolean | null;
+  // Paralelismo interno: avalia indivíduos em paralelo via multiprocessing.
+  usar_paralelismo?: boolean | null;
+  // Semente aleatória para reprodutibilidade (0 = aleatório, fixo = resultados idênticos).
+  ag_semente?: number | null;
 }
 
 export interface NoResultado {
@@ -124,6 +147,35 @@ export interface StatusTarefa {
   criado_em?: string | null;
 }
 
+// Resumo de tarefa para listagem em histórico.
+export interface TarefaResumo {
+  task_id: string;
+  status: StatusTarefaTipo;
+  progresso: number;
+  criado_em?: string | null;
+  iniciado_em?: string | null;
+  finalizado_em?: string | null;
+  mensagem?: string | null;
+  tem_resultado: boolean;
+}
+
+// Resposta do endpoint /api/health com metadados do servidor.
+export interface HealthResponse {
+  status: string;
+  servico: string;
+  versao: string;
+  cpu_count: number;
+  ambiente: string;
+  celery_max_concorrencia: number;
+}
+
+// Resposta do endpoint /api/health/worker.
+export interface HealthWorkerResponse {
+  worker_disponivel: boolean;
+  resposta?: Record<string, any>;
+  erro?: string;
+}
+
 // Catálogos
 export interface Material {
   id: number;
@@ -150,4 +202,30 @@ export interface Perfil {
   j_m4: number;
   uso_recomendado?: string | null;
   chapa_referencia?: string | null;
+}
+
+// Estrutura retornada por /api/normas (referência de constantes NBR).
+export interface NormasReferencia {
+  nbr_6120: {
+    nome: string;
+    descricao: string;
+    constantes: Record<string, number>;
+    combinacoes_elu: string[];
+    combinacoes_els: string[];
+  };
+  nbr_6123: {
+    nome: string;
+    descricao: string;
+    constantes: Record<string, number>;
+    vento_default: Record<string, number>;
+  };
+  nbr_8800: {
+    nome: string;
+    descricao: string;
+    constantes: Record<string, number>;
+    equacoes: Array<{ id: string; nome: string }>;
+  };
+  ga: {
+    defaults: Record<string, number | boolean>;
+  };
 }

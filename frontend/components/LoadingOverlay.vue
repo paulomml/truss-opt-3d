@@ -129,7 +129,7 @@ const globalBestDisplay = computed(() => {
   const fit = dp.melhor_global_fitness;
   const mat = dp.melhor_global_material;
   if (fit != null && fit !== Infinity && mat) {
-    return `${Number(fit).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg (${mat})`;
+    return `R$ ${Number(fit).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${mat})`;
   }
   return '—';
 });
@@ -201,7 +201,7 @@ function getStatusDotClass(name: string): string {
 <template>
   <div
     v-if="store.loading"
-    class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md px-4 sm:px-6 text-center"
+    class="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 px-4 sm:px-6 text-center"
   >
     <div class="flex flex-col items-center w-full max-w-3xl">
       <!-- Spinner -->
@@ -240,6 +240,18 @@ function getStatusDotClass(name: string): string {
           <span class="text-gray-500">Tempo:</span>
           <span class="text-blue-300 ml-1">{{ elapsedDisplay }}</span>
         </div>
+      </div>
+
+      <!-- Aviso de timeout client-side (sem progresso por > 45s) -->
+      <div
+        v-if="store.showTimeoutWarning"
+        class="w-full max-w-3xl bg-orange-900/30 border border-orange-700/50 rounded-lg px-4 py-2 mb-4 text-center text-xs"
+      >
+        <Icon name="lucide:alert-triangle" class="w-4 h-4 inline mr-1 text-orange-400" />
+        <span class="text-orange-300 font-bold">Sem progresso há algum tempo.</span>
+        <span class="text-orange-200 ml-1">
+          Se o problema persistir, cancele e verifique o worker Celery.
+        </span>
       </div>
 
       <!-- Painel de logs (agrupado por material com expansão) -->
@@ -302,7 +314,10 @@ function getStatusDotClass(name: string): string {
           v-if="!linhasGerais.length && !materiaisOrdenados.length"
           class="text-gray-500 text-center py-8"
         >
-          Aguardando dados do servidor...
+          <template v-if="store.dadosProgresso.status === 'EM_ANDAMENTO'">
+            Processando primeira geração de avaliações estruturais...
+          </template>
+          <template v-else> Aguardando dados do servidor... </template>
         </div>
       </div>
 

@@ -10,6 +10,10 @@ import type {
   Material,
   Perfil,
   StatusTarefa,
+  TarefaResumo,
+  HealthResponse,
+  HealthWorkerResponse,
+  NormasReferencia,
 } from '@/types/truss';
 import { watch } from 'vue';
 import * as generators from '@/utils/trussGenerators';
@@ -30,6 +34,7 @@ export const useTrussStore = defineStore('truss', () => {
     raw_truss: null,
     ag_geracoes: 25,
     ag_populacao: 30,
+    ag_semente: 42,
     // Campos extras (não enviados ao backend).
     ...({
       dead_load: 2000.0,
@@ -59,6 +64,19 @@ export const useTrussStore = defineStore('truss', () => {
     perfis_excluidos: null,
     usar_penalidade_diversidade: true,
   });
+
+  // Parâmetros avançados do GA (defaults do backend carregados via /api/normas).
+  const agAvancado = reactive({
+    usar_refinamento_local: true as boolean | null,
+    probabilidade_cruzamento: null as number | null,
+    probabilidade_mutacao: null as number | null,
+    indice_torneio: null as number | null,
+    max_perfis_distintos: null as number | null,
+  });
+
+  // Otimizações de performance (enviadas no payload ao backend).
+  const modoRapido = ref<boolean>(true);
+  const usarParalelismo = ref<boolean>(true);
 
   // Modo de desempenho do GA (frontend-only, não enviado ao backend).
   const modoDesempenho = ref<'rapido' | 'normal' | 'preciso' | 'customizado'>('normal');
@@ -97,10 +115,21 @@ export const useTrussStore = defineStore('truss', () => {
   const dadosProgresso = ref<Record<string, any>>({});
   // Timestamp de início da otimização (epoch ms).
   const tempoInicio = ref(0);
-
   // Catálogos carregados do backend.
   const materiais = ref<Material[]>([]);
   const perfis = ref<Perfil[]>([]);
+
+  // Status de saúde do servidor e do worker Celery.
+  const serverHealth = ref<HealthResponse | null>(null);
+  const workerHealth = ref<HealthWorkerResponse | null>(null);
+  const verificandoWorker = ref(false);
+
+  // Histórico de tarefas (carregado sob demanda).
+  const historicoTarefas = ref<TarefaResumo[]>([]);
+  const carregandoHistorico = ref(false);
+
+  // Referência de normas (caching local).
+  const normasReferencia = ref<NormasReferencia | null>(null);
 
   // WebSocket para streaming.
   const ws = ref<WebSocket | null>(null);
@@ -123,9 +152,17 @@ export const useTrussStore = defineStore('truss', () => {
     tempoInicio.value = 0;
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
+    // Cancelamento real via REST: revoga a tarefa Celery no backend.
+    if (taskId.value) {
+      try {
+        await $fetch(`/api/tarefas/${taskId.value}/cancelar`, { method: 'POST' });
+        addToast('Tarefa cancelada no servidor.', 'info');
+      } catch (e: any) {
+        addToast('Aviso: não foi possível cancelar no servidor: ' + (e?.message || ''), 'warning');
+      }
+    }
     cancelOptimization();
-    addToast('Operação cancelada. Os parâmetros foram preservados.', 'info');
   };
 
   const generateRawTruss = (): TrelicaBruta | null => {
@@ -168,7 +205,6 @@ export const useTrussStore = defineStore('truss', () => {
     logsTexto.value = 'Status: Conectando ao servidor...';
     dadosProgresso.value = {};
     tempoInicio.value = Date.now();
-    showTimeoutWarning.value = false;
 
     try {
       const generated = generateRawTruss();
@@ -177,7 +213,7 @@ export const useTrussStore = defineStore('truss', () => {
       form.raw_truss = generated;
       rawTruss.value = generated;
 
-      // Constrói payload limpo.
+      // Constrói payload limpo com TODOS os parâmetros do GA + paralelismo.
       const formAny = form as any;
       const payload: RequisicaoOtimizacao = {
         length: form.length,
@@ -198,6 +234,16 @@ export const useTrussStore = defineStore('truss', () => {
         restricoes: { ...restricoes },
         ag_geracoes: form.ag_geracoes,
         ag_populacao: form.ag_populacao,
+        // Parâmetros avançados do GA (nulos = usa default do backend).
+        ag_usar_refinamento_local: agAvancado.usar_refinamento_local,
+        ag_probabilidade_cruzamento: agAvancado.probabilidade_cruzamento,
+        ag_probabilidade_mutacao: agAvancado.probabilidade_mutacao,
+        ag_indice_torneio: agAvancado.indice_torneio,
+        ag_max_perfis_distintos: agAvancado.max_perfis_distintos,
+        // Otimizações de performance.
+        modo_rapido: modoRapido.value,
+        usar_paralelismo: usarParalelismo.value,
+        ag_semente: form.ag_semente || null,
       };
 
       // Configura WebSocket (proxy do Nuxt em dev ou Nginx em prod).
@@ -219,9 +265,9 @@ export const useTrussStore = defineStore('truss', () => {
           taskId.value = p.task_id;
           mainProgress.value = p.progress || 0;
           logsTexto.value = p.logs || '';
-          if (p.material_atual) {
-            dadosProgresso.value = { ...p };
-          }
+          // Sempre mescla os dados de progresso no dadosProgresso para que
+          // o frontend exiba status e progresso mesmo antes de material_atual.
+          dadosProgresso.value = { ...dadosProgresso.value, ...p };
           tempoInicio.value = tempoInicio.value || Date.now();
         } else if (data.type === 'result') {
           const r = data.data;
@@ -251,6 +297,10 @@ export const useTrussStore = defineStore('truss', () => {
             addToast(validated.status_message || 'Estrutura não suporta a carga.', 'warning');
           }
           loading.value = false;
+          if (timeoutWatcher) {
+            clearInterval(timeoutWatcher);
+            timeoutWatcher = null;
+          }
           ws.value?.close();
         } else if (data.type === 'error') {
           addToast('Erro no cálculo: ' + data.message, 'error');
@@ -301,6 +351,11 @@ export const useTrussStore = defineStore('truss', () => {
     form.ag_geracoes = 25;
     form.ag_populacao = 30;
     modoDesempenho.value = 'normal';
+    agAvancado.usar_refinamento_local = true;
+    agAvancado.probabilidade_cruzamento = null;
+    agAvancado.probabilidade_mutacao = null;
+    agAvancado.indice_torneio = null;
+    agAvancado.max_perfis_distintos = null;
   };
 
   // Catálogos
@@ -345,11 +400,81 @@ export const useTrussStore = defineStore('truss', () => {
     }
   };
 
+  // Saúde do servidor (CPU count, ambiente, versão).
+  const verificarSaudeServidor = async () => {
+    try {
+      const resp = await $fetch<HealthResponse>('/api/health');
+      serverHealth.value = resp;
+      return resp;
+    } catch (e) {
+      console.error('Erro ao verificar saúde do servidor:', e);
+      return null;
+    }
+  };
+
+  // Diagnóstico do worker Celery: dispara tarefa_diagnostico e aguarda 5s.
+  const verificarWorker = async () => {
+    verificandoWorker.value = true;
+    try {
+      const resp = await $fetch<HealthWorkerResponse>('/api/health/worker', {
+        timeout: 8000,
+      });
+      workerHealth.value = resp;
+      return resp;
+    } catch (e: any) {
+      workerHealth.value = {
+        worker_disponivel: false,
+        erro: e?.message || 'Falha ao verificar worker.',
+      };
+      return workerHealth.value;
+    } finally {
+      verificandoWorker.value = false;
+    }
+  };
+
+  // Histórico de tarefas: lista as N mais recentes.
+  const carregarHistorico = async (limite = 20) => {
+    carregandoHistorico.value = true;
+    try {
+      const resp = await $fetch<TarefaResumo[]>(`/api/tarefas`, {
+        params: { limite },
+      });
+      historicoTarefas.value = resp;
+      return resp;
+    } catch (e) {
+      console.error('Erro ao carregar histórico:', e);
+      return [];
+    } finally {
+      carregandoHistorico.value = false;
+    }
+  };
+
+  // Carrega a referência de normas NBR (cache local).
+  const carregarNormas = async () => {
+    if (normasReferencia.value) return normasReferencia.value;
+    try {
+      const resp = await $fetch<NormasReferencia>('/api/normas');
+      normasReferencia.value = resp;
+      // Aplica defaults do GA nos campos avançados (quando nulos).
+      const defaults = resp.ga?.defaults || {};
+      if (agAvancado.usar_refinamento_local === null && 'usar_refinamento_local' in defaults) {
+        agAvancado.usar_refinamento_local = defaults.usar_refinamento_local as boolean;
+      }
+      return resp;
+    } catch (e) {
+      console.error('Erro ao carregar normas:', e);
+      return null;
+    }
+  };
+
   return {
     // Estado
     form,
     parametrosVento,
     restricoes,
+    agAvancado,
+    modoRapido,
+    usarParalelismo,
     result,
     rawTruss,
     loading,
@@ -364,6 +489,12 @@ export const useTrussStore = defineStore('truss', () => {
     modoDesempenho,
     materiais,
     perfis,
+    serverHealth,
+    workerHealth,
+    verificandoWorker,
+    historicoTarefas,
+    carregandoHistorico,
+    normasReferencia,
     // Ações
     cancelOptimization: handleCancel,
     setRawTruss,
@@ -373,5 +504,9 @@ export const useTrussStore = defineStore('truss', () => {
     carregarMateriais,
     carregarPerfis,
     baixarMemorial,
+    verificarSaudeServidor,
+    verificarWorker,
+    carregarHistorico,
+    carregarNormas,
   };
 });

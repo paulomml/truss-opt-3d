@@ -13,8 +13,7 @@ export const useToast = () => {
     const id = Date.now();
     toasts.value.push({ id, message, type });
 
-    // Remove toast após 5s para evitar acúmulo na DOM.
-    setTimeout(() => {
+  setTimeout(() => {
       removeToast(id);
     }, 5000);
   };

@@ -44,7 +44,7 @@ def calcular_carga_cobertura(inclinacao_percentual: float) -> float:
     """
     Carga variável mínima em cobertura (Item 6.4).
 
-    Para inclinações 1% <= i <= 5%, q varia de 0.50 a 0.25 kN/m^2.
+    Para inclinações de 1% a 5%, q varia de 0.50 a 0.25 kN/m^2.
     Acima de 5%, q = 0.25 kN/m^2 (mínimo absoluto).
     Abaixo de 1%, não é permitido (recomendação).
     """
@@ -146,7 +146,7 @@ def verificar_empozamento(
     Verifica empoçamento progressivo (Anexo D: NBR 6120).
 
     Requisitos:
-    1. i_def = i_projeto - 0.024 * L^3 * g / (E * I) + contraflecha/24 >= 1%
+    1. i_def = i_projeto - 0.024 * L3 * g / (E * I) + contraflecha/24 >= 1%
     2. i_def = i_projeto + 0.024 * L * p / (E * I) - contraflecha/24 > 0
 
     Implementação simplificada: compara flecha sob carga permanente + chuva

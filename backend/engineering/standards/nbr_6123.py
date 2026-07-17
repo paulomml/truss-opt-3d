@@ -1,23 +1,5 @@
 """
 Verificações NBR 6123:1988: Forças devidas ao vento em edificações.
-
-Implementa o modelo de cargas estáticas de vento em coberturas e fechamentos
-verticais, com aplicação 3D na treliça.
-
-Fórmulas principais (Item 4):
-    Vk = V0 * S1 * S2 * S3               (velocidade característica)
-    q   = 0.613 * Vk^2                     (pressão dinâmica, N/m^2)
-    F   = (Ce − Ci) * q * A              (força em elemento de área A)
-    Fa  = Ca * q * Ae                     (força de arrasto global)
-
-Onde:
-    V0 : velocidade básica do vento (mapa isovelocidade, 30-50 m/s no Brasil)
-    S1 : fator topográfico (1.0 terreno plano; >1.0 em encostas)
-    S2 : fator de rugosidade (0.5-1.5 conforme classe e altura)
-    S3 : fator estatístico (1.0 para edifícios comuns, vida útil 50 anos)
-    Ce : coeficiente de forma externo (pressão/sucção)
-    Ci : coeficiente de forma interno
-    Ca : coeficiente de arrasto
 """
 
 from __future__ import annotations

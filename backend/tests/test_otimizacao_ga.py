@@ -122,9 +122,7 @@ def test_ga_respeita_restricoes_familia(trelica_simples, material_a36, perfis_cu
         assert perfil.familia == "RHS"
 
 
-# =====================================================================
 # Testes de regressão: algoritmo memético
-# =====================================================================
 
 
 def test_ga_populacao_inicial_eh_avaliada(trelica_simples, material_a36, perfis_curtos):

@@ -16,6 +16,7 @@ O TRUSS-OPT 3D (Truss Optimizer 3D, Otimizador de Treliças 3D) é um sistema co
 - [1. Descrição Geral](#1-descricao-geral)
 - [2. Fundamentação Teórica e Modelagem Estrutural](#2-fundamentacao-teorica-e-modelagem-estrutural)
   - [2.1 Método dos Elementos Finitos (MEF)](#21-metodo-dos-elementos-finitos-mef)
+    - [2.1.1 Otimizações do Solver](#211-otimizacoes-do-solver)
   - [2.2 Verificações Normativas](#22-verificacoes-normativas)
     - [2.2.1 NBR 8800:2008](#221-nbr-88002008-estruturas-de-aco)
     - [2.2.2 NBR 6120:2019](#222-nbr-61202019-acoes-em-edificacoes)
@@ -62,6 +63,18 @@ O núcleo de cálculo é fundamentado em princípios da mecânica dos sólidos e
 $$[K]\{D\} = \{F\}$$
 
 Os nós são submetidos a restrições que simulam os apoios físicos, permitindo graus de liberdade para translação e rotação. O sistema suporta apoios rotulados (Pinned), engastes perfeitos (Fixed), apoios de rolete (Roller) e apoios elásticos (modelo de Winkler). O cálculo de superposição considera o somatório da carga permanente (peso próprio distribuído em todos os nós baseado no comprimento e densidade do perfil) e do carregamento externo variável, distribuído nas faces superiores da treliça.
+
+#### 2.1.1 Otimizações do Solver
+
+O solver MEF é implementado sobre o motor PyNiteFEA v3, com três otimizações principais para garantir desempenho em centenas de avaliações durante o GA:
+
+**Reuso do modelo MEF (ModeloBaseFEA):** A geometria da treliça (nós, conectividade, materiais, cargas externas e combinações) não muda entre avaliações de diferentes candidatos — apenas as seções transversais atribuídas a cada grupo de barras variam. O modelo PyNite é construído uma única vez no início do GA para cada material, e as avaliações subsequentes reutilizam a mesma instância, atualizando apenas as seções das barras e o peso próprio antes de re-analisar. Isso elimina a sobrecarga de recriação do modelo a cada chamada do solver.
+
+**Montagem única da matriz de rigidez:** O PyNite oferece dois métodos de análise linear: `analyze()`, que remonta a matriz de rigidez global K para cada combinação de carga, e `analyze_linear()`, que a monta uma única vez e a reutiliza para todas as combinações. Como o modelo não utiliza elementos tension-only/compression-only nem análise P-Delta, os dois métodos são algebricamente equivalentes. O sistema emprega `analyze_linear()`, reduzindo o tempo de solução proporcionalmente ao número de combinações (8 combos no modo padrão, contra 28+ com verificações de manutenção).
+
+**Extração de esforços agrupada por combinação:** A extração de esforços axiais e momentos fletores é feita em um único loop por combinação de carga (em vez de três loops separados por direção), reduzindo o número de segmentações internas do PyNite por um fator de ~2,7×.
+
+**Paralelismo na avaliação da população:** O GA avalia os indivíduos de cada geração concorrentemente via `ThreadPoolExecutor`. Cada thread worker constrói sua própria instância do modelo MEF reutilizável (lazy init) e processa um indivíduo independentemente. O número de workers é limitado a `min(cpu_count(), tamanho_populacao, 4)` para evitar saturação de memória. O hill climbing (refinamento local) permanece sequencial por natureza iterativa.
 
 ### 2.2 Verificações Normativas
 
@@ -318,7 +331,7 @@ truss-opt-3d/
     optimization/                 (algoritmo genético memético com DEAP)
     worker/                       (tarefa Celery de otimização)
     seed/                         (população inicial: 6 materiais + 32 perfis)
-    tests/                        (36 testes pytest)
+    tests/                        (72 testes pytest)
   frontend/                       (Node 24 Nuxt 4 + Three.js)
     components/                   (TrussViewer, TrussSidebar, LoadingOverlay, etc)
     stores/                       (Pinia: form, WebSocket, catálogos)
@@ -352,12 +365,15 @@ O catálogo contempla três famílias de perfis: cantoneiras de abas iguais (L, 
 
 | Método | Rota                                 | Descrição                                          |
 | ------ | ------------------------------------ | -------------------------------------------------- |
-| GET    | /api/health                          | Health check                                       |
+| GET    | /api/health                          | Health check com cpu_count e ambiente              |
+| GET    | /api/health/worker                   | Diagnóstico do worker Celery (ping/pong)           |
 | GET    | /api/materiais                       | Lista materiais ativos                             |
 | GET    | /api/perfis?familia=RHS              | Lista perfis (opcionalmente filtrados por família) |
+| GET    | /api/normas                          | Referência de constantes NBR 6120/6123/8800 + GA   |
 | POST   | /api/otimizar                        | Inicia otimização, retorna task_id                 |
+| GET    | /api/tarefas?limite=20&status_filtro=PENDENTE | Lista histórico de tarefas (paginação + filtro)  |
 | GET    | /api/tarefas/{id}                    | Consulta status da tarefa por polling              |
-| POST   | /api/tarefas/{id}/cancelar           | Cancela tarefa em andamento                        |
+| POST   | /api/tarefas/{id}/cancelar           | Cancela tarefa em andamento (revoga no Celery)     |
 | GET    | /api/tarefas/{id}/memorial/{formato} | Download do memorial (pdf ou docx)                 |
 | WS     | /api/ws/otimizar                     | Streaming de progresso em tempo real               |
 
@@ -390,9 +406,23 @@ O catálogo contempla três famílias de perfis: cantoneiras de abas iguais (L, 
     "usar_penalidade_diversidade": true
   },
   "ag_geracoes": 12,
-  "ag_populacao": 20
+  "ag_populacao": 20,
+  "ag_semente": 42,
+  "ag_usar_refinamento_local": true,
+  "ag_probabilidade_cruzamento": 0.7,
+  "ag_probabilidade_mutacao": 0.2,
+  "ag_indice_torneio": 3,
+  "ag_max_perfis_distintos": 4
 }
 ```
+
+### 5.3 Cancelamento de Tarefas
+
+O botão "Cancelar Análise" envia `POST /api/tarefas/{id}/cancelar`, que revoga a tarefa no Celery e marca o registro como CANCELADO no banco de dados. O cancelamento é suportado entre gerações do GA, garantindo resposta rápida mesmo durante processamento intensivo.
+
+### 5.4 Semente Aleatória
+
+O campo `ag_semente` (opcional, default 42) define a semente do gerador aleatório utilizado pelo GA. Com o mesmo valor de semente, a mesma configuração de entrada produz resultados idênticos em execuções diferentes. O valor 0 (zero) desativa a semente fixa, fazendo com que cada execução explore uma sequência aleatória diferente.
 
 ## 6. Frontend
 
@@ -408,11 +438,21 @@ O componente TrussViewer usa @tresjs/core (wrapper Vue para Three.js) e oferece:
 
 ### 6.2 Painel de Controles
 
-A sidebar (TrussSidebar) segue o fluxo natural de configuração: Geometria, Carregamento (com vento NBR 6123 colapsável), Fundação e Otimizador (com modo de desempenho e restrições avançadas). Todos os campos possuem tooltips explicativos com terminologia técnica e valores típicos.
+A sidebar (TrussSidebar) segue o fluxo natural de configuração: Geometria, Carregamento (com vento NBR 6123 colapsável), Fundação e Otimizador (com seed aleatória, parâmetros avançados do GA e restrições avançadas). Todos os campos possuem tooltips explicativos com terminologia técnica e valores típicos.
+
+O cabeçalho da sidebar inclui ainda:
+- **Botões de Catálogos**: acesso rápido aos modais de Materiais, Perfis, Normas NBR e Histórico de Tarefas.
+
+Os modais disponíveis são:
+- `CatalogoMateriaisModal.vue`: tabela completa de materiais (E, fy, fu, ρ, custo).
+- `CatalogoPerfisModal.vue`: tabela completa de perfis (dimensões, área, Ix, Iy, J) com filtro por família.
+- `HistoricoTarefasModal.vue`: histórico das últimas 50 tarefas com status, duração e mensagem.
+- `NormasReferenciaModal.vue`: constantes NBR 6120/6123/8800 + defaults do GA + equações verificadas.
+- `HelpModal.vue` e `AboutModal.vue`: já existentes (manual de uso e contexto acadêmico).
 
 ### 6.3 Estado Global
 
-A store Pinia (useTrussStore) centraliza o formulário reativo, o ciclo de vida do WebSocket, os catálogos carregados do backend e as ações de memorial. O progresso da otimização é exibido em tempo real com logs por material, barra de progresso global entre todos os materiais e painel expansível de gerações.
+A store Pinia (useTrussStore) centraliza o formulário reativo, o ciclo de vida do WebSocket, os catálogos carregados do backend, as ações de memorial, o histórico de tarefas, a referência de normas e os parâmetros avançados do GA. O progresso da otimização é exibido em tempo real com logs por material, barra de progresso global entre todos os materiais e painel de gerações.
 
 ## 7. Memorial de Cálculo
 
@@ -527,7 +567,7 @@ Com a aplicação rodando, siga este roteiro rápido:
 2. Na sidebar, escolha um tipo de estrutura (ex: Tesoura Pratt).
 3. Ajuste vão (12 m), altura (2,5 m) e número de painéis (6).
 4. Em Carregamento, mantenha os valores padrão de carga permanente e sobrecarga.
-5. Em Otimizador, selecione o modo de desempenho (Normal ou Rápido para testes).
+5. Em Otimizador, ajuste os parâmetros desejados (gerações, população, seed).
 6. Clique em "Iniciar Análise Estrutural".
 7. Acompanhe o progresso em tempo real no painel de logs.
 8. Ao finalizar, explore o resultado 3D: gire a câmera, clique em barras para inspecionar, e expanda o rodapé para ver todas as métricas.
@@ -564,15 +604,16 @@ cd backend
 pytest -v
 ```
 
-Cobertura atual: 36 testes distribuídos em:
+Cobertura atual: 72 testes distribuídos em:
 
 - test_nbr8800.py (9 testes): esbeltez, fator Q, chi, N_rd, interação N+M, flecha.
 - test_nbr6120.py (8 testes): cargas de cobertura, manutenção, assimetrias, combinações, empoçamento.
 - test_nbr6123.py (6 testes): Vk, q, decomposição de direção, área frontal, forças 3D.
 - test_otimizacao_ga.py (7 testes): integração GA + solver com treliça simples, restrições de família, avaliação da população inicial, elitismo entre gerações, GA puro, convergência da busca local e caso de borda com zero gerações.
 - test_api.py (6 testes): health check, listagem de materiais/perfis, criação e consulta de tarefas.
+- test_aprimoramentos.py (12 testes): health com cpu_count, diagnóstico do worker, referência de normas, listagem de histórico, cancelamento via REST, parâmetros avançados do GA e confirmação da rota Celery.
 
-Os testes usam SQLite em memória (via `conftest.py`) para não depender de PostgreSQL.
+Os testes usam SQLite em memória (via `conftest.py`) para não depender de PostgreSQL. O mock de `otimizar_trelice.delay` agora gera UUIDs únicos por chamada, evitando violação da restrição UNIQUE em `celery_task_id` quando múltiplas tarefas são criadas no mesmo teste.
 
 ## 12. Licença
 

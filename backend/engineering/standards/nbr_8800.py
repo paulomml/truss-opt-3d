@@ -1,16 +1,5 @@
 """
 Verificações NBR 8800:2008: Projeto de estruturas de aço.
-
-Implementa:
-- Esbeltez máxima (Item 5.2.8 e 5.3.4)
-- Flambagem local: Fator Q (Anexo F)
-- Força axial resistente N_rd (Item 5.2.2 e 5.3.2)
-- Fator de redução chi (Item 5.3.3)
-- Momento fletor resistente M_rd (regime elástico)
-- Interação N + M (Item 5.5.1.2)
-- Estado Limite de Serviço: Flecha (ELS)
-
-Referências diretas às equações da norma são mantidas nos comentários.
 """
 
 from __future__ import annotations
@@ -44,13 +33,13 @@ def calcular_fator_q(perfil: PerfilFisico, material: MaterialFisico) -> float:
 
     Para perfis L/RHS/Ue formados a frio, a esbeltez local b/t determina
     a necessidade de redução da área efetiva. Implementação simplificada
-    mas conservadora: Qs = 1.0 se b/t <= lambdar; senão Qa = Ae/Ag.
+    mas conservadora: Qs = 1.0 se b/t for <= lambdar; senao Qa = Ae/Ag.
     """
     t = max(perfil.t_mm, 0.1) / 1000.0  # em metros
     # Largura da mesa mais esbelta (conservador): bf ou h.
     b_mm = max(perfil.h_mm, perfil.bf_mm)
     b = b_mm / 1000.0
-    # Largura flat descontando dobras (~= 3t de cada lado).
+    # Largura flat descontando dobras (aprox. 3t de cada lado).
     b_flat = max(b - 6 * t, t)
 
     # lambdar = 1.40 * sqrt(E/fy) para elementos sem enrijecedor longitudinal.

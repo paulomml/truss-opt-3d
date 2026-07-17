@@ -88,7 +88,7 @@ MATERIAIS_PADRAO = [
     {
         "nome": "SAC350",
         "norma_referencia": "NBR 8800",
-        "observacao": "Perfis formados a frio alta resistência (Ue espessura ≥ 2.65 mm).",
+        "observacao": "Perfis formados a frio alta resistência (Ue espessura >= 2.65 mm).",
         "e_gpa": 200.0,
         "g_gpa": 76.9,
         "nu": 0.30,

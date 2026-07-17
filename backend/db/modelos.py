@@ -55,7 +55,7 @@ class Material(Base):
     )
     fu_mpa: Mapped[float] = mapped_column(Float, nullable=False, comment="Tensão de ruptura (MPa)")
     rho_kg_m3: Mapped[float] = mapped_column(
-        Float, nullable=False, comment="Massa específica (kg/m³)"
+        Float, nullable=False, comment="Massa específica (kg/m^3)"
     )
     custo_kg: Mapped[float] = mapped_column(
         Float,

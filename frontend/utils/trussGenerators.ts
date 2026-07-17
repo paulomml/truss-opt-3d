@@ -36,7 +36,7 @@ function extrude3D(planar: RawTruss, width: number): RawTruss {
   const nodes: Record<string, RawNode> = {};
   const members: RawMember[] = [];
 
-  // Duplicação da malha para as faces frontal (z=0) e traseira (z=width).
+  // Duplicação para faces frontal (z=0) e traseira (z=width).
   for (const [id, node] of Object.entries(planar.nodes)) {
     addNode(nodes, id + 'F', node.x, node.y, 0, node.support);
     addNode(nodes, id + 'B', node.x, node.y, width, node.support);
@@ -51,7 +51,6 @@ function extrude3D(planar: RawTruss, width: number): RawTruss {
   // X-Bracing e membros transversais.
   const nodeIds = Object.keys(planar.nodes);
 
-  // Membros transversais (conectores de profundidade).
   for (const id of nodeIds) {
     addMember(members, id + 'F', id + 'B', 'Transversal');
   }

@@ -1,20 +1,5 @@
 """
 Solver MEF baseado em PyNite v3.
-
-Responsável por:
-1. Construir o modelo FEModel3D a partir do grafo estrutural.
-2. Definir materiais, seções, apoios e cargas.
-3. Aplicar combinações ELU e ELS (NBR 6120/8681).
-4. Aplicar forças de vento NBR 6123.
-5. Executar a análise linear e extrair esforços nas barras.
-6. Calcular comprimentos de flambagem (Lkx, Lky) para os banzos.
-7. Consolidar resultados em ResultadoAnalise.
-
-Notas sobre a API PyNite v3:
-- add_section(name, A, Iy, Iz, J): atenção à ordem (Iy, Iz, não Ix).
-- add_material(name, E, G, nu, rho, fy=None).
-- member.max_moment(direction, combo) onde direction é 'my' ou 'mz'.
-- node.DY[combo] é um dict mapeando combo -> deslocamento.
 """
 
 from __future__ import annotations
@@ -43,7 +28,7 @@ _logger = logging.getLogger(__name__)
 
 
 # Coeficiente de reação do subleito (Winkler): NBR 6122 referenciado pela 8800.
-# Valores em kN/m^3 (Padrão Terzaghi para placa 0.30x0.30 m).
+# Valores em kN/m^3 (Padrao Terzaghi para placa 0.30x0.30 m).
 BANCO_SOLOS = {
     "Areia Fofa": {"ks1": 15000, "tipo": "granular"},
     "Areia Compacta": {"ks1": 100000, "tipo": "granular"},
@@ -108,6 +93,421 @@ def calcular_lk_banzos(
     return lk_map
 
 
+class ModeloBaseFEA:
+    """
+    Modelo MEF reutilizável para acelerar avaliações do GA.
+
+    Constrói o modelo PyNite uma única vez com geometria, material,
+    cargas invariantes (Dead2, Live, vento, água, manutenção) e combinações.
+    O método resolver(perfil_por_grupo) atualiza as seções das barras,
+    recalcula peso próprio (Dead1) e re-analisa, sem recriar o modelo.
+    """
+
+    def __init__(
+        self,
+        nos: dict[str, NoFisico],
+        barras: list[BarraFisica],
+        material: MaterialFisico,
+        casos_carga_externos: list[dict],
+        parametros_vento: ParametrosVento | None = None,
+        nos_banzo_superior: list[str] | None = None,
+        nos_fachada: list[str] | None = None,
+        water_lamina_mm: float = 0.0,
+        solo_tipo: str = "Rocha",
+        custom_ks: float | None = None,
+        footing_b: float = 0.6,
+        footing_l: float = 0.6,
+        perfis_disponiveis: list[PerfilFisico] | None = None,
+    ):
+        self.nos = nos
+        self.barras = barras
+        self.material = material
+        self.perfis_disponiveis = perfis_disponiveis or []
+
+        # Vão real (invariante)
+        xs_apoios = [no.x for no in nos.values() if no.support != "None"]
+        self.vano_real = max(
+            (max(xs_apoios) - min(xs_apoios)) if xs_apoios else 0.0,
+            0.1,
+        )
+        if not xs_apoios:
+            self.vano_real = max((abs(n.x) for n in nos.values()), default=0.1)
+
+        # Banzo superior
+        if nos_banzo_superior is None:
+            y_max = max((n.y for n in nos.values()), default=0.0)
+            self.nos_banzo_superior = [
+                nid for nid, n in nos.items() if abs(n.y - y_max) < 0.05
+            ]
+        else:
+            self.nos_banzo_superior = nos_banzo_superior
+        self.nos_fachada = nos_fachada
+
+        # Pré-calcular Lk (invariante: só depende da geometria)
+        self.lk_map = calcular_lk_banzos(barras, nos)
+
+        self._primeira_chamada = True
+
+        # Construir modelo PyNite.
+        self.modelo = FEModel3D()
+
+        # 1) Material
+        self.modelo.add_material(
+            material.nome,
+            material.e_pa,
+            material.g_pa,
+            material.nu,
+            material.rho_kg_m3,
+            fy=material.fy_pa,
+        )
+
+        # 2) Seções (todos os perfis disponíveis, adicionados uma vez)
+        for perfil in self.perfis_disponiveis:
+            if perfil.nome not in self.modelo.sections:
+                self.modelo.add_section(
+                    perfil.nome,
+                    perfil.area_m2,
+                    perfil.iy_m4,
+                    perfil.ix_m4,
+                    perfil.j_m4,
+                )
+
+        # 3) Nós e apoios
+        usar_ise = solo_tipo is not None and solo_tipo != "Rocha"
+        for nid, no in nos.items():
+            self.modelo.add_node(nid, no.x, no.y, no.z)
+            if no.support == "Pinned":
+                if usar_ise:
+                    self.modelo.def_support(nid, True, False, True, False, False, False)
+                else:
+                    self.modelo.def_support(nid, True, True, True, False, False, False)
+            elif no.support == "Roller":
+                if usar_ise:
+                    self.modelo.def_support(nid, False, False, True, False, False, False)
+                else:
+                    self.modelo.def_support(nid, False, True, True, False, False, False)
+            elif no.support == "Fixed":
+                self.modelo.def_support(nid, True, True, True, True, True, True)
+
+        # 4) ISE: molas Winkler
+        if usar_ise:
+            solo_info = BANCO_SOLOS.get(solo_tipo, BANCO_SOLOS["Rocha"])
+            ks1_kN_m3 = (
+                custom_ks
+                if (solo_tipo == "Customizado" and custom_ks is not None)
+                else solo_info["ks1"]
+            )
+            B = max(footing_b, 0.305)
+            if solo_info["tipo"] == "granular":
+                ks_kN_m3 = ks1_kN_m3 * ((B + 0.305) / (2 * B)) ** 2
+            elif solo_info["tipo"] == "coesivo":
+                ks_kN_m3 = ks1_kN_m3 * (0.305 / B)
+            else:
+                ks_kN_m3 = ks1_kN_m3
+            ks = ks_kN_m3 * 1000.0
+            K_y = ks * B * footing_l
+            I_x = footing_l * B**3 / 12
+            I_z = B * footing_l**3 / 12
+            K_theta_x = ks * I_x
+            K_theta_z = ks * I_z
+            for nid, no in nos.items():
+                if no.support in ("Pinned", "Roller"):
+                    self.modelo.def_support_spring(nid, "DY", K_y)
+                    self.modelo.def_support_spring(nid, "RX", K_theta_x)
+                    self.modelo.def_support_spring(nid, "RZ", K_theta_z)
+
+        # 5) Barras (com seção padrão temporária)
+        secao_padrao = (
+            self.perfis_disponiveis[0].nome
+            if self.perfis_disponiveis
+            else next(iter(self.modelo.sections), None)
+        )
+        for b in barras:
+            self.modelo.add_member(
+                f"M{b.id}", b.node_start, b.node_end, material.nome, secao_padrao
+            )
+
+        # 6) Cargas externas (Dead2 / Live)
+        casos_carga_ativos: set[str] = set()
+        for i, caso in enumerate(casos_carga_externos):
+            tipo = caso.get("type", "G")
+            case_name = "Dead2" if tipo == "G" else ("Live" if tipo == "Q" else "Live")
+            if case_name == "Live":
+                case_name = f"Live_{i}" if "Live" in casos_carga_ativos else "Live"
+            casos_carga_ativos.add(case_name)
+            nos_alvo = caso.get("nodes") or self.nos_banzo_superior
+            if not nos_alvo:
+                continue
+            valor_total = caso.get("value", 0.0)
+            valor_por_no = valor_total / len(nos_alvo)
+            for nid in nos_alvo:
+                if nid in nos:
+                    self.modelo.add_node_load(
+                        nid, caso.get("direction", "FY"), valor_por_no, case=case_name
+                    )
+
+        # 7) Lâmina d'água
+        if water_lamina_mm > 0 and self.nos_banzo_superior:
+            carga_agua = water_lamina_mm * 10.0
+            xs = [nos[nid].x for nid in self.nos_banzo_superior if nid in nos]
+            zs = [nos[nid].z for nid in self.nos_banzo_superior if nid in nos]
+            if xs and zs:
+                area = (max(xs) - min(xs)) * (max(zs) - min(zs))
+                carga_total = carga_agua * area
+                carga_por_no = carga_total / len(self.nos_banzo_superior)
+                for nid in self.nos_banzo_superior:
+                    if nid in nos:
+                        self.modelo.add_node_load(nid, "FY", -carga_por_no, case="Water")
+
+        # 8) Vento NBR 6123
+        if parametros_vento is not None:
+            fachadas = nos_fachada
+            if fachadas is None:
+                fachadas = identificar_fachadas_perpendiculares(
+                    nos, parametros_vento.direcao_graus
+                )
+            forcas = calcular_forcas_vento_3d(
+                nos, parametros_vento, self.nos_banzo_superior, fachadas
+            )
+            for f in forcas:
+                if f.no_id in nos:
+                    self.modelo.add_node_load(f.no_id, f.direction, f.valor, case="Wind")
+
+        # 9) Manutenção (1 kN por nó do banzo superior)
+        self.casos_manutencao: list[str] = []
+        for i, nid in enumerate(self.nos_banzo_superior):
+            if nid in nos:
+                case_name = f"Maint_{i}"
+                self.modelo.add_node_load(nid, "FY", -1000.0, case=case_name)
+                self.casos_manutencao.append(case_name)
+
+        # NOTA: Dead1 (peso próprio) é aplicado em resolver()
+
+        # 10) Combinações ELU e ELS
+        # Combos core (sempre necessários para o GA).
+        self.fatores_core = {
+            "ELU_Normal": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50, "Wind": 1.40, "Water": 1.40},
+            "ELU_Secundario": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.40, "Wind": 1.40, "Water": 1.40},
+            "ELU_Alivio": {"Dead1": 1.00, "Dead2": 1.00, "Live": 1.50, "Wind": 0.00, "Water": 0.00},
+            "ELU_Sem_Vento": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.50, "Wind": 0.00, "Water": 1.40},
+            "ELU_Vento_Dominante": {"Dead1": 1.25, "Dead2": 1.40, "Live": 1.00, "Wind": 1.40, "Water": 1.40},
+            "ELS_Flecha_Total": {"Dead1": 1.00, "Dead2": 1.00, "Live": 1.00, "Wind": 0.00, "Water": 0.00},
+            "ELS_Flecha_Frequente": {"Dead1": 1.00, "Dead2": 1.00, "Live": 0.5, "Wind": 0.00, "Water": 0.00},
+            "ELS_Flecha_Permanente": {"Dead1": 1.00, "Dead2": 1.00, "Live": 0.3, "Wind": 0.00, "Water": 0.00},
+            "ELS_Permanente": {"Dead1": 1.00, "Dead2": 1.00, "Wind": 0.00, "Water": 0.00},
+        }
+        # Combos de manutenção (separados, adicionados sob demanda).
+        self.fatores_manutencao: dict[str, dict[str, float]] = {}
+        for i, _ in enumerate(self.casos_manutencao):
+            nome = f"ELU_Maint_{i}"
+            self.fatores_manutencao[nome] = {"Dead1": 1.25, "Dead2": 1.40, f"Maint_{i}": 1.50, "Live": 0.00}
+
+        # Adicionar apenas combos core ao modelo.
+        for nome, fatores in self.fatores_core.items():
+            with contextlib.suppress(Exception):
+                self.modelo.add_load_combo(nome, fatores)
+
+    def resolver(
+        self,
+        perfil_por_grupo: dict[str, PerfilFisico],
+        incluir_manutencao: bool = False,
+    ) -> ResultadoAnalise:
+        """
+        Executa análise com os perfis especificados, reusando o modelo base.
+
+        Args:
+            perfil_por_grupo: mapeamento grupo -> PerfilFisico
+            incluir_manutencao: se True, adiciona combos de manutenção
+                temporariamente antes de analisar.
+
+        Returns:
+            ResultadoAnalise com esforços, deslocamentos e verificação NBR 8800.
+        """
+        resultado = ResultadoAnalise()
+        resultado.nos = dict(self.nos)
+        resultado.barras = [
+            BarraFisica(
+                id=b.id,
+                node_start=b.node_start,
+                node_end=b.node_end,
+                group=b.group,
+                length=b.length,
+            )
+            for b in self.barras
+        ]
+        resultado.vano_real = self.vano_real
+
+        # Mapa perfil por barra
+        perfil_por_barra: dict[int, PerfilFisico] = {}
+        for b in self.barras:
+            perfil = perfil_por_grupo.get(b.group) or next(
+                iter(perfil_por_grupo.values())
+            )
+            perfil_por_barra[b.id] = perfil
+
+        # Atualizar seções das barras no modelo PyNite
+        for b in self.barras:
+            mid = f"M{b.id}"
+            if mid not in self.modelo.members:
+                continue
+            self.modelo.members[mid].section_name = perfil_por_barra[b.id].nome
+
+        # Remover cargas Dead1 anteriores e recalcular peso próprio.
+        # PyNite v3 armazena cargas nodais em NodeLoads: list[(direction, P, case)].
+        for node in self.modelo.nodes.values():
+            node.NodeLoads = [
+                ld for ld in node.NodeLoads if ld[2] != "Dead1"
+            ]
+
+        peso_total = 0.0
+        pesos_nos: dict[str, float] = {nid: 0.0 for nid in self.nos}
+        for b in self.barras:
+            perfil = perfil_por_barra[b.id]
+            unit_weight_kg_m = perfil.area_m2 * self.material.rho_kg_m3
+            peso_barra_kg = unit_weight_kg_m * b.length
+            peso_total += peso_barra_kg
+            pesos_nos[b.node_start] += peso_barra_kg / 2
+            pesos_nos[b.node_end] += peso_barra_kg / 2
+
+        for nid, peso_kg in pesos_nos.items():
+            if peso_kg > 0 and nid in self.modelo.nodes:
+                self.modelo.nodes[nid].NodeLoads.append(
+                    ("FY", -peso_kg * 9.81, "Dead1")
+                )
+
+        resultado.peso_total_kg = peso_total
+
+        # Adicionar combos de manutenção sob demanda (modo_rapido=False).
+        if incluir_manutencao:
+            for nome, fatores in self.fatores_manutencao.items():
+                with contextlib.suppress(Exception):
+                    self.modelo.add_load_combo(nome, fatores)
+
+        # analyze_linear() monta K uma única vez (vs analyze() que monta por
+        # combo). Equivalente quando não há T/C-only ou P-Delta.
+        try:
+            self.modelo.analyze_linear(
+                check_statics=False,
+                check_stability=self._primeira_chamada,
+            )
+            self._primeira_chamada = False
+        except Exception as e:
+            resultado.erro = f"Falha na análise MEF: {e}"
+            return resultado
+
+        # Remover combos de manutenção após análise.
+        if incluir_manutencao:
+            for nome in self.fatores_manutencao:
+                self.modelo.load_combos.pop(nome, None)
+
+        # Extração de deslocamentos
+        max_flecha = 0.0
+        max_contraflecha = 0.0
+        for nid, no_modelo in self.modelo.nodes.items():
+            dy_total = abs(no_modelo.DY.get("ELS_Flecha_Total", 0.0))
+            dy_perm = abs(no_modelo.DY.get("ELS_Permanente", 0.0))
+            if dy_total > max_flecha:
+                max_flecha = dy_total
+            if dy_perm > max_contraflecha:
+                max_contraflecha = dy_perm
+            dx = no_modelo.DX.get("ELS_Flecha_Total", 0.0)
+            dz = no_modelo.DZ.get("ELS_Flecha_Total", 0.0)
+            resultado.deslocamentos[nid] = (dx, dy_total, dz)
+
+        if max_flecha > 2.0:
+            resultado.erro = "Deslocamento excessivo: possível instabilidade."
+            return resultado
+
+        resultado.flecha_maxima = max_flecha
+        resultado.contraflecha = max_contraflecha
+
+        # Envoltória de esforços por barra
+        fatores_ativos = (
+            {**self.fatores_core, **self.fatores_manutencao}
+            if incluir_manutencao
+            else self.fatores_core
+        )
+        combos_elu_nomes = [
+            n
+            for n in fatores_ativos
+            if n.startswith("ELU_") and not n.startswith("ELS_")
+        ]
+        utilizacao_maxima = 0.0
+
+        for b in resultado.barras:
+            mid_str = f"M{b.id}"
+            if mid_str not in self.modelo.members:
+                continue
+            membro = self.modelo.members[mid_str]
+
+            # Otimização: extrair axial, my e mz PARA A MESMA COMBO em cada
+            # iteração. Cada chamada max_axial(c)/max_moment(dir, c) re-segmenta
+            # o membro quando a combo muda (via _segment_member). Ao agrupar
+            # todas as direções por combo, evitamos re-segmentação entre
+            # direções e reduzimos as chamadas de N_combos * 3 direções para
+            # apenas N_combos segmentações por barra.
+            axiais: list[float] = []
+            mys: list[float] = []
+            mzs: list[float] = []
+            for c in combos_elu_nomes:
+                try:
+                    axiais.append(membro.max_axial(c))
+                    axiais.append(membro.min_axial(c))
+                    mys.append(membro.max_moment("my", c))
+                    mys.append(membro.min_moment("my", c))
+                    mzs.append(membro.max_moment("mz", c))
+                    mzs.append(membro.min_moment("mz", c))
+                except Exception:
+                    pass
+            axiais = [
+                a
+                for a in axiais
+                if not (isinstance(a, float) and (math.isnan(a) or math.isinf(a)))
+            ]
+            if not axiais:
+                resultado.erro = f"Sem esforços na barra {b.id}."
+                continue
+            axial = max(axiais, key=abs)
+
+            mys = [
+                m
+                for m in mys
+                if not (isinstance(m, float) and (math.isnan(m) or math.isinf(m)))
+            ]
+            my = max(mys, key=abs) if mys else 0.0
+
+            mzs = [
+                m
+                for m in mzs
+                if not (isinstance(m, float) and (math.isnan(m) or math.isinf(m)))
+            ]
+            mz = max(mzs, key=abs) if mzs else 0.0
+
+            b.axial_force = float(axial)
+            b.my = float(my)
+            b.mz = float(mz)
+            b.stress_type = "Tração" if axial > 0 else "Compressão"
+
+            # Verificação NBR 8800
+            perfil = perfil_por_barra[b.id]
+            lkx, lky = self.lk_map.get(b.id, (b.length, b.length))
+            b.lkx = lkx
+            b.lky = lky
+            verif = verificar_barra_nbr8800(b, perfil, self.material, lkx=lkx, lky=lky)
+            b.utilization = verif.utilization
+            b.n_rd = verif.n_rd
+            b.m_rd = verif.m_rd
+            b.esbeltez = verif.esbeltez
+            b.fator_chi = verif.fator_chi
+            b.fator_q = verif.fator_q
+            b.profile_name = perfil.nome
+
+            utilizacao_maxima = max(utilizacao_maxima, verif.utilization)
+
+        resultado.utilizacao_maxima = utilizacao_maxima
+        return resultado
+
+
 def construir_e_resolver(
     nos_entrada: dict[str, NoFisico],
     barras_entrada: list[BarraFisica],
@@ -153,7 +553,7 @@ def construir_e_resolver(
         material.e_pa,
         material.g_pa,
         material.nu,
-        material.rho_kg_m3,  # kg/m3: consistente com E em Pa e lengths em m
+        material.rho_kg_m3,  # kg/m^3: consistente com E em Pa e lengths em m
         fy=material.fy_pa,
     )
 
@@ -203,7 +603,7 @@ def construir_e_resolver(
         else:
             ks_kN_m3 = ks1_kN_m3
 
-        ks = ks_kN_m3 * 1000.0  # kN/m3 para N/m3
+        ks = ks_kN_m3 * 1000.0  # kN/m^3 para N/m^3
 
         K_y = ks * B * footing_l  # N/m
         I_x = footing_l * B**3 / 12  # m4
@@ -272,9 +672,9 @@ def construir_e_resolver(
                     case=case_name,
                 )
 
-    # Lâmina d'água (NBR 6120 item 5.6)
+    # Lamina d'agua (NBR 6120 item 5.6)
     if water_lamina_mm > 0 and nos_banzo_superior:
-        # Peso = lamina(mm) * 10 N/m^2 por mm * área tributária.
+        # Peso = lâmina(mm) * 10 N/m^2 por mm * área tributária.
         carga_agua = water_lamina_mm * 10.0  # N/m^2
         xs = [nos_entrada[nid].x for nid in nos_banzo_superior if nid in nos_entrada]
         zs = [nos_entrada[nid].z for nid in nos_banzo_superior if nid in nos_entrada]
@@ -372,9 +772,12 @@ def construir_e_resolver(
         with contextlib.suppress(Exception):
             modelo.add_load_combo(nome, fatores)
 
-    # Análise
+    # Análise.
+    # Otimização: usar analyze_linear() (monta K uma única vez em vez de uma
+    # vez por combinação de carga). Válido porque este modelo não usa elementos
+    # tension-only/compression-only nem análise P-Delta. Resultados idênticos.
     try:
-        modelo.analyze(check_statics=False, check_stability=True)
+        modelo.analyze_linear(check_statics=False, check_stability=True)
     except Exception as e:
         resultado.erro = f"Falha na análise MEF: {e}"
         return resultado
@@ -417,12 +820,19 @@ def construir_e_resolver(
             continue
         membro = modelo.members[mid_str]
 
-        # Envoltória axial.
+        # Otimização: extrair axial, my e mz PARA A MESMA COMBO em cada
+        # iteração. Reduz re-segmentação do membro entre direções.
         axiais = []
+        mys = []
+        mzs = []
         for c in combos_elu_nomes:
             try:
                 axiais.append(membro.max_axial(c))
                 axiais.append(membro.min_axial(c))
+                mys.append(membro.max_moment("my", c))
+                mys.append(membro.min_moment("my", c))
+                mzs.append(membro.max_moment("mz", c))
+                mzs.append(membro.min_moment("mz", c))
             except Exception:
                 pass
         axiais = [
@@ -433,25 +843,9 @@ def construir_e_resolver(
             continue
         axial = max(axiais, key=abs)
 
-        # Envoltória momento Y.
-        mys = []
-        for c in combos_elu_nomes:
-            try:
-                mys.append(membro.max_moment("my", c))
-                mys.append(membro.min_moment("my", c))
-            except Exception:
-                pass
         mys = [m for m in mys if not (isinstance(m, float) and (math.isnan(m) or math.isinf(m)))]
         my = max(mys, key=abs) if mys else 0.0
 
-        # Envoltória momento Z.
-        mzs = []
-        for c in combos_elu_nomes:
-            try:
-                mzs.append(membro.max_moment("mz", c))
-                mzs.append(membro.min_moment("mz", c))
-            except Exception:
-                pass
         mzs = [m for m in mzs if not (isinstance(m, float) and (math.isnan(m) or math.isinf(m)))]
         mz = max(mzs, key=abs) if mzs else 0.0
 

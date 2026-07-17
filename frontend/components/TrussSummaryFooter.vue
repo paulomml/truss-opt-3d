@@ -1,23 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed } from 'vue';
 import { useTrussStore } from '@/stores/useTrussStore';
 import { getCylinderData, formatarNumero, formatarMoeda } from '@/utils/truss3d';
 import type { BarraResultado, NoResultado } from '@/types/truss';
 
 const store = useTrussStore();
-const isExpanded = ref(false);
-const isMobile = ref(false);
-
-onMounted(() => {
-  const checkMobile = () => {
-    isMobile.value = window.innerWidth < 768;
-    if (window.innerWidth >= 1024) isExpanded.value = true;
-    else isExpanded.value = false;
-  };
-  checkMobile();
-  window.addEventListener('resize', checkMobile);
-  onBeforeUnmount(() => window.removeEventListener('resize', checkMobile));
-});
 
 const trussResult = computed(() => store.result);
 
@@ -68,28 +55,16 @@ const baixarMemorial = (formato: 'pdf' | 'docx') => {
 <template>
   <footer
     v-if="trussResult"
-    :class="[
-      'bg-gray-800/95 backdrop-blur-md border-t border-gray-700 transition-all duration-300',
-      isExpanded ? 'max-h-[32rem]' : 'max-h-14',
-      isMobile && store.showMobileMenu ? 'hidden' : 'block',
-    ]"
+    class="bg-gray-800/95 backdrop-blur-md border-t border-gray-700"
   >
     <div class="px-4 py-2">
-      <button
-        @click="isExpanded = !isExpanded"
-        class="w-full flex items-center justify-between text-xs text-gray-400 hover:text-white"
-      >
-        <span class="font-bold uppercase tracking-wider">
-          Resumo da Análise
-          <span v-if="trussResult.is_structurally_stable" class="ml-2 text-green-400"
-            >✓ Estável</span
-          >
-          <span v-else class="ml-2 text-red-400">✗ Instável</span>
-        </span>
-        <Icon :name="isExpanded ? 'lucide:chevron-down' : 'lucide:chevron-up'" class="w-4 h-4" />
-      </button>
+      <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-3">
+        Resumo da Análise
+        <span v-if="trussResult.is_structurally_stable" class="ml-2 text-green-400">✓ Estável</span>
+        <span v-else class="ml-2 text-red-400">✗ Instável</span>
+      </div>
 
-      <div v-if="isExpanded" class="mt-3 space-y-3">
+      <div class="space-y-3">
         <!-- Primeira fileira: principais indicadores -->
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div class="bg-gray-900/50 rounded-lg p-2">
@@ -191,7 +166,7 @@ const baixarMemorial = (formato: 'pdf' | 'docx') => {
 
       <!-- Botões de Memorial -->
       <div
-        v-if="isExpanded && trussResult.is_structurally_stable"
+        v-if="trussResult.is_structurally_stable"
         class="mt-3 flex gap-2 justify-end"
       >
         <button

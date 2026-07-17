@@ -131,6 +131,58 @@ class RequisicaoOtimizacao(BaseModel):
     # Parâmetros do GA (sobrepõe configurações padrão).
     ag_geracoes: int | None = Field(None, ge=1, le=200)
     ag_populacao: int | None = Field(None, ge=4, le=200)
+    # Ativa busca local (hill climbing) após cada geração: algoritmo memético.
+    ag_usar_refinamento_local: bool | None = Field(
+        default=None,
+        description="Ativa refinamento local (memético). None = segue configuração padrão.",
+    )
+    # Probabilidade de cruzamento (cxpb) usada pelo GA.
+    ag_probabilidade_cruzamento: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Probabilidade de crossover (0 a 1)."
+    )
+    # Probabilidade de mutação (mutpb) usada pelo GA.
+    ag_probabilidade_mutacao: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Probabilidade de mutação (0 a 1)."
+    )
+    # Tamanho do torneio (tournsize) usado na seleção.
+    ag_indice_torneio: int | None = Field(
+        default=None, ge=1, le=10, description="Tamanho do torneio de seleção."
+    )
+    # Número máximo de perfis distintos aceitos antes de aplicar penalidade.
+    ag_max_perfis_distintos: int | None = Field(
+        default=None, ge=1, le=50, description="Máximo de perfis distintos sem penalidade."
+    )
+
+    # Paralelismo: quantas execuções do GA (uma por material) rodar em paralelo.
+    # Limite natural: min(len(materiais_disponiveis), cpu_count). Default = 1.
+    n_parallel: int | None = Field(
+        default=None,
+        ge=1,
+        le=64,
+        description="Número de materiais processados em paralelo (ProcessPoolExecutor).",
+    )
+
+    # Modo rápido: pula combos de manutenção (1 kN/nó) durante o GA.
+    # As verificações construtivas só são relevantes no resultado final.
+    modo_rapido: bool = Field(
+        default=True,
+        description="Ignorar combos de manutenção durante o GA (mais rápido, sem perda de precisão no resultado).",
+    )
+
+    # Paralelismo interno do GA: avalia indivíduos da população em paralelo
+    # via multiprocessing.Pool, aproveitando múltiplos núcleos da CPU.
+    usar_paralelismo: bool = Field(
+        default=True,
+        description="Paralelizar avaliação dos indivíduos do GA (multiprocessing). Acelera cada geração proporcionalmente ao número de núcleos.",
+    )
+
+    # Semente aleatória para reprodutibilidade dos resultados.
+    ag_semente: int | None = Field(
+        default=None,
+        ge=0,
+        le=2**31 - 1,
+        description="Seed do gerador aleatório (0 ou None = aleatório; fixo = resultados idênticos a cada execução).",
+    )
 
 
 # Resultados (saída)
@@ -198,6 +250,19 @@ class StatusTarefa(BaseModel):
     mensagem: str | None = None
     resultado: RespostaOtimizacao | None = None
     criado_em: datetime | None = None
+
+
+class TarefaResumo(BaseModel):
+    """Resumo de uma tarefa para listagem em histórico."""
+
+    task_id: str
+    status: Literal["PENDENTE", "EM_ANDAMENTO", "CONCLUIDO", "FALHOU", "CANCELADO"]
+    progresso: float = 0.0
+    criado_em: datetime | None = None
+    iniciado_em: datetime | None = None
+    finalizado_em: datetime | None = None
+    mensagem: str | None = None
+    tem_resultado: bool = False
 
 
 # Catálogos

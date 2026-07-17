@@ -1,4 +1,4 @@
-# .dockerignore — backend
+# .dockerignore: backend
 **/__pycache__/
 **/*.py[cod]
 **/__pycache__/*

@@ -1,27 +1,23 @@
 """
-Motor de Otimização: Algoritmo Genético Memético (DEAP + Hill Climbing).
+Motor de Otimização: GA Memetico (DEAP + Hill Climbing).
 
-Combina:
-- GA (exploração global): crossover, mutação, seleção por torneio.
-- Busca local (refinamento): hill climbing first-improvement nos melhores
-  indivíduos a cada geração (aprendizagem Lamarckiana).
-
-Indivíduo: vetor de inteiros (índices no catálogo de perfis), um por grupo.
-Fitness: peso_total_kg x custo_kg_material + penalidades (minimiza R$).
-Penalidades: violação NBR 8800/6120/6123, flecha ELS, diversidade de perfis.
+Indivíduo: vetor de indices de perfis (um por grupo).
+Fitness: peso x custo_kg + penalidades (violação NBR, flecha ELS, diversidade).
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import random
+import threading
 from collections.abc import Callable
 
 from deap import algorithms, base, creator, tools
 
 from core.config import configuracoes
 from core.memoria import CanceladorOtimizacao, verificar_memoria
-from engineering.fea.pynite_solver import construir_e_resolver
+from engineering.fea.pynite_solver import ModeloBaseFEA, construir_e_resolver
 from engineering.modelos_fisicos import (
     BarraFisica,
     MaterialFisico,
@@ -35,10 +31,75 @@ from engineering.standards.nbr_8800 import verificar_flecha_els
 _logger = logging.getLogger(__name__)
 
 
-# ----------------------------------------------------------------
 # Garantia de criação única das classes DEAP (evita erros em reloads).
-# ----------------------------------------------------------------
 _FITNESS_CRIADO = False
+
+# Contexto compartilhado entre threads para avaliar indivíduos em paralelo.
+# _THREAD_CTX armazena dados invariantes (grupos, perfis, material, etc.)
+# _THREAD_LOCAL armazena o ModeloBaseFEA específico de cada thread.
+_THREAD_CTX: dict = {}
+_THREAD_LOCAL = threading.local()
+
+
+def _avaliar_thread(individuo: list[int]) -> tuple[float, ...]:
+    """Worker function para ThreadPoolExecutor.
+
+    Cada thread constrói seu próprio ModeloBaseFEA na primeira chamada
+    (lazy init via _THREAD_LOCAL) e o reusa nas chamadas seguintes.
+    O cache (_THREAD_CTX['cache']) é compartilhado com a thread principal.
+    """
+    ctx = _THREAD_CTX
+    if not ctx:
+        return (float("inf"),)
+    chave = tuple(individuo)
+    cache = ctx.get("cache", {})
+    if chave in cache:
+        return cache[chave]
+
+    # ModeloBaseFEA por thread (lazy).
+    try:
+        modelo_base = _THREAD_LOCAL.modelo_base
+    except AttributeError:
+        modelo_base = ModeloBaseFEA(
+            nos=ctx["nos"],
+            barras=ctx["barras"],
+            material=ctx["material"],
+            casos_carga_externos=ctx["casos_carga"],
+            parametros_vento=ctx.get("parametros_vento"),
+            nos_banzo_superior=ctx["nos_banzo_superior"],
+            nos_fachada=ctx.get("nos_fachada"),
+            water_lamina_mm=ctx["water_lamina_mm"],
+            solo_tipo=ctx["solo_tipo"],
+            custom_ks=ctx.get("custom_ks"),
+            footing_b=ctx["footing_b"],
+            footing_l=ctx["footing_l"],
+            perfis_disponiveis=ctx["perfis"],
+        )
+        _THREAD_LOCAL.modelo_base = modelo_base
+
+    resultado = _avaliar_individuo(
+        individuo,
+        ctx["grupos"],
+        ctx["perfis"],
+        ctx["material"],
+        ctx["nos"],
+        ctx["barras"],
+        ctx["nos_banzo_superior"],
+        ctx.get("nos_fachada", None),
+        ctx["casos_carga"],
+        ctx.get("parametros_vento"),
+        ctx["water_lamina_mm"],
+        ctx["solo_tipo"],
+        ctx.get("custom_ks"),
+        ctx["footing_b"],
+        ctx["footing_l"],
+        ctx.get("usar_penalidade_diversidade", True),
+        ctx.get("max_perfis_distintos", 4),
+        modelo_base=modelo_base,
+        modo_rapido=ctx.get("modo_rapido", True),
+    )
+    cache[chave] = resultado
+    return resultado
 
 
 def _garantiar_classes_deap() -> None:
@@ -107,12 +168,13 @@ def _avaliar_individuo(
     footing_b: float,
     footing_l: float,
     usar_penalidade_diversidade: bool,
+    max_perfis_distintos: int,
+    modelo_base: ModeloBaseFEA | None = None,
+    modo_rapido: bool = True,
 ) -> tuple[float]:
     """
-    Função objetivo do GA.
-
-    Retorna uma tupla (fitness,): DEAP exige iterável mesmo para fitness simples.
-    Fitness = peso_total_kg x custo_kg_material + penalidades (minimiza custo em R$).
+    Função objetivo do GA. Retorna tupla (fitness,) para DEAP.
+    Fitness = peso x custo_kg + penalidades (minimiza R$).
     """
     # Mapa grupo -> perfil (a partir do indivíduo).
     perfil_por_grupo: dict[str, PerfilFisico] = {}
@@ -121,22 +183,25 @@ def _avaliar_individuo(
         idx = max(0, min(idx, len(perfis) - 1))
         perfil_por_grupo[grupo] = perfis[idx]
 
-    # Executa análise MEF.
-    resultado = construir_e_resolver(
-        nos_entrada=nos,
-        barras_entrada=barras,
-        perfil_por_grupo=perfil_por_grupo,
-        material=material,
-        casos_carga_externos=casos_carga,
-        parametros_vento=parametros_vento,
-        nos_banzo_superior=nos_banzo_superior,
-        nos_fachada=nos_fachada,
-        water_lamina_mm=water_lamina_mm,
-        solo_tipo=solo_tipo,
-        custom_ks=custom_ks,
-        footing_b=footing_b,
-        footing_l=footing_l,
-    )
+    # Executa análise MEF (com reuso do modelo base quando disponível).
+    if modelo_base is not None:
+        resultado = modelo_base.resolver(perfil_por_grupo, incluir_manutencao=not modo_rapido)
+    else:
+        resultado = construir_e_resolver(
+            nos_entrada=nos,
+            barras_entrada=barras,
+            perfil_por_grupo=perfil_por_grupo,
+            material=material,
+            casos_carga_externos=casos_carga,
+            parametros_vento=parametros_vento,
+            nos_banzo_superior=nos_banzo_superior,
+            nos_fachada=nos_fachada,
+            water_lamina_mm=water_lamina_mm,
+            solo_tipo=solo_tipo,
+            custom_ks=custom_ks,
+            footing_b=footing_b,
+            footing_l=footing_l,
+        )
 
     if resultado.erro:
         # Estrutura inviável: penalidade máxima.
@@ -168,8 +233,8 @@ def _avaliar_individuo(
     # 3) Penalidade por diversidade de perfis (padronização).
     if usar_penalidade_diversidade:
         num_distintos = _contar_perfis_distintos(individuo, perfis)
-        if num_distintos > configuracoes.ag_max_perfis_distintos:
-            excesso_diversidade = num_distintos - configuracoes.ag_max_perfis_distintos
+        if num_distintos > max_perfis_distintos:
+            excesso_diversidade = num_distintos - max_perfis_distintos
             penalidade += configuracoes.ag_penalidade_diversidade_perfis * excesso_diversidade
 
     fitness = peso * material.custo_kg + penalidade
@@ -197,14 +262,17 @@ def otimizar_trelice_ga(
     cancelador: CanceladorOtimizacao | None = None,
     callback_progresso: Callable[[int, int, float, str], None] | None = None,
     usar_refinamento_local: bool | None = None,
+    probabilidade_cruzamento: float | None = None,
+    probabilidade_mutacao: float | None = None,
+    indice_torneio: int | None = None,
+    max_perfis_distintos: int | None = None,
+    modelo_base: ModeloBaseFEA | None = None,
+    modo_rapido: bool = True,
+    usar_paralelismo: bool = True,
+    semente: int | None = None,
 ) -> tuple[ResultadoAnalise, dict[str, PerfilFisico], list[str]]:
     """
-    Executa o algoritmo genético memético completo.
-
-    Se usar_refinamento_local for True (padrão), aplica hill climbing
-    first-improvement nos melhores indivíduos a cada geração,
-    combinando exploração global (GA) com refinamento local (Lamarckiano).
-
+    Executa o GA memético: exploração global (DEAP) + refinamento local (hill climbing).
     Retorna (melhor_resultado, perfil_por_grupo, logs).
     """
     _garantiar_classes_deap()
@@ -222,8 +290,27 @@ def otimizar_trelice_ga(
         else configuracoes.ag_usar_refinamento_local
     )
 
+    # Parâmetros do GA: sobrepõe defaults de configuração quando informados.
     geracoes = geracoes or configuracoes.ag_geracoes
     tamanho_populacao = tamanho_populacao or configuracoes.ag_populacao_tamanho
+    cxpb = (
+        probabilidade_cruzamento
+        if probabilidade_cruzamento is not None
+        else configuracoes.ag_probabilidade_cruzamento
+    )
+    mutpb = (
+        probabilidade_mutacao
+        if probabilidade_mutacao is not None
+        else configuracoes.ag_probabilidade_mutacao
+    )
+    tournsize = (
+        indice_torneio if indice_torneio is not None else configuracoes.ag_indice_torneio
+    )
+    max_perfis_distintos_cfg = (
+        max_perfis_distintos
+        if max_perfis_distintos is not None
+        else configuracoes.ag_max_perfis_distintos
+    )
 
     logs: list[str] = []
     logs.append(
@@ -233,10 +320,7 @@ def otimizar_trelice_ga(
         f"material={material.nome} (R$ {material.custo_kg:.2f}/kg)."
     )
 
-    # ----------------------------------------------------------------
     # Cache de avaliação (evita re-calcular FEA para mesmos perfis).
-    # Resetado a cada execução do GA.
-    # ----------------------------------------------------------------
     _cache_avaliacao: dict[tuple[int, ...], tuple[float, ...]] = {}
 
     def _avaliar_com_cache(individuo: list[int]) -> tuple[float, ...]:
@@ -261,22 +345,57 @@ def otimizar_trelice_ga(
             footing_b,
             footing_l,
             usar_penalidade_diversidade,
+            max_perfis_distintos_cfg,
+            modelo_base=modelo_base,
+            modo_rapido=modo_rapido,
         )
         _cache_avaliacao[chave] = resultado
         return resultado
 
-    # ----------------------------------------------------------------
-    # Busca local (hill climbing first-improvement com reinício).
-    # ----------------------------------------------------------------
+    # Paralelismo: ThreadPoolExecutor para avaliar indivíduos.
+    # Cada thread constrói seu ModeloBaseFEA local via _THREAD_LOCAL.
+    executor = None
+    usar_paralelismo = (
+        usar_paralelismo
+        and modelo_base is not None
+        and tamanho_populacao >= 2
+    )
+    if usar_paralelismo:
+        from concurrent.futures import ThreadPoolExecutor
+
+        n_workers = min(os.cpu_count() or 1, tamanho_populacao, 4)
+        logs.append(f"Paralelismo ativo: {n_workers} threads para avaliação da população.")
+
+        # Contexto compartilhado entre threads (leitura apenas após init).
+        _THREAD_CTX.clear()
+        _THREAD_CTX.update({
+            "grupos": grupos,
+            "perfis": perfis,
+            "material": material,
+            "nos": nos,
+            "barras": barras,
+            "nos_banzo_superior": nos_banzo_superior,
+            "nos_fachada": nos_fachada,
+            "casos_carga": casos_carga,
+            "parametros_vento": parametros_vento,
+            "water_lamina_mm": water_lamina_mm,
+            "solo_tipo": solo_tipo,
+            "custom_ks": custom_ks,
+            "footing_b": footing_b,
+            "footing_l": footing_l,
+            "usar_penalidade_diversidade": usar_penalidade_diversidade,
+            "max_perfis_distintos": max_perfis_distintos_cfg,
+            "modo_rapido": modo_rapido,
+            "perfis": perfis,
+            "cache": _cache_avaliacao,
+        })
+        executor = ThreadPoolExecutor(max_workers=n_workers)
+
+    # Busca local (hill climbing).
     def _refinamento_local(individuo: list[int], max_iter: int = 2000) -> float:
         """
-        Hill climbing first-improvement com reinício de varredura.
-
-        Testa o perfil imediatamente acima e abaixo de cada grupo.
-        Reinicia a varredura ao encontrar melhora. Trava de segurança
-        em max_iter iteracoes.
-
-        Retorna o fitness do indivíduo refinado.
+        Hill climbing first-improvement com reinício.
+        Testa perfil acima/abaixo de cada grupo e reinicia ao encontrar melhora.
         """
         melhor_fitness = _avaliar_com_cache(individuo)[0]
         iter_count = 0
@@ -337,7 +456,12 @@ def otimizar_trelice_ga(
         up=max(num_perfis - 1, 0),
         indpb=1.0 / max(num_grupos, 1),
     )
-    toolbox.register("select", tools.selTournament, tournsize=configuracoes.ag_indice_torneio)
+    toolbox.register("select", tools.selTournament, tournsize=tournsize)
+
+    # Se paralelismo ativo, registra evaluate + map para threads.
+    if executor is not None:
+        toolbox.register("evaluate", _avaliar_thread)
+        toolbox.register("map", executor.map)
 
     # População inicial.
     populacao = toolbox.population(n=tamanho_populacao)
@@ -357,15 +481,13 @@ def otimizar_trelice_ga(
     logbook = tools.Logbook()
     logbook.header = ["gen", "nevals", "min", "avg"]
 
-    # ----------------------------------------------------------------
-    # Avaliação da população inicial (geração 0)
-    # ----------------------------------------------------------------
-    # algorithms.varAnd não avalia a população: apenas produz filhos.
+    # Avaliação da população inicial (geração 0).
     invalidos_iniciais = [ind for ind in populacao if not ind.fitness.valid]
     if invalidos_iniciais:
         fitnesses_init = toolbox.map(toolbox.evaluate, invalidos_iniciais)
         for ind, fit in zip(invalidos_iniciais, fitnesses_init):
             ind.fitness.values = fit
+            _cache_avaliacao[tuple(ind)] = fit
 
     # Fase memética inicial: refina os melhores ~30% da população.
     if usar_refinamento_local and populacao:
@@ -415,14 +537,12 @@ def otimizar_trelice_ga(
             logs.append(f"GA interrompido por limite de memória: {e}")
             break
 
-        # --------------------------------------------------------
-        # FASE GENÉTICA: variação (crossover + mutação)
-        # --------------------------------------------------------
+        # Variação (crossover + mutação).
         offspring = algorithms.varAnd(
             populacao,
             toolbox,
-            cxpb=configuracoes.ag_probabilidade_cruzamento,
-            mutpb=configuracoes.ag_probabilidade_mutacao,
+            cxpb=cxpb,
+            mutpb=mutpb,
         )
 
         # Avaliação dos inválidos.
@@ -431,10 +551,10 @@ def otimizar_trelice_ga(
             fitnesses = toolbox.map(toolbox.evaluate, invalidos)
             for ind, fit in zip(invalidos, fitnesses):
                 ind.fitness.values = fit
+                # Atualiza cache do processo pai (útil para hill climbing).
+                _cache_avaliacao[tuple(ind)] = fit
 
-        # --------------------------------------------------------
-        # FASE MEMÉTICA: refinamento local nos melhores indivíduos
-        # --------------------------------------------------------
+        # Refinamento local (hill climbing) nos melhores indivíduos.
         if usar_refinamento_local:
             # Ordena por fitness (menor = melhor) e seleciona top 30%.
             ordenados = sorted(
@@ -451,15 +571,10 @@ def otimizar_trelice_ga(
                     ind[i] = val
                 ind.fitness.values = (fitness_refinado,)
 
-        # --------------------------------------------------------
-        # SELEÇÃO para próxima geração (mu, lambda)
-        # --------------------------------------------------------
-        # Seleciona a próxima população apenas a partir dos filhos.
+        # Seleção para próxima geração.
         populacao[:] = toolbox.select(offspring, k=len(populacao))
 
-        # --------------------------------------------------------
-        # Elitismo: substitui o pior pelo melhor (Hall of Fame)
-        # --------------------------------------------------------
+        # Elitismo: substitui o pior pelo melhor.
         if len(hof) > 0 and len(populacao) > 0:
             elite = hof[0]
             elite_fit = elite.fitness.values[0] if elite.fitness.valid else float("inf")
@@ -508,26 +623,33 @@ def otimizar_trelice_ga(
         idx = max(0, min(int(melhor_individuo[i]), num_perfis - 1))
         perfil_por_grupo[grupo] = perfis[idx]
 
-    melhor_resultado = construir_e_resolver(
-        nos_entrada=nos,
-        barras_entrada=barras,
-        perfil_por_grupo=perfil_por_grupo,
-        material=material,
-        casos_carga_externos=casos_carga,
-        parametros_vento=parametros_vento,
-        nos_banzo_superior=nos_banzo_superior,
-        nos_fachada=nos_fachada,
-        water_lamina_mm=water_lamina_mm,
-        solo_tipo=solo_tipo,
-        custom_ks=custom_ks,
-        footing_b=footing_b,
-        footing_l=footing_l,
-    )
+    if modelo_base is not None:
+        melhor_resultado = modelo_base.resolver(perfil_por_grupo)
+    else:
+        melhor_resultado = construir_e_resolver(
+            nos_entrada=nos,
+            barras_entrada=barras,
+            perfil_por_grupo=perfil_por_grupo,
+            material=material,
+            casos_carga_externos=casos_carga,
+            parametros_vento=parametros_vento,
+            nos_banzo_superior=nos_banzo_superior,
+            nos_fachada=nos_fachada,
+            water_lamina_mm=water_lamina_mm,
+            solo_tipo=solo_tipo,
+            custom_ks=custom_ks,
+            footing_b=footing_b,
+            footing_l=footing_l,
+        )
     melhor_resultado.logs = logs
 
     logs.append(
         f"GA concluído. Melhor custo: R$ {melhor_fitness_historico:.2f}. "
         f"Perfis escolhidos: {', '.join(f'{g}={p.nome}' for g, p in perfil_por_grupo.items())}."
     )
+
+    # Finaliza o ThreadPoolExecutor se estava em paralelo.
+    if executor is not None:
+        executor.shutdown(wait=True)
 
     return melhor_resultado, perfil_por_grupo, logs

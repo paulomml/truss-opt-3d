@@ -18,9 +18,7 @@ from engineering.modelos_fisicos import (
 )
 
 
-# ---------------------------------------------------------------------------
 # Fixtures
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -79,17 +77,15 @@ def trelica_minima():
     return nos, barras
 
 
-# ---------------------------------------------------------------------------
-# Testes de correção Terzaghi (unidades: kN/m³)
-# ---------------------------------------------------------------------------
+# Testes de correção Terzaghi (unidades: kN/m^3)
 
 
 class TestTerzaghi:
     """Verifica as fórmulas de correção geométrica de Terzaghi."""
 
     def test_granular_areia_fofa(self):
-        """Areia Fofa (ks1=15000 kN/m³, granular, B=0.6 m).
-        ks = 15000 * ((0.6 + 0.305) / (2 * 0.6))^2 = 8532 kN/m³"""
+        """Areia Fofa (ks1=15000 kN/m3, granular, B=0.6 m).
+        ks = 15000 * ((0.6 + 0.305) / (2 * 0.6))2 = 8532 kN/m3"""
         solo = BANCO_SOLOS["Areia Fofa"]
         assert solo["tipo"] == "granular"
         ks1 = solo["ks1"]
@@ -98,7 +94,7 @@ class TestTerzaghi:
         assert abs(ks - 8532) < 1
 
     def test_granular_areia_compacta(self):
-        """Areia Compacta (ks1=100000 kN/m³, granular, B=0.6 m)."""
+        """Areia Compacta (ks1=100000 kN/m^3, granular, B=0.6 m)."""
         solo = BANCO_SOLOS["Areia Compacta"]
         assert solo["tipo"] == "granular"
         ks1 = solo["ks1"]
@@ -112,7 +108,7 @@ class TestTerzaghi:
         ks1 = solo["ks1"]
         ks_06 = ks1 * ((0.6 + 0.305) / (2 * 0.6)) ** 2
         ks_10 = ks1 * ((1.0 + 0.305) / (2 * 1.0)) ** 2
-        assert ks_10 < ks_06  # sapata maior → menor correção
+        assert ks_10 < ks_06  # sapata maior -> menor correção
 
     def test_granular_b_minimo(self):
         """B < 0.305 m deve usar B=0.305 m."""
@@ -120,11 +116,11 @@ class TestTerzaghi:
         ks1 = solo["ks1"]
         B = max(0.2, 0.305)  # clamp
         ks = ks1 * ((B + 0.305) / (2 * B)) ** 2
-        assert abs(ks - ks1) < 1  # B=0.305 → fator=1.0
+        assert abs(ks - ks1) < 1  # B=0.305 -> fator=1.0
 
     def test_coesivo_argila_mole(self):
-        """Argila Mole (ks1=10000 kN/m³, coesivo, B=0.6 m).
-        ks = 10000 * (0.305 / 0.6) = 5083 kN/m³"""
+        """Argila Mole (ks1=10000 kN/m^3, coesivo, B=0.6 m).
+        ks = 10000 * (0.305 / 0.6) = 5083 kN/m^3"""
         solo = BANCO_SOLOS["Argila Mole"]
         assert solo["tipo"] == "coesivo"
         ks1 = solo["ks1"]
@@ -133,7 +129,7 @@ class TestTerzaghi:
         assert abs(ks - 5083) < 1
 
     def test_coesivo_argila_rija(self):
-        """Argila Rija (ks1=40000 kN/m³, coesivo, B=0.6 m)."""
+        """Argila Rija (ks1=40000 kN/m^3, coesivo, B=0.6 m)."""
         solo = BANCO_SOLOS["Argila Rija"]
         assert solo["tipo"] == "coesivo"
         ks1 = solo["ks1"]
@@ -142,7 +138,7 @@ class TestTerzaghi:
         assert abs(ks - 20333) < 1
 
     def test_rigido_rocha_sem_correcao(self):
-        """Rocha (ks1=250000 kN/m³, rigido): sem correção."""
+        """Rocha (ks1=250000 kN/m^3, rigido): sem correção."""
         solo = BANCO_SOLOS["Rocha"]
         assert solo["tipo"] == "rigido"
         assert solo["ks1"] == 250000
@@ -163,9 +159,7 @@ class TestTerzaghi:
         assert abs(ks - 15250) < 1
 
 
-# ---------------------------------------------------------------------------
 # Testes de aplicação de molas Winkler (API PyNite)
-# ---------------------------------------------------------------------------
 
 
 class TestMolasWinkler:
@@ -215,9 +209,7 @@ class TestMolasWinkler:
         assert m.nodes["N1"].spring_DY == [3.0e6, None, True]
 
 
-# ---------------------------------------------------------------------------
 # Testes de integração com o solver (construir_e_resolver)
-# ---------------------------------------------------------------------------
 
 
 class TestISESolver:
@@ -388,9 +380,7 @@ class TestISESolver:
         assert res_grande.flecha_maxima <= res_pequena.flecha_maxima
 
 
-# ---------------------------------------------------------------------------
 # Testes de combinações ELS
-# ---------------------------------------------------------------------------
 
 
 class TestELSCombinacoes:

@@ -1,4 +1,4 @@
-# .dockerignore — frontend
+# .dockerignore: frontend
 node_modules/
 .nuxt/
 .output/

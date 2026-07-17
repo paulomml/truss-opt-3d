@@ -1,6 +1,4 @@
-# ============================================================
-# TRUSS-OPT 3D — Dependências do Backend (Python 3.12)
-# ============================================================
+# Dependências do Backend (Python 3.12)
 # API e servidor ASGI
 fastapi
 uvicorn[standard]

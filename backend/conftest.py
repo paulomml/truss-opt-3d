@@ -72,13 +72,20 @@ def configurar_banco_testes():
 @pytest.fixture(autouse=True)
 def mock_celery_delay(monkeypatch):
     """Mocka otimizar_trelice.delay para não disparar Celery real em testes."""
+    import uuid
+
     from worker import tarefas
 
     def _delay_mock(*args, **kwargs):
-        class _ResultadoFalso:
-            id = "fake-celery-task-id"
+        # UUID garante unicidade mesmo entre testes (banco é session-scoped).
+        task_id = f"fake-celery-{uuid.uuid4().hex}"
 
-        return _ResultadoFalso()
+        class _ResultadoFalso:
+            pass
+
+        resultado = _ResultadoFalso()
+        resultado.id = task_id
+        return resultado
 
     monkeypatch.setattr(tarefas.otimizar_trelice, "delay", _delay_mock)
 

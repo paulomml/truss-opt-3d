@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { onUnmounted } from 'vue';
 import { getCylinderData, getMemberColor, formatarNumero } from '@/utils/truss3d';
 import type { BarraResultado, BarraBruta, NoResultado, NoBruto } from '@/types/truss';
-import { Vector3, Quaternion } from 'three';
+import { Vector3, Quaternion, WebGLRenderer } from 'three';
+import { useTresContext } from '@tresjs/core';
 
 const store = useTrussStore();
 const cameraRef = ref();
@@ -13,13 +15,28 @@ const modoVisualizacao = ref<'tensao' | 'deformada'>('tensao');
 // Fator de escala para visualização da deformada (ampliação visual).
 const fatorDeformada = ref(50);
 
+onUnmounted(() => {
+  try {
+    const { renderer } = useTresContext();
+    if (renderer?.value instanceof WebGLRenderer) {
+      renderer.value.dispose();
+      renderer.value.forceContextLoss?.();
+    }
+  } catch {
+    // TresContext pode não estar disponível se o canvas nunca foi montado
+  }
+});
+
 // Computa dados das barras otimizadas.
 const membersWithData = computed(() => {
   if (!store.result?.members?.length || !store.result?.nodes) return [];
 
+  // Na deformada, usa nós deslocados para que as barras acompanhem as esferas.
+  const nodeData = nodesDeformed.value || store.result!.nodes;
+
   return store.result.members
     .map((m) => {
-      const cylinderData = getCylinderData(m, store.result!.nodes);
+      const cylinderData = getCylinderData(m, nodeData);
       let valorHeatmap = m.utilization;
 
       // Modo deformada: usa deslocamentos nodais relativos.
@@ -140,39 +157,11 @@ function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
       </div>
     </div>
 
-    <!-- Indicador de barra selecionada -->
-    <div
-      v-if="store.selectedMember"
-      class="absolute top-4 right-4 z-10 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg p-3 max-w-xs"
-    >
-      <div class="text-[10px] text-gray-400 font-bold uppercase">Barra Selecionada</div>
-      <div class="text-white font-mono text-sm mt-1">
-        #{{ store.selectedMember.id }} — {{ store.selectedMember.group }}
-      </div>
-      <div class="text-gray-300 text-xs mt-1">
-        Perfil: <span class="font-mono">{{ store.selectedMember.profile }}</span>
-      </div>
-      <div class="text-gray-300 text-xs">
-        Material: <span class="font-mono">{{ store.selectedMember.material }}</span>
-      </div>
-      <div class="text-gray-300 text-xs">
-        Força axial:
-        <span class="font-mono"
-          >{{ formatarNumero(store.selectedMember.axial_force / 1000, 1) }} kN</span
-        >
-      </div>
-      <div class="text-gray-300 text-xs">
-        Utilização:
-        <span class="font-mono"
-          >{{ formatarNumero(store.selectedMember.utilization * 100, 1) }}%</span
-        >
-      </div>
-    </div>
-
     <TresCanvas
       v-if="
-        (store.result && store.result.members.length > 0) ||
-        (store.rawTruss && store.rawTruss.members.length > 0)
+        !store.loading &&
+        ((store.result && store.result.members.length > 0) ||
+         (store.rawTruss && store.rawTruss.members.length > 0))
       "
       alpha
       clear-color="#111827"

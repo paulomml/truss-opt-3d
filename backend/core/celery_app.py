@@ -39,7 +39,10 @@ app_celery.conf.update(
     ),
     task_default_queue="default",
     task_routes={
-        "worker.tarefas.otimizar_trelice_*": {"queue": "otimizacao"},
+        # Rota exata (não glob) para a tarefa principal de otimização.
+        # Antes era "worker.tarefas.otimizar_trelice_*", que não casava com o
+        # nome real da tarefa e fazia tudo cair na fila default por acidente.
+        "worker.tarefas.otimizar_trelice": {"queue": "otimizacao"},
     },
     # Serialização JSON (compatível com Pinia no frontend via WebSocket).
     task_serializer="json",

@@ -5,6 +5,11 @@ import HelpModal from './HelpModal.vue';
 import AboutModal from './AboutModal.vue';
 import InfoTooltip from './InfoTooltip.vue';
 
+import CatalogoMateriaisModal from './CatalogoMateriaisModal.vue';
+import CatalogoPerfisModal from './CatalogoPerfisModal.vue';
+import HistoricoTarefasModal from './HistoricoTarefasModal.vue';
+import NormasReferenciaModal from './NormasReferenciaModal.vue';
+
 const store = useTrussStore();
 const {
   form,
@@ -15,17 +20,25 @@ const {
   restricoes,
   parametrosVento,
   modoDesempenho,
+  agAvancado,
 } = storeToRefs(store);
 
 const showHelpModal = ref(false);
 const showAboutModal = ref(false);
 const showRestricoesAvancadas = ref(false);
 const showVentoAvancado = ref(false);
+const showGA_avancado = ref(false);
+const showCatalogoMateriais = ref(false);
+const showCatalogoPerfis = ref(false);
+const showHistorico = ref(false);
+const showNormas = ref(false);
 
-// Carrega catálogos na montagem.
+// Carrega catálogos e normas na montagem.
 onMounted(() => {
   store.carregarMateriais();
   store.carregarPerfis();
+  store.carregarNormas();
+  store.verificarSaudeServidor();
 });
 
 const templateCategories = [
@@ -64,10 +77,10 @@ const familiasDisponiveis = computed(() => {
   return [...new Set(perfis.value.map((p) => p.familia))].sort();
 });
 
-const isSpanActive = computed(() => !form.value.selectedTemplate.includes('tower'));
-const isPanelsActive = computed(() => !form.value.selectedTemplate.includes('fink'));
-const isTopWidthActive = computed(() => form.value.selectedTemplate.includes('tower'));
-const isSectionsActive = computed(() => form.value.selectedTemplate.includes('tower'));
+const isSpanActive = computed(() => !(form.value as any).selectedTemplate.includes('tower'));
+const isPanelsActive = computed(() => !(form.value as any).selectedTemplate.includes('fink'));
+const isTopWidthActive = computed(() => (form.value as any).selectedTemplate.includes('tower'));
+const isSectionsActive = computed(() => (form.value as any).selectedTemplate.includes('tower'));
 
 const isMobile = ref(false);
 onMounted(() => {
@@ -185,6 +198,8 @@ const toggleFamiliaPermitida = (familia: string) => {
         <p class="text-xs text-blue-400/80 mt-1 font-medium uppercase tracking-wider">
           Dimensionamento e Otimização Paramétrica de Treliças Espaciais
         </p>
+
+        <!-- Botões de ação: AJUDA / SOBRE -->
         <div class="flex gap-2 mt-3 justify-center">
           <button
             @click="showHelpModal = true"
@@ -199,13 +214,38 @@ const toggleFamiliaPermitida = (familia: string) => {
             SOBRE
           </button>
         </div>
+
+        <!-- Botões de catálogos e referências -->
+        <div class="grid grid-cols-2 gap-1.5 mt-2">
+          <button
+            @click="showCatalogoMateriais = true"
+            class="py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[9px] font-bold text-gray-400 uppercase"
+          >
+            Materiais
+          </button>
+          <button
+            @click="showCatalogoPerfis = true"
+            class="py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[9px] font-bold text-gray-400 uppercase"
+          >
+            Perfis
+          </button>
+          <button
+            @click="showNormas = true"
+            class="py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[9px] font-bold text-gray-400 uppercase"
+          >
+            Normas NBR
+          </button>
+          <button
+            @click="showHistorico = true"
+            class="py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[9px] font-bold text-gray-400 uppercase"
+          >
+            Histórico
+          </button>
+        </div>
       </div>
 
       <!-- Formulário -->
       <div class="p-4 space-y-4 flex-grow">
-        <!-- ═══════════════════════════════════════════ -->
-        <!-- SEÇÃO 1: GEOMETRIA                         -->
-        <!-- ═══════════════════════════════════════════ -->
         <div class="pt-1">
           <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">
             1. Geometria
@@ -339,9 +379,6 @@ const toggleFamiliaPermitida = (familia: string) => {
           </div>
         </div>
 
-        <!-- ═══════════════════════════════════════════ -->
-        <!-- SEÇÃO 2: CARREGAMENTO                       -->
-        <!-- ═══════════════════════════════════════════ -->
         <div class="pt-3 border-t border-gray-700 space-y-3">
           <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider">
             2. Carregamento <span class="text-gray-500 font-normal">(NBR 6120)</span>
@@ -398,7 +435,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             />
           </div>
 
-          <!-- Vento (NBR 6123) — expansível -->
+          <!-- Vento (NBR 6123): expansível -->
           <div class="pt-1">
             <button
               @click="showVentoAvancado = !showVentoAvancado"
@@ -540,9 +577,6 @@ const toggleFamiliaPermitida = (familia: string) => {
           </div>
         </div>
 
-        <!-- ═══════════════════════════════════════════ -->
-        <!-- SEÇÃO 3: FUNDAÇÃO                           -->
-        <!-- ═══════════════════════════════════════════ -->
         <div class="pt-3 border-t border-gray-700 space-y-3">
           <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider">3. Fundação</h3>
 
@@ -622,9 +656,6 @@ const toggleFamiliaPermitida = (familia: string) => {
           </div>
         </div>
 
-        <!-- ═══════════════════════════════════════════ -->
-        <!-- SEÇÃO 4: OTIMIZADOR                         -->
-        <!-- ═══════════════════════════════════════════ -->
         <div class="pt-3 border-t border-gray-700 space-y-3">
           <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider">4. Otimizador</h3>
 
@@ -690,7 +721,176 @@ const toggleFamiliaPermitida = (familia: string) => {
             </div>
           </div>
 
-          <!-- Restrições Avançadas — expansível -->
+          <!-- Parâmetros Avançados do GA: expansível -->
+          <div class="pt-1">
+            <button
+              @click="showGA_avancado = !showGA_avancado"
+              class="w-full flex items-center justify-between text-xs font-bold text-gray-400 hover:text-blue-400 transition-colors uppercase"
+            >
+              <span>Parâmetros Avançados do GA</span>
+              <Icon
+                :name="showGA_avancado ? 'lucide:chevron-up' : 'lucide:chevron-down'"
+                class="w-4 h-4"
+              />
+            </button>
+
+            <div v-if="showGA_avancado" class="mt-3 space-y-3">
+              <!-- Refinamento local (memético) -->
+              <label class="flex items-center gap-2 text-xs text-gray-200 cursor-pointer">
+                <input type="checkbox" v-model="agAvancado.usar_refinamento_local" />
+                <span>
+                  Refinamento local (memético)
+                  <InfoTooltip
+                    text="Ativa hill climbing first-improvement nos melhores indivíduos a cada geração. Algoritmo memético: combina exploração global (GA) com refinamento local (Lamarckiano). Recomendado: ligado."
+                  />
+                </span>
+              </label>
+
+              <!-- Probabilidade de cruzamento -->
+              <div :class="{ 'opacity-50 pointer-events-none': loading }">
+                <label class="block text-xs text-gray-300 mb-1">
+                  Prob. Cruzamento:
+                  {{
+                    agAvancado.probabilidade_cruzamento === null
+                      ? 'padrão'
+                      : agAvancado.probabilidade_cruzamento.toFixed(2)
+                  }}
+                  <InfoTooltip
+                    text="Probabilidade de crossover entre dois indivíduos (0 a 1). Padrão do backend: 0,7. Valores menores preservam diversidade, valores maiores aceleram convergência."
+                  />
+                </label>
+                <input
+                  v-model.number="agAvancado.probabilidade_cruzamento"
+                  :disabled="loading"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  class="w-full accent-blue-500"
+                />
+                <button
+                  @click="agAvancado.probabilidade_cruzamento = null"
+                  class="text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5"
+                >
+                  usar padrão
+                </button>
+              </div>
+
+              <!-- Probabilidade de mutação -->
+              <div :class="{ 'opacity-50 pointer-events-none': loading }">
+                <label class="block text-xs text-gray-300 mb-1">
+                  Prob. Mutação:
+                  {{
+                    agAvancado.probabilidade_mutacao === null
+                      ? 'padrão'
+                      : agAvancado.probabilidade_mutacao.toFixed(2)
+                  }}
+                  <InfoTooltip
+                    text="Probabilidade de mutação de cada gene (0 a 1). Padrão do backend: 0,2. Valores maiores aumentam diversidade, valores menores aceleram convergência."
+                  />
+                </label>
+                <input
+                  v-model.number="agAvancado.probabilidade_mutacao"
+                  :disabled="loading"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  class="w-full accent-blue-500"
+                />
+                <button
+                  @click="agAvancado.probabilidade_mutacao = null"
+                  class="text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5"
+                >
+                  usar padrão
+                </button>
+              </div>
+
+              <!-- Tamanho do torneio -->
+              <div :class="{ 'opacity-50 pointer-events-none': loading }">
+                <label class="block text-xs text-gray-300 mb-1">
+                  Tamanho do Torneio:
+                  {{ agAvancado.indice_torneio === null ? 'padrão' : agAvancado.indice_torneio }}
+                  <InfoTooltip
+                    text="Número de indivíduos que competem na seleção por torneio. Padrão do backend: 3. Valores maiores aumentam a pressão seletiva (convergência mais rápida, menos diversidade)."
+                  />
+                </label>
+                <input
+                  v-model.number="agAvancado.indice_torneio"
+                  :disabled="loading"
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  class="w-full accent-blue-500"
+                />
+                <button
+                  @click="agAvancado.indice_torneio = null"
+                  class="text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5"
+                >
+                  usar padrão
+                </button>
+              </div>
+
+              <!-- Máximo de perfis distintos -->
+              <div :class="{ 'opacity-50 pointer-events-none': loading }">
+                <label class="block text-xs text-gray-300 mb-1">
+                  Máx. Perfis Distintos:
+                  {{
+                    agAvancado.max_perfis_distintos === null
+                      ? 'padrão'
+                      : agAvancado.max_perfis_distintos
+                  }}
+                  <InfoTooltip
+                    text="Número máximo de perfis distintos sem aplicar penalidade de padronização. Padrão do backend: 4. Valores menores forçam padronização (menos custo de fabricação), valores maiores permitem mais diversidade estrutural."
+                  />
+                </label>
+                <input
+                  v-model.number="agAvancado.max_perfis_distintos"
+                  :disabled="loading"
+                  type="range"
+                  min="1"
+                  max="20"
+                  step="1"
+                  class="w-full accent-blue-500"
+                />
+                <button
+                  @click="agAvancado.max_perfis_distintos = null"
+                  class="text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5"
+                >
+                  usar padrão
+                </button>
+              </div>
+
+              <!-- Semente aleatória -->
+              <hr class="border-gray-700/50 my-2" />
+              <div :class="{ 'opacity-50 pointer-events-none': loading }">
+                <label class="block text-xs text-gray-300 mb-1">
+                  Seed Aleatória: {{ store.form.ag_semente ?? 'aleatório' }}
+                  <InfoTooltip
+                    text="Seed do gerador aleatório. 42 = resultados idênticos a cada execução. 0 ou vazio = aleatório (diferente a cada vez)."
+                  />
+                </label>
+                <input
+                  v-model.number="store.form.ag_semente"
+                  :disabled="loading"
+                  type="range"
+                  min="0"
+                  max="9999"
+                  step="1"
+                  class="w-full accent-blue-500"
+                />
+                <button
+                  @click="store.form.ag_semente = 42"
+                  class="text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5"
+                >
+                  restaurar 42
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Restrições Avançadas: expansível -->
           <div class="pt-1">
             <button
               @click="showRestricoesAvancadas = !showRestricoesAvancadas"
@@ -844,4 +1044,10 @@ const toggleFamiliaPermitida = (familia: string) => {
 
   <HelpModal :show="showHelpModal" @close="showHelpModal = false" />
   <AboutModal :show="showAboutModal" @close="showAboutModal = false" />
+
+  <!-- Catálogos e referências -->
+  <CatalogoMateriaisModal :show="showCatalogoMateriais" @close="showCatalogoMateriais = false" />
+  <CatalogoPerfisModal :show="showCatalogoPerfis" @close="showCatalogoPerfis = false" />
+  <HistoricoTarefasModal :show="showHistorico" @close="showHistorico = false" />
+  <NormasReferenciaModal :show="showNormas" @close="showNormas = false" />
 </template>
