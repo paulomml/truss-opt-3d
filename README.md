@@ -314,14 +314,14 @@ flowchart TD
     Best --> End
 ```
 
-#### 2.4.5 Cancelamento e Proteção de Memória
+#### 2.4.6 Cancelamento e Proteção de Memória
 
 O `CanceladorOtimizacao` permite abortar a otimização via API entre gerações. O verificador de memória lança `LimiteMemoriaExcedido` se a RAM do container exceder o percentual configurado (padrão 85%).
 
 > [!WARNING]
 > Quando o GA é interrompido por limite de memória, todo o progresso daquela execução é perdido devido à ausência de um checkpoint parcial. Ajuste `LIMITE_MEMORIA_PERCENTUAL` ou reduza o tamanho da população (`AG_POPULACAO_TAMANHO`) se encontrar travamentos frequentes.
 
-#### 2.4.6 Avaliação Inicial e Elitismo Efetivo
+#### 2.4.7 Avaliação Inicial e Elitismo Efetivo
 
 A implementação observa dois cuidados fundamentais frequentemente negligenciados em algoritmos genéticos artesanais:
 
