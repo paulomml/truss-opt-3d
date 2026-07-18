@@ -1,13 +1,8 @@
 """
 Verificações NBR 6120:2019: Ações para o cálculo de estruturas de edificações.
 
-Foco em:
-- Carga concentrada de manutenção (Item 6.4): 1 kN atuando isoladamente
-  em elementos da cobertura (ripas, terças, banzo superior de treliças).
-- Cargas em coberturas (Item 6.4): distribuição mínima conforme inclinação.
-- Assimetria de cargas (Anexo D + Item 6.4): cargas parciais que produzem
-  envoltória mais desfavorável em treliças (meia carga, carga lateral).
-- Empoçamento progressivo (Anexo D).
+Carga de manutenção, cargas em coberturas, assimetria de cargas (Anexo D)
+e empoçamento progressivo (Anexo D).
 """
 
 from __future__ import annotations
@@ -52,9 +47,7 @@ def calcular_carga_cobertura(inclinacao_percentual: float) -> float:
         return 0.50  # Conservador: usar máximo.
     if inclinacao_percentual >= 5.0:
         return 0.25
-    # Interpolação linear entre 1% (0.50) e 5% (0.25)... mas a fórmula real é
-    # q = 0.25 kN/m^2 para i >= 3%, e q = 1/i + 0.15 para 2% < i < 3%, etc.
-    # Implementação simplificada e conservadora:
+    # Faixa intermediária: valores conservadores entre 1% e 5%.
     if inclinacao_percentual < 3.0:
         return 0.40
     return 0.25

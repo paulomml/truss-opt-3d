@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// components/NormasReferenciaModal.vue: Referência de normas NBR e defaults do GA.
+// Referência de normas NBR e defaults do GA.
 import { useTrussStore } from '@/stores/useTrussStore';
 
 const store = useTrussStore();
@@ -19,7 +19,7 @@ watch(
 
 const normas = computed(() => store.normasReferencia);
 
-// Formata chave de constante para exibição amigável (gamma_g -> γ_G).
+// Formata chave de constante para exibição amigável.
 function formatarChave(chave: string): string {
   return chave
     .replace('gamma_g', 'γ_G')

@@ -95,12 +95,8 @@ def calcular_lk_banzos(
 
 class ModeloBaseFEA:
     """
-    Modelo MEF reutilizável para acelerar avaliações do GA.
-
-    Constrói o modelo PyNite uma única vez com geometria, material,
-    cargas invariantes (Dead2, Live, vento, água, manutenção) e combinações.
-    O método resolver(perfil_por_grupo) atualiza as seções das barras,
-    recalcula peso próprio (Dead1) e re-analisa, sem recriar o modelo.
+    Modelo MEF reutilizável: constrói PyNite uma vez e reanalisa
+    via resolver(perfil_por_grupo) sem recriar o modelo.
     """
 
     def __init__(
@@ -275,7 +271,9 @@ class ModeloBaseFEA:
         if parametros_vento is not None:
             fachadas = nos_fachada
             if fachadas is None:
-                fachadas = identificar_fachadas_perpendiculares(nos, parametros_vento.direcao_vento_graus)
+                fachadas = identificar_fachadas_perpendiculares(
+                    nos, parametros_vento.direcao_vento_graus
+                )
             forcas = calcular_forcas_vento_3d(
                 nos, parametros_vento, self.nos_banzo_superior, fachadas
             )
@@ -286,11 +284,25 @@ class ModeloBaseFEA:
             area_frontal = (
                 (max(n.x for n in nos.values()) - min(n.x for n in nos.values()))
                 * (max(n.y for n in nos.values()) - min(n.y for n in nos.values()))
-                if nos else 0.0
+                if nos
+                else 0.0
             )
-            ca_arrasto = getattr(parametros_vento, 'ca_arrasto', 1.3)
-            q = 0.613 * (parametros_vento.v0_mps * parametros_vento.s1 * parametros_vento.s2 * parametros_vento.s3) ** 2
-            forca_arrasto_total = ca_arrasto * q * area_frontal if area_frontal > 0 else abs(sum(f.valor for f in forcas))
+            ca_arrasto = getattr(parametros_vento, "ca_arrasto", 1.3)
+            q = (
+                0.613
+                * (
+                    parametros_vento.v0_mps
+                    * parametros_vento.s1
+                    * parametros_vento.s2
+                    * parametros_vento.s3
+                )
+                ** 2
+            )
+            forca_arrasto_total = (
+                ca_arrasto * q * area_frontal
+                if area_frontal > 0
+                else abs(sum(f.valor for f in forcas))
+            )
             self.dados_vento = {
                 "v0_mps": parametros_vento.v0_mps,
                 "s1": parametros_vento.s1,
@@ -507,12 +519,8 @@ class ModeloBaseFEA:
                 continue
             membro = self.modelo.members[mid_str]
 
-            # Otimização: extrair axial, my e mz PARA A MESMA COMBO em cada
-            # iteração. Cada chamada max_axial(c)/max_moment(dir, c) re-segmenta
-            # o membro quando a combo muda (via _segment_member). Ao agrupar
-            # todas as direções por combo, evitamos re-segmentação entre
-            # direções e reduzimos as chamadas de N_combos * 3 direções para
-            # apenas N_combos segmentações por barra.
+            # Agrupa axial, my e mz por combo para evitar re-segmentação
+            # do membro entre direções.
             axiais: list[float] = []
             mys: list[float] = []
             mzs: list[float] = []
@@ -593,7 +601,9 @@ class ModeloBaseFEA:
         if resultado.barras:
             pior = max(resultado.barras, key=lambda x: x.utilization)
             resultado.dados_extras["barra_critica"] = {
-                "id": pior.id, "grupo": pior.group, "utilization": pior.utilization
+                "id": pior.id,
+                "grupo": pior.group,
+                "utilization": pior.utilization,
             }
         if resultado.deslocamentos:
             no_max_flecha = max(
@@ -871,9 +881,7 @@ def construir_e_resolver(
             modelo.add_load_combo(nome, fatores)
 
     # Análise.
-    # Otimização: usar analyze_linear() (monta K uma única vez em vez de uma
-    # vez por combinação de carga). Válido porque este modelo não usa elementos
-    # tension-only/compression-only nem análise P-Delta. Resultados idênticos.
+    # Usa analyze_linear() em vez de analyze() (monta K uma única vez).
     try:
         modelo.analyze_linear(check_statics=False, check_stability=True)
     except Exception as e:
@@ -918,8 +926,7 @@ def construir_e_resolver(
             continue
         membro = modelo.members[mid_str]
 
-        # Otimização: extrair axial, my e mz PARA A MESMA COMBO em cada
-        # iteração. Reduz re-segmentação do membro entre direções.
+        # Extrai axial, my e mz por combo para evitar re-segmentação.
         axiais = []
         mys = []
         mzs = []
@@ -985,7 +992,11 @@ def construir_e_resolver(
             "Rocha": {"ks1": 250000, "tipo": "rigido"},
             "Customizado": {"ks1": 50000, "tipo": "coesivo"},
         }.get(solo_tipo_local, {"ks1": 50000, "tipo": "coesivo"})
-        ks1_local = custom_ks if (solo_tipo_local == "Customizado" and custom_ks is not None) else solo_info_local["ks1"]
+        ks1_local = (
+            custom_ks
+            if (solo_tipo_local == "Customizado" and custom_ks is not None)
+            else solo_info_local["ks1"]
+        )
         B_local = max(footing_b, 0.305)
         if solo_info_local["tipo"] == "granular":
             ks_local = ks1_local * ((B_local + 0.305) / (2 * B_local)) ** 2
@@ -1016,10 +1027,20 @@ def construir_e_resolver(
         area_frontal = (
             (max(n.x for n in nos_entrada.values()) - min(n.x for n in nos_entrada.values()))
             * (max(n.y for n in nos_entrada.values()) - min(n.y for n in nos_entrada.values()))
-            if nos_entrada else 0.0
+            if nos_entrada
+            else 0.0
         )
-        ca_arrasto = getattr(parametros_vento, 'ca_arrasto', 1.3)
-        q_local = 0.613 * (parametros_vento.v0_mps * parametros_vento.s1 * parametros_vento.s2 * parametros_vento.s3) ** 2
+        ca_arrasto = getattr(parametros_vento, "ca_arrasto", 1.3)
+        q_local = (
+            0.613
+            * (
+                parametros_vento.v0_mps
+                * parametros_vento.s1
+                * parametros_vento.s2
+                * parametros_vento.s3
+            )
+            ** 2
+        )
         resultado.dados_extras["vento"] = {
             "v0_mps": parametros_vento.v0_mps,
             "s1": parametros_vento.s1,
@@ -1051,11 +1072,14 @@ def construir_e_resolver(
     if resultado.barras:
         pior = max(resultado.barras, key=lambda x: x.utilization)
         resultado.dados_extras["barra_critica"] = {
-            "id": pior.id, "grupo": pior.group, "utilization": pior.utilization
+            "id": pior.id,
+            "grupo": pior.group,
+            "utilization": pior.utilization,
         }
     if resultado.deslocamentos:
         no_max = max(resultado.deslocamentos, key=lambda nid: abs(resultado.deslocamentos[nid][1]))
         resultado.dados_extras["no_max_flecha"] = {
-            "id": no_max, "dy_mm": abs(resultado.deslocamentos[no_max][1]) * 1000
+            "id": no_max,
+            "dy_mm": abs(resultado.deslocamentos[no_max][1]) * 1000,
         }
     return resultado

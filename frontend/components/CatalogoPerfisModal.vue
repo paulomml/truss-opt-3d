@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// components/CatalogoPerfisModal.vue: Catálogo completo de perfis.
+// Catálogo completo de perfis.
 import { useTrussStore } from '@/stores/useTrussStore';
 import { ref, computed } from 'vue';
 

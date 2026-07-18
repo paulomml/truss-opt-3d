@@ -34,7 +34,7 @@ def calcular_fator_q(perfil: PerfilFisico, material: MaterialFisico) -> float:
 
     Para perfis L/RHS/Ue formados a frio, a esbeltez local b/t determina
     a necessidade de redução da área efetiva. Implementação simplificada
-    mas conservadora: Qs = 1.0 se b/t for <= lambdar; senao Qa = Ae/Ag.
+    mas conservadora: Qs = 1.0 se b/t for <= lambdar; senão Qa = Ae/Ag.
     """
     t = max(perfil.t_mm, 0.1) / 1000.0  # em metros
     # Largura da mesa mais esbelta (conservador): bf ou h.

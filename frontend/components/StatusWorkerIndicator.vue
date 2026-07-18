@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// components/StatusWorkerIndicator.vue: Badge de status do worker Celery + CPU.
+// Badge de status do worker Celery + CPU.
 import { useTrussStore } from '@/stores/useTrussStore';
 import { onMounted } from 'vue';
 

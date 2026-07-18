@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// components/CatalogoMateriaisModal.vue: Catálogo completo de materiais.
+// Catálogo completo de materiais.
 import { useTrussStore } from '@/stores/useTrussStore';
 
 const store = useTrussStore();

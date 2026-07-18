@@ -85,18 +85,8 @@ def calcular_forcas_vento_3d(
     nos_fachada: list[str] | None = None,
 ) -> list[ForcaVento]:
     """
-    Modela as forças de vento em 3D sobre a treliça.
-
-    Estratégia:
-    1. Para coberturas (banzo superior): aplica pressão vertical (FY)
-       combinada com sucção conforme coeficiente Ce.
-    2. Para fachadas verticais (montantes de torres): aplica pressão
-       horizontal (FX e FZ conforme direção do vento).
-    3. Para o conjunto: calcula força de arrasto global e distribui entre
-       nós das fachadas perpendiculares ao vento.
-
-    A área tributária de cada nó é estimada a partir da malha: para
-    treliças planares, considera-se 1 m de profundidade.
+    Distribui forças de vento 3D: pressão vertical no banzo superior,
+    pressão horizontal nas fachadas e arrasto global conforme NBR 6123.
     """
     if not nos:
         return []

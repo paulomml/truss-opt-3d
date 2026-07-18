@@ -1,4 +1,4 @@
-// types/truss.ts: Tipos TypeScript espelhando os schemas Pydantic do backend.
+// Tipos TypeScript espelhando os schemas Pydantic do backend.
 
 export type SupportType = 'Pinned' | 'Roller' | 'Fixed' | 'None';
 

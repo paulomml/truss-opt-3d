@@ -244,7 +244,7 @@ flowchart LR
     A[Browser - Nuxt 4 + Three.js] -->|HTTP/WS| B[Nginx]
     B --> C[FastAPI - Python 3.12]
     B --> D[Nuxt SSR - Node 24]
-    C --> E[(PostgreSQL 16)]
+    C --> E[(PostgreSQL 17)]
     C --> F[(Redis 7)]
     C --> G[Celery Worker]
     G --> E
@@ -307,7 +307,7 @@ sequenceDiagram
 | Estilos         | Tailwind CSS             |
 | Backend         | FastAPI + Pydantic       |
 | Servidor ASGI   | Uvicorn                  |
-| Banco de Dados  | PostgreSQL 16            |
+| Banco de Dados  | PostgreSQL 17            |
 | ORM             | SQLAlchemy               |
 | Broker e Cache  | Redis 7                  |
 | Fila de Tarefas | Celery                   |
@@ -331,7 +331,7 @@ truss-opt-3d/
     optimization/                 (algoritmo genético memético com DEAP)
     worker/                       (tarefa Celery de otimização)
     seed/                         (população inicial: 6 materiais + 32 perfis)
-    tests/                        (72 testes pytest)
+    tests/                        (70 testes pytest)
   frontend/                       (Node 24 Nuxt 4 + Three.js)
     components/                   (TrussViewer, TrussSidebar, LoadingOverlay, etc)
     stores/                       (Pinia: form, WebSocket, catálogos)
@@ -385,10 +385,12 @@ O catálogo contempla três famílias de perfis: cantoneiras de abas iguais (L, 
   "height": 2.5,
   "width": 2.0,
   "divisions": 6,
+  "truss_type": "pratt_roof",
   "load_cases": [
     { "type": "G", "direction": "FY", "value": -20000.0 },
     { "type": "Q", "direction": "FY", "value": -50000.0 }
   ],
+  "water_lamina": 0.0,
   "soil_type": "Rocha",
   "footing_b": 0.6,
   "footing_l": 0.6,
@@ -455,16 +457,20 @@ A store Pinia (useTrussStore) centraliza o formulário reativo, o ciclo de vida 
 
 ## 7. Memorial de Cálculo
 
-O memorial é gerado sob demanda em /api/tarefas/{id}/memorial/{formato} e contém:
+O memorial é gerado sob demanda em /api/tarefas/{id}/memorial/{formato} e contém 12 seções:
 
 1. Dados de entrada (geometria, cargas, materiais, fundação).
 2. Casos de carga aplicados conforme NBR 6120.
 3. Combinações ELU e ELS conforme NBR 8681.
 4. Tabela de esforços por barra: força axial N, momentos M, taxa de utilização U, fator chi, fator Q, índice de esbeltez lambda e status (ok ou falha).
-5. Equações NBR 8800 utilizadas com referência ao item da norma.
-6. Cargas de vento NBR 6123 (`Vk`, `q`, `Ce`, `Ci`).
-7. Resultado da otimização: peso total, custo total, material vencedor, utilização máxima, flecha máxima e contraflecha.
-8. Barras mais solicitadas (top 5 por taxa de utilização).
+5. Deslocamentos nodais (ELS flecha total).
+6. Equações NBR 8800 aplicadas com referência ao item da norma.
+7. Cargas de vento NBR 6123 (`Vk`, `q`, `Ce`, `Ci`).
+8. Fundação e Interação Solo-Estrutura (NBR 6122).
+9. Metodologia de otimização (GA) com parâmetros e histórico de convergência.
+10. Resultado da otimização: peso total, custo total, material vencedor, utilização máxima, flecha máxima e contraflecha.
+11. Barras mais solicitadas (top 5 por taxa de utilização).
+12. Perfis utilizados (Bill of Materials).
 
 Formatos suportados: PDF (ReportLab) e DOCX (python-docx). O memorial é persistido em PostgreSQL (base64) para reuso.
 
@@ -490,7 +496,7 @@ Durante a elaboração da modelagem, foram conduzidas baterias de testes com pre
 Clone o repositório e inicie todos os serviços:
 
 ```bash
-git clone <url-do-repositorio>
+git clone https://github.com/paulomml/truss-opt-3d.git
 cd truss-opt-3d
 docker compose up --build -d
 ```
@@ -521,9 +527,7 @@ Isso reconstrói as imagens e reinicia apenas os containers alterados.
 
 | Recurso                       | URL                              |
 | ----------------------------- | -------------------------------- |
-| Frontend (via Nginx)          | http://localhost:80              |
-| Frontend (direto)             | http://localhost:3000            |
-| Documentação da API (Swagger) | http://localhost:8000/docs       |
+| Frontend (via Nginx)          | http://localhost:8080            |
 | Health check                  | http://localhost:8000/api/health |
 
 ### 9.3 Desenvolvimento Local (sem Docker)
@@ -562,7 +566,7 @@ O servidor de desenvolvimento do Nuxt (porta 3000) faz proxy automático das req
 
 Com a aplicação rodando, siga este roteiro rápido:
 
-1. Acesse http://localhost:3000 no navegador.
+1. Acesse http://localhost:8080 no navegador.
 2. Na sidebar, escolha um tipo de estrutura (ex: Tesoura Pratt).
 3. Ajuste vão (12 m), altura (2,5 m) e número de painéis (6).
 4. Em Carregamento, mantenha os valores padrão de carga permanente e sobrecarga.
@@ -603,14 +607,15 @@ cd backend
 pytest -v
 ```
 
-Cobertura atual: 72 testes distribuídos em:
+Cobertura atual: 70 testes distribuídos em:
 
 - test_nbr8800.py (9 testes): esbeltez, fator Q, chi, N_rd, interação N+M, flecha.
 - test_nbr6120.py (8 testes): cargas de cobertura, manutenção, assimetrias, combinações, empoçamento.
 - test_nbr6123.py (6 testes): Vk, q, decomposição de direção, área frontal, forças 3D.
 - test_otimizacao_ga.py (7 testes): integração GA + solver com treliça simples, restrições de família, avaliação da população inicial, elitismo entre gerações, GA puro, convergência da busca local e caso de borda com zero gerações.
 - test_api.py (6 testes): health check, listagem de materiais/perfis, criação e consulta de tarefas.
-- test_aprimoramentos.py (12 testes): health com cpu_count, diagnóstico do worker, referência de normas, listagem de histórico, cancelamento via REST, parâmetros avançados do GA e confirmação da rota Celery.
+- test_aprimoramentos.py (10 testes): health check expandido, diagnóstico do worker, referência de normas, listagem e filtro de tarefas, cancelamento via REST, parâmetros avançados do GA e confirmação da rota Celery.
+- test_ise.py (24 testes): correção de Terzaghi em solos granulares e coesivos, molas Winkler, ISE com diferentes tipos de solo, combinações ELS.
 
 Os testes usam SQLite em memória (via `conftest.py`) para não depender de PostgreSQL. O mock de `otimizar_trelice.delay` agora gera UUIDs únicos por chamada, evitando violação da restrição UNIQUE em `celery_task_id` quando múltiplas tarefas são criadas no mesmo teste.
 

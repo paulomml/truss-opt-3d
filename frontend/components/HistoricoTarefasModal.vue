@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// components/HistoricoTarefasModal.vue: Histórico de tarefas executadas.
+// Histórico de tarefas executadas.
 import { useTrussStore } from '@/stores/useTrussStore';
 import { computed } from 'vue';
 
