@@ -188,6 +188,7 @@ class ModeloBaseFEA:
                 self.modelo.def_support(nid, True, True, True, True, True, True)
 
         # 4) ISE: molas Winkler
+        self.dados_ise: dict = {}
         if usar_ise:
             solo_info = BANCO_SOLOS.get(solo_tipo, BANCO_SOLOS["Rocha"])
             ks1_kN_m3 = (
@@ -208,6 +209,19 @@ class ModeloBaseFEA:
             I_z = B * footing_l**3 / 12
             K_theta_x = ks * I_x
             K_theta_z = ks * I_z
+            self.dados_ise = {
+                "solo_tipo": solo_tipo,
+                "ks1_kN_m3": ks1_kN_m3,
+                "ks_kN_m3": ks_kN_m3,
+                "K_y_N_m": K_y,
+                "K_theta_x_Nm_rad": K_theta_x,
+                "K_theta_z_Nm_rad": K_theta_z,
+                "footing_b_m": footing_b,
+                "footing_l_m": footing_l,
+                "I_x_m4": I_x,
+                "I_z_m4": I_z,
+                "usar_ise": True,
+            }
             for nid, no in nos.items():
                 if no.support in ("Pinned", "Roller"):
                     self.modelo.def_support_spring(nid, "DY", K_y)
@@ -261,13 +275,37 @@ class ModeloBaseFEA:
         if parametros_vento is not None:
             fachadas = nos_fachada
             if fachadas is None:
-                fachadas = identificar_fachadas_perpendiculares(nos, parametros_vento.direcao_graus)
+                fachadas = identificar_fachadas_perpendiculares(nos, parametros_vento.direcao_vento_graus)
             forcas = calcular_forcas_vento_3d(
                 nos, parametros_vento, self.nos_banzo_superior, fachadas
             )
             for f in forcas:
                 if f.no_id in nos:
                     self.modelo.add_node_load(f.no_id, f.direction, f.valor, case="Wind")
+            # Guarda metadados do vento para o memorial.
+            area_frontal = (
+                (max(n.x for n in nos.values()) - min(n.x for n in nos.values()))
+                * (max(n.y for n in nos.values()) - min(n.y for n in nos.values()))
+                if nos else 0.0
+            )
+            ca_arrasto = getattr(parametros_vento, 'ca_arrasto', 1.3)
+            q = 0.613 * (parametros_vento.v0_mps * parametros_vento.s1 * parametros_vento.s2 * parametros_vento.s3) ** 2
+            forca_arrasto_total = ca_arrasto * q * area_frontal if area_frontal > 0 else abs(sum(f.valor for f in forcas))
+            self.dados_vento = {
+                "v0_mps": parametros_vento.v0_mps,
+                "s1": parametros_vento.s1,
+                "s2": parametros_vento.s2,
+                "s3": parametros_vento.s3,
+                "direcao_graus": parametros_vento.direcao_vento_graus,
+                "ce_externo": parametros_vento.ce_externo,
+                "ci_interno": parametros_vento.ci_interno,
+                "ca_arrasto": ca_arrasto,
+                "area_frontal_m2": area_frontal,
+                "forca_arrasto_total_N": forca_arrasto_total,
+                "num_forcas_nodais": len(forcas),
+            }
+        else:
+            self.dados_vento = {}
 
         # 9) Manutenção (1 kN por nó do banzo superior)
         self.casos_manutencao: list[str] = []
@@ -523,11 +561,48 @@ class ModeloBaseFEA:
             b.esbeltez = verif.esbeltez
             b.fator_chi = verif.fator_chi
             b.fator_q = verif.fator_q
+            b.lambda_0 = verif.lambda_0
+            b.detalhes = verif.detalhes
+            b.violacao_normativa = verif.violacao_normativa
+            b.peso_kg = perfil.area_m2 * self.material.rho_kg_m3 * b.length
             b.profile_name = perfil.nome
 
             utilizacao_maxima = max(utilizacao_maxima, verif.utilization)
 
         resultado.utilizacao_maxima = utilizacao_maxima
+
+        # Dados extras para o memorial (ISE, vento, peso por grupo).
+        resultado.dados_extras["ise"] = self.dados_ise
+        resultado.dados_extras["vento"] = self.dados_vento
+        # Peso por grupo
+        peso_por_grupo: dict[str, float] = {}
+        for b in resultado.barras:
+            grupo = b.group or "Padrão"
+            peso_por_grupo[grupo] = peso_por_grupo.get(grupo, 0.0) + b.peso_kg
+        resultado.dados_extras["peso_por_grupo"] = peso_por_grupo
+        # Distribuição de utilização
+        usos = [b.utilization for b in resultado.barras]
+        resultado.dados_extras["stats_utilizacao"] = {
+            "min": min(usos) if usos else 0.0,
+            "max": max(usos) if usos else 0.0,
+            "avg": sum(usos) / len(usos) if usos else 0.0,
+            "acima_80": sum(1 for u in usos if u > 0.8),
+            "violadas": sum(1 for u in usos if u > 1.0),
+        }
+        # Barra mais solicitada e nó com maior flecha
+        if resultado.barras:
+            pior = max(resultado.barras, key=lambda x: x.utilization)
+            resultado.dados_extras["barra_critica"] = {
+                "id": pior.id, "grupo": pior.group, "utilization": pior.utilization
+            }
+        if resultado.deslocamentos:
+            no_max_flecha = max(
+                resultado.deslocamentos, key=lambda nid: abs(resultado.deslocamentos[nid][1])
+            )
+            resultado.dados_extras["no_max_flecha"] = {
+                "id": no_max_flecha,
+                "dy_mm": abs(resultado.deslocamentos[no_max_flecha][1]) * 1000,
+            }
         return resultado
 
 
@@ -713,7 +788,7 @@ def construir_e_resolver(
     if parametros_vento is not None:
         if nos_fachada is None:
             nos_fachada = identificar_fachadas_perpendiculares(
-                nos_entrada, parametros_vento.direcao_graus
+                nos_entrada, parametros_vento.direcao_vento_graus
             )
         forcas = calcular_forcas_vento_3d(
             nos_entrada, parametros_vento, nos_banzo_superior, nos_fachada
@@ -889,9 +964,98 @@ def construir_e_resolver(
         b.esbeltez = verif.esbeltez
         b.fator_chi = verif.fator_chi
         b.fator_q = verif.fator_q
+        b.lambda_0 = verif.lambda_0
+        b.detalhes = verif.detalhes
+        b.violacao_normativa = verif.violacao_normativa
+        b.peso_kg = perfil.area_m2 * material.rho_kg_m3 * b.length
         b.profile_name = perfil.nome
 
         utilizacao_maxima = max(utilizacao_maxima, verif.utilization)
 
     resultado.utilizacao_maxima = utilizacao_maxima
+
+    # Dados extras para o memorial (ISE, vento, peso por grupo)
+    solo_tipo_local = solo_tipo or "Rocha"
+    if solo_tipo_local != "Rocha":
+        solo_info_local = {
+            "Areia Fofa": {"ks1": 15000, "tipo": "granular"},
+            "Areia Compacta": {"ks1": 100000, "tipo": "granular"},
+            "Argila Mole": {"ks1": 10000, "tipo": "coesivo"},
+            "Argila Rija": {"ks1": 40000, "tipo": "coesivo"},
+            "Rocha": {"ks1": 250000, "tipo": "rigido"},
+            "Customizado": {"ks1": 50000, "tipo": "coesivo"},
+        }.get(solo_tipo_local, {"ks1": 50000, "tipo": "coesivo"})
+        ks1_local = custom_ks if (solo_tipo_local == "Customizado" and custom_ks is not None) else solo_info_local["ks1"]
+        B_local = max(footing_b, 0.305)
+        if solo_info_local["tipo"] == "granular":
+            ks_local = ks1_local * ((B_local + 0.305) / (2 * B_local)) ** 2
+        elif solo_info_local["tipo"] == "coesivo":
+            ks_local = ks1_local * (0.305 / B_local)
+        else:
+            ks_local = ks1_local
+        K_y_local = ks_local * 1000.0 * B_local * footing_l
+        I_x_local = footing_l * B_local**3 / 12
+        I_z_local = B_local * footing_l**3 / 12
+        resultado.dados_extras["ise"] = {
+            "solo_tipo": solo_tipo_local,
+            "ks1_kN_m3": ks1_local,
+            "ks_kN_m3": ks_local,
+            "K_y_N_m": K_y_local,
+            "K_theta_x_Nm_rad": ks_local * 1000.0 * I_x_local,
+            "K_theta_z_Nm_rad": ks_local * 1000.0 * I_z_local,
+            "footing_b_m": footing_b,
+            "footing_l_m": footing_l,
+            "I_x_m4": I_x_local,
+            "I_z_m4": I_z_local,
+            "usar_ise": True,
+        }
+    else:
+        resultado.dados_extras["ise"] = {"solo_tipo": solo_tipo_local, "usar_ise": False}
+    # Vento
+    if parametros_vento is not None:
+        area_frontal = (
+            (max(n.x for n in nos_entrada.values()) - min(n.x for n in nos_entrada.values()))
+            * (max(n.y for n in nos_entrada.values()) - min(n.y for n in nos_entrada.values()))
+            if nos_entrada else 0.0
+        )
+        ca_arrasto = getattr(parametros_vento, 'ca_arrasto', 1.3)
+        q_local = 0.613 * (parametros_vento.v0_mps * parametros_vento.s1 * parametros_vento.s2 * parametros_vento.s3) ** 2
+        resultado.dados_extras["vento"] = {
+            "v0_mps": parametros_vento.v0_mps,
+            "s1": parametros_vento.s1,
+            "s2": parametros_vento.s2,
+            "s3": parametros_vento.s3,
+            "direcao_graus": parametros_vento.direcao_vento_graus,
+            "ce_externo": parametros_vento.ce_externo,
+            "ci_interno": parametros_vento.ci_interno,
+            "ca_arrasto": ca_arrasto,
+            "area_frontal_m2": area_frontal,
+        }
+    else:
+        resultado.dados_extras["vento"] = {}
+    # Peso por grupo
+    peso_por_grupo: dict[str, float] = {}
+    for b in resultado.barras:
+        grp = b.group or "Padrão"
+        peso_por_grupo[grp] = peso_por_grupo.get(grp, 0.0) + b.peso_kg
+    resultado.dados_extras["peso_por_grupo"] = peso_por_grupo
+    # Distribuição de utilização
+    usos = [b.utilization for b in resultado.barras]
+    resultado.dados_extras["stats_utilizacao"] = {
+        "min": min(usos) if usos else 0.0,
+        "max": max(usos) if usos else 0.0,
+        "avg": sum(usos) / len(usos) if usos else 0.0,
+        "acima_80": sum(1 for u in usos if u > 0.8),
+        "violadas": sum(1 for u in usos if u > 1.0),
+    }
+    if resultado.barras:
+        pior = max(resultado.barras, key=lambda x: x.utilization)
+        resultado.dados_extras["barra_critica"] = {
+            "id": pior.id, "grupo": pior.group, "utilization": pior.utilization
+        }
+    if resultado.deslocamentos:
+        no_max = max(resultado.deslocamentos, key=lambda nid: abs(resultado.deslocamentos[nid][1]))
+        resultado.dados_extras["no_max_flecha"] = {
+            "id": no_max, "dy_mm": abs(resultado.deslocamentos[no_max][1]) * 1000
+        }
     return resultado

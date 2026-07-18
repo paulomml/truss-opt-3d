@@ -270,12 +270,16 @@ def otimizar_trelice_ga(
     modo_rapido: bool = True,
     usar_paralelismo: bool = True,
     semente: int | None = None,
-) -> tuple[ResultadoAnalise, dict[str, PerfilFisico], list[str]]:
+) -> tuple[ResultadoAnalise, dict[str, PerfilFisico], list[str], list[dict], dict]:
     """
     Executa o GA memético: exploração global (DEAP) + refinamento local (hill climbing).
-    Retorna (melhor_resultado, perfil_por_grupo, logs).
+    Retorna (melhor_resultado, perfil_por_grupo, logs, logbook, parametros_usados).
     """
     _garantiar_classes_deap()
+
+    # Aplica a semente para reprodutibilidade (antes de qualquer operação do DEAP).
+    if semente and semente > 0:
+        random.seed(semente)
 
     # Aplica restrições do usuário ao espaço de busca.
     perfis = _filtrar_perfis(perfis_disponiveis, restricoes)
@@ -317,6 +321,22 @@ def otimizar_trelice_ga(
         f"população={tamanho_populacao}, gerações={geracoes}, "
         f"material={material.nome} (R$ {material.custo_kg:.2f}/kg)."
     )
+
+    # Parâmetros usados para documentação no memorial.
+    parametros_usados = {
+        "material": material.nome,
+        "custo_kg": material.custo_kg,
+        "populacao": tamanho_populacao,
+        "geracoes": geracoes,
+        "probabilidade_cruzamento": cxpb,
+        "probabilidade_mutacao": mutpb,
+        "indice_torneio": tournsize,
+        "max_perfis_distintos_sem_penalidade": max_perfis_distintos_cfg,
+        "usar_refinamento_local": usar_refinamento_local,
+        "usar_penalidade_diversidade": usar_penalidade_diversidade,
+        "paralelismo_interno": usar_paralelismo,
+        "semente": semente or "aleatório",
+    }
 
     # Cache de avaliação (evita re-calcular FEA para mesmos perfis).
     _cache_avaliacao: dict[tuple[int, ...], tuple[float, ...]] = {}
@@ -648,4 +668,9 @@ def otimizar_trelice_ga(
     if executor is not None:
         executor.shutdown(wait=True)
 
-    return melhor_resultado, perfil_por_grupo, logs
+    # Converte logbook do DEAP para lista de dicts serializável.
+    logbook_dicts = [dict(record) for record in logbook]
+
+    parametros_usados["fitness_final"] = melhor_fitness_historico
+
+    return melhor_resultado, perfil_por_grupo, logs, logbook_dicts, parametros_usados

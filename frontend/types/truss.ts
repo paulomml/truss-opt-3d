@@ -86,6 +86,8 @@ export interface RequisicaoOtimizacao {
   usar_paralelismo?: boolean | null;
   // Semente aleatória para reprodutibilidade (0 = aleatório, fixo = resultados idênticos).
   ag_semente?: number | null;
+  // Tipo de estrutura/topologia (pratt_roof, howe_roof, etc.).
+  truss_type?: string;
 }
 
 export interface NoResultado {

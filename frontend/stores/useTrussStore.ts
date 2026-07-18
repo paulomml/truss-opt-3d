@@ -229,6 +229,7 @@ export const useTrussStore = defineStore('truss', () => {
         footing_b: form.footing_b,
         footing_l: form.footing_l,
         raw_truss: generated,
+        truss_type: formAny.selectedTemplate,
         load_cases: [
           { type: 'G', direction: 'FY', value: -(formAny.dead_load || 0) },
           { type: 'Q', direction: 'FY', value: -(formAny.live_load || 0) },

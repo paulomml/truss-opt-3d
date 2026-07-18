@@ -78,7 +78,7 @@ def test_ga_produz_solucao_estavel(trelica_simples, material_a36, perfis_curtos)
     ]
     nos_banzo_superior = ["U0", "U1", "U2", "U3"]
 
-    resultado, perfil_por_grupo, logs = otimizar_trelice_ga(
+    resultado, perfil_por_grupo, logs, _logbook, _ga_params = otimizar_trelice_ga(
         nos=nos,
         barras=barras,
         grupos=grupos,
@@ -104,7 +104,7 @@ def test_ga_respeita_restricoes_familia(trelica_simples, material_a36, perfis_cu
     casos_carga = [{"type": "G", "direction": "FY", "value": -1000.0}]
     nos_banzo_superior = ["U0", "U1", "U2", "U3"]
 
-    _, perfil_por_grupo, _ = otimizar_trelice_ga(
+    _, perfil_por_grupo, _, _, _ = otimizar_trelice_ga(
         nos=nos,
         barras=barras,
         grupos=grupos,
@@ -204,7 +204,7 @@ def test_ga_puro_sem_refinamento_local_funciona(trelica_simples, material_a36, p
     casos_carga = [{"type": "G", "direction": "FY", "value": -1000.0}]
     nos_banzo_superior = ["U0", "U1", "U2", "U3"]
 
-    resultado, perfil_por_grupo, logs = otimizar_trelice_ga(
+    resultado, perfil_por_grupo, logs, _logbook, _ga_params = otimizar_trelice_ga(
         nos=nos,
         barras=barras,
         grupos=grupos,
@@ -262,7 +262,7 @@ def test_ga_zero_geracoes_avalia_populacao_inicial(trelica_simples, material_a36
     casos_carga = [{"type": "G", "direction": "FY", "value": -1000.0}]
     nos_banzo_superior = ["U0", "U1", "U2", "U3"]
 
-    resultado, perfil_por_grupo, logs = otimizar_trelice_ga(
+    resultado, perfil_por_grupo, logs, _logbook, _ga_params = otimizar_trelice_ga(
         nos=nos,
         barras=barras,
         grupos=grupos,

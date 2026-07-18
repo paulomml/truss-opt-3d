@@ -50,6 +50,10 @@ class BarraFisica:
     fator_q: float = 1.0
     lkx: float = 0.0
     lky: float = 0.0
+    lambda_0: float = 0.0
+    detalhes: str = ""
+    violacao_normativa: bool = False
+    peso_kg: float = 0.0
 
 
 @dataclass
@@ -131,6 +135,8 @@ class ResultadoAnalise:
     logs: list[str] = field(default_factory=list)
     # Deslocamentos nodais para visualização.
     deslocamentos: dict[str, tuple[float, float, float]] = field(default_factory=dict)
+    # Dados extras (ISE, vento, GA) para o memorial.
+    dados_extras: dict = field(default_factory=dict)
 
 
 def perfil_dict_para_fisico(dados: dict) -> PerfilFisico:

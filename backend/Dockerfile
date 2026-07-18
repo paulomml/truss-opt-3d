@@ -16,10 +16,11 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Dependências do sistema (build-essential para compilar numpy/scipy se necessário).
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN     apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
         curl \
+        fontconfig fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Instala dependências Python primeiro (camada cacheável).

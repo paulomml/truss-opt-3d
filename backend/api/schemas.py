@@ -184,6 +184,12 @@ class RequisicaoOtimizacao(BaseModel):
         description="Seed do gerador aleatório (0 ou None = aleatório; fixo = resultados idênticos a cada execução).",
     )
 
+    # Tipo de estrutura/topologia.
+    truss_type: str = Field(
+        default="",
+        description="Tipo de estrutura selecionada (pratt_roof, howe_roof, etc.).",
+    )
+
 
 # Resultados (saída)
 class NoResultado(BaseModel):
@@ -218,6 +224,13 @@ class BarraResultado(BaseModel):
     esbeltez: float = 0.0
     fator_chi: float = 1.0
     fator_q: float = 1.0
+    length: float = 0.0
+    lkx: float = 0.0
+    lky: float = 0.0
+    lambda_0: float = 0.0
+    detalhes: str = ""
+    violacao_normativa: bool = False
+    peso_kg: float = 0.0
 
 
 class RespostaOtimizacao(BaseModel):
@@ -238,6 +251,17 @@ class RespostaOtimizacao(BaseModel):
     members: list[BarraResultado]
     nodes: dict[str, NoResultado]
     logs: list[str] = Field(default_factory=list)
+    # Dados de fundação/ISE
+    fundacao: dict = Field(default_factory=dict)
+    # Dados de vento expandidos
+    vento: dict = Field(default_factory=dict)
+    # Parâmetros do GA e histórico de convergência
+    ga_parametros: dict = Field(default_factory=dict)
+    ga_logbook: list[dict] = Field(default_factory=list)
+    ga_fitness_final: float = 0.0
+    # Perfis utilizados (BOM) e material vencedor
+    perfis_usados: dict[str, dict] = Field(default_factory=dict)
+    material_vencedor: dict = Field(default_factory=dict)
 
 
 # Status de tarefa assíncrona

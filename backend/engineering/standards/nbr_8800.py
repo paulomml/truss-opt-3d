@@ -25,6 +25,7 @@ class ResultadoVerificacao:
     fator_q: float
     violacao_normativa: bool
     detalhes: str
+    lambda_0: float = 0.0
 
 
 def calcular_fator_q(perfil: PerfilFisico, material: MaterialFisico) -> float:
@@ -178,6 +179,7 @@ def verificar_barra_nbr8800(
             fator_q=fator_q,
             violacao_normativa=True,
             detalhes=f"Esbeltez {esbeltez_max:.0f} > 200 (compressão, NBR 8800 5.3.4.1).",
+            lambda_0=lambda_0,
         )
     if tracao and esbeltez_max > 300.0:
         return ResultadoVerificacao(
@@ -189,6 +191,7 @@ def verificar_barra_nbr8800(
             fator_q=fator_q,
             violacao_normativa=True,
             detalhes=f"Esbeltez {esbeltez_max:.0f} > 300 (tração, NBR 8800 5.2.8.1).",
+            lambda_0=lambda_0,
         )
 
     # 4) N_rd e M_rd.
@@ -206,6 +209,7 @@ def verificar_barra_nbr8800(
             fator_q=fator_q,
             violacao_normativa=True,
             detalhes="N_rd nulo: instabilidade.",
+            lambda_0=lambda_0,
         )
 
     # 5) Interação N + M (Item 5.5.1.2).
@@ -238,6 +242,7 @@ def verificar_barra_nbr8800(
         fator_q=fator_q,
         violacao_normativa=violacao,
         detalhes=detalhes,
+        lambda_0=lambda_0,
     )
 
 

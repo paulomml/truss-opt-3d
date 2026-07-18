@@ -586,7 +586,7 @@ def _executar_ga_material_inprocess(
         perfis_disponiveis=perfis,
     )
 
-    resultado, perfil_por_grupo, logs = otimizar_trelice_ga(
+    resultado, perfil_por_grupo, logs, logbook_dicts, parametros_usados = otimizar_trelice_ga(
         nos=nos,
         barras=barras,
         grupos=grupos,
@@ -618,7 +618,10 @@ def _executar_ga_material_inprocess(
     )
 
     # Serializa o resultado e o perfil_por_grupo para dict puro.
-    return _serializar_resultado_material(resultado, perfil_por_grupo, logs, material, idx)
+    return _serializar_resultado_material(
+        resultado, perfil_por_grupo, logs, material, idx,
+        logbook_dicts=logbook_dicts, parametros_usados=parametros_usados,
+    )
 
 
 def _executar_ga_material_subprocesso(args: tuple) -> dict:
@@ -639,6 +642,11 @@ def _executar_ga_material_subprocesso(args: tuple) -> dict:
         idx,
         total_materiais,
     ) = args
+
+    # Aplica a semente no subprocesso (ProcessPoolExecutor não herda a seed do processo pai).
+    semente = payload.get("ag_semente")
+    if semente and semente > 0:
+        random.seed(semente + idx)
 
     material = material_dict_para_fisico(material_dict)
     perfis = [perfil_dict_para_fisico(p) for p in perfis_dicts]
@@ -693,7 +701,7 @@ def _executar_ga_material_subprocesso(args: tuple) -> dict:
         if min_fit < melhor_fitness_local:
             melhor_fitness_local = min_fit
 
-    resultado, perfil_por_grupo, logs = otimizar_trelice_ga(
+    resultado, perfil_por_grupo, logs, logbook_dicts, parametros_usados = otimizar_trelice_ga(
         nos=nos,
         barras=barras,
         grupos=grupos,
@@ -728,7 +736,8 @@ def _executar_ga_material_subprocesso(args: tuple) -> dict:
     logs_completos = logs_locais + logs
 
     return _serializar_resultado_material(
-        resultado, perfil_por_grupo, logs_completos, material, idx
+        resultado, perfil_por_grupo, logs_completos, material, idx,
+        logbook_dicts=logbook_dicts, parametros_usados=parametros_usados,
     )
 
 
@@ -738,6 +747,8 @@ def _serializar_resultado_material(
     logs: list[str],
     material: MaterialFisico,
     idx: int,
+    logbook_dicts: list[dict] | None = None,
+    parametros_usados: dict | None = None,
 ) -> dict:
     """Converte o resultado do GA em um dict puro (serializável JSON/pickle)."""
     return {
@@ -768,6 +779,13 @@ def _serializar_resultado_material(
                 "esbeltez": b.esbeltez,
                 "fator_chi": b.fator_chi,
                 "fator_q": b.fator_q,
+                "length": b.length,
+                "lkx": b.lkx,
+                "lky": b.lky,
+                "lambda_0": b.lambda_0,
+                "detalhes": b.detalhes,
+                "violacao_normativa": b.violacao_normativa,
+                "peso_kg": b.peso_kg,
             }
             for b in resultado.barras
         ],
@@ -784,6 +802,10 @@ def _serializar_resultado_material(
         },
         "perfil_por_grupo": {g: p.__dict__ for g, p in (perfil_por_grupo or {}).items()},
         "logs": logs,
+        "dados_extras": resultado.dados_extras,
+        "ga_logbook": logbook_dicts or [],
+        "ga_parametros": parametros_usados or {},
+        "ga_fitness_final": (parametros_usados or {}).get("fitness_final", 0.0),
     }
 
 
@@ -811,6 +833,32 @@ def _selecionar_melhor_material(resultados: list[dict]) -> dict | None:
 def _calcular_comprimento(n1: NoFisico, n2: NoFisico) -> float:
     """Distância euclidiana 3D entre dois nós."""
     return ((n1.x - n2.x) ** 2 + (n1.y - n2.y) ** 2 + (n1.z - n2.z) ** 2) ** 0.5
+
+
+def _extrair_perfis_usados(perfil_por_grupo_dicts: dict | None) -> dict[str, dict]:
+    """Extrai metadados dos perfis usados para o memorial (BOM)."""
+    if not perfil_por_grupo_dicts:
+        return {}
+    saida: dict[str, dict] = {}
+    for grupo, p in perfil_por_grupo_dicts.items():
+        nome = p.get("nome", p.get("Name", "?"))
+        saida[nome] = {
+            "nome": nome,
+            "grupo": grupo,
+            "familia": p.get("familia", ""),
+            "h_mm": p.get("h_mm", 0.0),
+            "bf_mm": p.get("bf_mm", 0.0),
+            "t_mm": p.get("t_mm", 0.0),
+            "area_m2": p.get("area_m2", 0.0),
+            "ix_m4": p.get("ix_m4", 0.0),
+            "iy_m4": p.get("iy_m4", 0.0),
+            "j_m4": p.get("j_m4", 0.0),
+            "uso_recomendado": p.get("uso_recomendado", ""),
+            "chapa_referencia": p.get("chapa_referencia", ""),
+            "raio_giracao_x": (p.get("ix_m4", 0.0) / max(p.get("area_m2", 1e-12), 1e-12)) ** 0.5,
+            "raio_giracao_y": (p.get("iy_m4", 0.0) / max(p.get("area_m2", 1e-12), 1e-12)) ** 0.5,
+        }
+    return saida
 
 
 def _construir_resposta(
@@ -849,6 +897,13 @@ def _construir_resposta(
                 "esbeltez": b["esbeltez"],
                 "fator_chi": b["fator_chi"],
                 "fator_q": b["fator_q"],
+                "length": b.get("length", 0.0),
+                "lkx": b.get("lkx", 0.0),
+                "lky": b.get("lky", 0.0),
+                "lambda_0": b.get("lambda_0", 0.0),
+                "detalhes": b.get("detalhes", ""),
+                "violacao_normativa": b.get("violacao_normativa", False),
+                "peso_kg": b.get("peso_kg", 0.0),
             }
         )
 
@@ -888,4 +943,15 @@ def _construir_resposta(
         "members": barras_saida,
         "nodes": nos_saida,
         "logs": logs,
+        # Dados extras
+        "fundacao": resultado_dict.get("dados_extras", {}).get("ise", {}),
+        "vento": resultado_dict.get("dados_extras", {}).get("vento", {}),
+        "ga_parametros": resultado_dict.get("ga_parametros", {}),
+        "ga_logbook": resultado_dict.get("ga_logbook", []),
+        "ga_fitness_final": resultado_dict.get("ga_fitness_final", 0.0),
+        "perfis_usados": _extrair_perfis_usados(resultado_dict.get("perfil_por_grupo", {})),
+        "material_vencedor": {
+            "nome": material_nome,
+            "custo_kg": material_custo_kg,
+        },
     }
