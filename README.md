@@ -448,7 +448,6 @@ Os modais disponíveis são:
 - `CatalogoPerfisModal.vue`: tabela completa de perfis (dimensões, área, Ix, Iy, J) com filtro por família.
 - `HistoricoTarefasModal.vue`: histórico das últimas 50 tarefas com status, duração e mensagem.
 - `NormasReferenciaModal.vue`: constantes NBR 6120/6123/8800 + defaults do GA + equações verificadas.
-- `HelpModal.vue` e `AboutModal.vue`: já existentes (manual de uso e contexto acadêmico).
 
 ### 6.3 Estado Global
 

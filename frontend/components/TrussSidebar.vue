@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { useTrussStore } from '@/stores/useTrussStore';
 import { storeToRefs } from 'pinia';
-import HelpModal from './HelpModal.vue';
-import AboutModal from './AboutModal.vue';
 import InfoTooltip from './InfoTooltip.vue';
 
 import CatalogoMateriaisModal from './CatalogoMateriaisModal.vue';
@@ -23,8 +21,6 @@ const {
   agAvancado,
 } = storeToRefs(store);
 
-const showHelpModal = ref(false);
-const showAboutModal = ref(false);
 const showRestricoesAvancadas = ref(false);
 const showVentoAvancado = ref(false);
 const showGA_avancado = ref(false);
@@ -206,22 +202,6 @@ const toggleFamiliaPermitida = (familia: string) => {
         <p class="text-xs text-blue-400/80 mt-1 font-medium uppercase tracking-wider">
           Dimensionamento e Otimização Paramétrica de Treliças Espaciais
         </p>
-
-        <!-- Botões de ação: AJUDA / SOBRE -->
-        <div class="flex gap-2 mt-3 justify-center">
-          <button
-            @click="showHelpModal = true"
-            class="flex-1 py-1.5 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md text-[10px] font-bold text-gray-300"
-          >
-            AJUDA
-          </button>
-          <button
-            @click="showAboutModal = true"
-            class="flex-1 py-1.5 px-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-md text-[10px] font-bold text-gray-300"
-          >
-            SOBRE
-          </button>
-        </div>
 
         <!-- Botões de catálogos e referências -->
         <div class="grid grid-cols-2 gap-1.5 mt-2">
@@ -1049,9 +1029,6 @@ const toggleFamiliaPermitida = (familia: string) => {
     @click="showMobileMenu = false"
     class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
   ></div>
-
-  <HelpModal :show="showHelpModal" @close="showHelpModal = false" />
-  <AboutModal :show="showAboutModal" @close="showAboutModal = false" />
 
   <!-- Catálogos e referências -->
   <CatalogoMateriaisModal :show="showCatalogoMateriais" @close="showCatalogoMateriais = false" />
