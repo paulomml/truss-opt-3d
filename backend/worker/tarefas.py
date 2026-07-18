@@ -136,8 +136,7 @@ def otimizar_trelice(self, tarefa_id: int, payload: dict) -> dict:
         # Processamento sequencial de materiais (um por vez).
         n_parallel = 1
         _logger.info(
-            f"Tarefa {tarefa_id}: processamento sequencial "
-            f"(materiais={len(materiais_fisicos)})."
+            f"Tarefa {tarefa_id}: processamento sequencial (materiais={len(materiais_fisicos)})."
         )
 
         # Envia metadados dos materiais para o frontend sair do estado
@@ -616,8 +615,13 @@ def _executar_ga_material_inprocess(
 
     # Serializa o resultado e o perfil_por_grupo para dict puro.
     return _serializar_resultado_material(
-        resultado, perfil_por_grupo, logs, material, idx,
-        logbook_dicts=logbook_dicts, parametros_usados=parametros_usados,
+        resultado,
+        perfil_por_grupo,
+        logs,
+        material,
+        idx,
+        logbook_dicts=logbook_dicts,
+        parametros_usados=parametros_usados,
     )
 
 
@@ -733,8 +737,13 @@ def _executar_ga_material_subprocesso(args: tuple) -> dict:
     logs_completos = logs_locais + logs
 
     return _serializar_resultado_material(
-        resultado, perfil_por_grupo, logs_completos, material, idx,
-        logbook_dicts=logbook_dicts, parametros_usados=parametros_usados,
+        resultado,
+        perfil_por_grupo,
+        logs_completos,
+        material,
+        idx,
+        logbook_dicts=logbook_dicts,
+        parametros_usados=parametros_usados,
     )
 
 

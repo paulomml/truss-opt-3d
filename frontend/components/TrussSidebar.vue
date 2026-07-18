@@ -376,7 +376,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Carga Permanente G (kgf)
               <InfoTooltip
-                  text="Peso próprio dos elementos construtivos sobre a treliça: telhas, terças, forro, instalações.\nValor típico: 1.000–3.000 kgf por nó do banzo superior.\nQuanto maior G, mais robustos precisam ser os perfis selecionados."
+                text="Peso próprio dos elementos construtivos sobre a treliça: telhas, terças, forro, instalações.\nValor típico: 1.000–3.000 kgf por nó do banzo superior.\nQuanto maior G, mais robustos precisam ser os perfis selecionados."
               />
             </label>
             <input
@@ -393,7 +393,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Sobrecarga Q (kgf)
               <InfoTooltip
-                  text="Carga variável por uso (NBR 6120): pessoas, móveis, equipamentos.\nPara coberturas sem acesso: mínimo 25 kgf/m² de projeção horizontal.\nPara áreas de acesso público: 200–500 kgf/m²."
+                text="Carga variável por uso (NBR 6120): pessoas, móveis, equipamentos.\nPara coberturas sem acesso: mínimo 25 kgf/m² de projeção horizontal.\nPara áreas de acesso público: 200–500 kgf/m²."
               />
             </label>
             <input
@@ -410,7 +410,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Lâmina d'Água (mm)
               <InfoTooltip
-                  text="Altura da lâmina de água acumulada na cobertura, simulando chuva intensa.\nValores típicos: 50–150 mm para coberturas comuns.\nConsulte a NBR 6120 item 6.3 para valores mínimos normativos."
+                text="Altura da lâmina de água acumulada na cobertura, simulando chuva intensa.\nValores típicos: 50–150 mm para coberturas comuns.\nConsulte a NBR 6120 item 6.3 para valores mínimos normativos."
               />
             </label>
             <input
@@ -572,7 +572,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Tipo de Solo
               <InfoTooltip
-                  text="Classificação do solo de apoio.\nDetermina o coeficiente de reação do subleito (ks) nos apoios elásticos (Modelo de Winkler).\nSolos moles geram maiores recalques.\nEscolha 'Customizado' para definir ks manualmente."
+                text="Classificação do solo de apoio.\nDetermina o coeficiente de reação do subleito (ks) nos apoios elásticos (Modelo de Winkler).\nSolos moles geram maiores recalques.\nEscolha 'Customizado' para definir ks manualmente."
               />
             </label>
             <select
@@ -596,7 +596,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               ks (kN/m³)
               <InfoTooltip
-                  text="Coeficiente de reação do subleito (kN/m³).\nSó usado quando Tipo de Solo = Customizado.\nValores típicos: areia fofa ≈ 8.000, argila rija ≈ 40.000, rocha ≈ 100.000."
+                text="Coeficiente de reação do subleito (kN/m³).\nSó usado quando Tipo de Solo = Customizado.\nValores típicos: areia fofa ≈ 8.000, argila rija ≈ 40.000, rocha ≈ 100.000."
               />
             </label>
             <input
@@ -652,7 +652,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Modo de Desempenho
               <InfoTooltip
-                  text="Controla a velocidade × qualidade da otimização.\n• Rápido: 5 gerações (testes rápidos)\n• Normal: 25 gerações (padrão)\n• Preciso: 50 gerações (máxima qualidade)\n• Customizado: você define os parâmetros manualmente"
+                text="Controla a velocidade × qualidade da otimização.\n• Rápido: 5 gerações (testes rápidos)\n• Normal: 25 gerações (padrão)\n• Preciso: 50 gerações (máxima qualidade)\n• Customizado: você define os parâmetros manualmente"
               />
             </label>
             <select

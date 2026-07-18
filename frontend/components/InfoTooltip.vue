@@ -25,7 +25,9 @@ function toggle() {
   visible.value = !visible.value;
   if (visible.value) {
     if (isMobile.value) {
-      setTimeout(() => { visible.value = false; }, 5000);
+      setTimeout(() => {
+        visible.value = false;
+      }, 5000);
     }
     nextTick(() => atualizarPosicao());
   }

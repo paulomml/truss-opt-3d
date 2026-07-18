@@ -58,7 +58,9 @@ if "DejaVuSans" in _DEJAVU_FONTS:
         normal="DejaVuSans",
         bold="DejaVuSans-Bold" if "DejaVuSans-Bold" in _DEJAVU_FONTS else "DejaVuSans",
         italic="DejaVuSans-Oblique" if "DejaVuSans-Oblique" in _DEJAVU_FONTS else "DejaVuSans",
-        boldItalic="DejaVuSans-BoldOblique" if "DejaVuSans-BoldOblique" in _DEJAVU_FONTS else "DejaVuSans",
+        boldItalic="DejaVuSans-BoldOblique"
+        if "DejaVuSans-BoldOblique" in _DEJAVU_FONTS
+        else "DejaVuSans",
     )
 
 
@@ -225,15 +227,17 @@ def gerar_memorial_pdf(
     ]
     tabela_combo = Table(dados_combo, colWidths=[5 * cm, 11 * cm])
     tabela_combo.setStyle(
-        TableStyle([
-            ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F4F6")]),
-        ])
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F4F6")]),
+            ]
+        )
     )
     elementos.append(tabela_combo)
 
@@ -249,8 +253,26 @@ def gerar_memorial_pdf(
     )
     elementos.append(Spacer(1, 3 * mm))
 
-    dados_barras = [["ID", "Grupo", "Perfil", "Nó i", "Nó j", "N (kN)", "M (kN·m)",
-                     "N_rd (kN)", "M_rd (kN·m)", "Tipo", "U", "χ", "Q", "λ₀", "λ", "Status"]]
+    dados_barras = [
+        [
+            "ID",
+            "Grupo",
+            "Perfil",
+            "Nó i",
+            "Nó j",
+            "N (kN)",
+            "M (kN·m)",
+            "N_rd (kN)",
+            "M_rd (kN·m)",
+            "Tipo",
+            "U",
+            "χ",
+            "Q",
+            "λ₀",
+            "λ",
+            "Status",
+        ]
+    ]
     for b in resposta.members:
         status = "OK" if b.utilization <= 1.0 else "VIOLADO"
         tipo = b.stress_type[:4]  # "Traç" ou "Comp"
@@ -342,17 +364,30 @@ def gerar_memorial_pdf(
                     _formatar_numero(n.deslocamento_z * 1000, 2),
                 ]
             )
-        tabela_nos = Table(dados_nos, colWidths=[1.5 * cm, 1.5 * cm, 1.5 * cm, 1.5 * cm,
-                                                  1.5 * cm, 1.5 * cm, 1.5 * cm, 1.5 * cm])
+        tabela_nos = Table(
+            dados_nos,
+            colWidths=[
+                1.5 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                1.5 * cm,
+            ],
+        )
         tabela_nos.setStyle(
-            TableStyle([
-                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ])
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ]
+            )
         )
         elementos.append(tabela_nos)
 
@@ -360,29 +395,34 @@ def gerar_memorial_pdf(
     elementos.append(Paragraph("6. Equações NBR 8800:2008 Aplicadas", estilo_h2))
     dados_eq = [
         ["Item", "Equação / Descrição"],
-        ["5.3.3.1 — χ (flambagem global)",
-         "χ = 0,658^λ₀² para λ₀ ≤ 1,5; χ = 0,877/λ₀² para λ₀ > 1,5"],
-        ["5.3.3.2 — λ₀ (esbeltez reduzido)",
-         "λ₀ = √(A·Q·f_y / N_e)"],
+        [
+            "5.3.3.1 — χ (flambagem global)",
+            "χ = 0,658^λ₀² para λ₀ ≤ 1,5; χ = 0,877/λ₀² para λ₀ > 1,5",
+        ],
+        ["5.3.3.2 — λ₀ (esbeltez reduzido)", "λ₀ = √(A·Q·f_y / N_e)"],
         ["5.3.4.1 — Esbeltez máxima (compressão)", "λ ≤ 200"],
         ["5.2.8.1 — Esbeltez máxima (tração)", "λ ≤ 300"],
-        ["5.5.1.2 — Interação N + M",
-         "N/N_rd ≥ 0,2: N/N_rd + 8/9·(M_sd/M_rd) ≤ 1,0\n"
-         "N/N_rd < 0,2: N/(2·N_rd) + M_sd/M_rd ≤ 1,0"],
+        [
+            "5.5.1.2 — Interação N + M",
+            "N/N_rd ≥ 0,2: N/N_rd + 8/9·(M_sd/M_rd) ≤ 1,0\n"
+            "N/N_rd < 0,2: N/(2·N_rd) + M_sd/M_rd ≤ 1,0",
+        ],
         ["Anexo F — Fator Q (flambagem local)", "Largura efetiva para b/t > λ_r"],
         ["Tabela 4 — γ_a1 (ELU normal)", "γ_a1 = 1,10"],
     ]
     tabela_eq = Table(dados_eq, colWidths=[6 * cm, 10 * cm])
     tabela_eq.setStyle(
-        TableStyle([
-            ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F4F6")]),
-        ])
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F4F6")]),
+            ]
+        )
     )
     elementos.append(tabela_eq)
 
@@ -391,11 +431,11 @@ def gerar_memorial_pdf(
         elementos.append(Paragraph("7. Cargas de Vento (NBR 6123:1988)", estilo_h2))
         pv = requisicao.parametros_vento
         vk = pv.v0_mps * pv.s1 * pv.s2 * pv.s3
-        q = 0.613 * vk ** 2
-        dados_vento = getattr(resposta, 'vento', {}) or {}
-        ca_arrasto = dados_vento.get('ca_arrasto', 1.3)
-        area_frontal = dados_vento.get('area_frontal_m2', 0.0)
-        forca_arrasto = dados_vento.get('forca_arrasto_total_N', 0)
+        q = 0.613 * vk**2
+        dados_vento = getattr(resposta, "vento", {}) or {}
+        ca_arrasto = dados_vento.get("ca_arrasto", 1.3)
+        area_frontal = dados_vento.get("area_frontal_m2", 0.0)
+        forca_arrasto = dados_vento.get("forca_arrasto_total_N", 0)
         dados_v = [
             ["Parâmetro", "Valor", "Unidade"],
             ["Velocidade básica (V₀)", _formatar_numero(pv.v0_mps), "m/s"],
@@ -413,69 +453,89 @@ def gerar_memorial_pdf(
             dados_v.append(["Força de arrasto total", _formatar_numero(forca_arrasto, 1), "N"])
         tabela_v = Table(dados_v, colWidths=[6 * cm, 5 * cm, 5 * cm])
         tabela_v.setStyle(
-            TableStyle([
-                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F4F6")]),
-            ])
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.white, colors.HexColor("#F3F4F6")],
+                    ),
+                ]
+            )
         )
         elementos.append(tabela_v)
 
     # 8. Fundação e Interação Solo-Estrutura (NBR 6122).
-    fund = getattr(resposta, 'fundacao', {}) or {}
+    fund = getattr(resposta, "fundacao", {}) or {}
     elementos.append(Paragraph("8. Fundação e Interação Solo-Estrutura (NBR 6122)", estilo_h2))
-    if fund and fund.get('usar_ise'):
+    if fund and fund.get("usar_ise"):
         dados_f = [
             ["Parâmetro", "Valor", "Unidade"],
-            ["Tipo de solo", fund.get('solo_tipo', 'N/A'), "—"],
-            ["Coeficiente ks₁ (placa 0,30 m)", _formatar_numero(fund.get('ks1_kN_m3', 0)), "kN/m³"],
-            ["ks ajustado pela sapata", _formatar_numero(fund.get('ks_kN_m3', 0)), "kN/m³"],
-            ["Sapata (B × L)", f"{_formatar_numero(fund.get('footing_b_m', 0))} × {_formatar_numero(fund.get('footing_l_m', 0))}", "m"],
-            ["Inércia I_x", _formatar_numero(fund.get('I_x_m4', 0), 6), "m⁴"],
-            ["Inércia I_z", _formatar_numero(fund.get('I_z_m4', 0), 6), "m⁴"],
-            ["Mola vertical K_y", _formatar_numero(fund.get('K_y_N_m', 0)), "N/m"],
-            ["Mola rotacional K_θx", _formatar_numero(fund.get('K_theta_x_Nm_rad', 0)), "N·m/rad"],
-            ["Mola rotacional K_θz", _formatar_numero(fund.get('K_theta_z_Nm_rad', 0)), "N·m/rad"],
+            ["Tipo de solo", fund.get("solo_tipo", "N/A"), "—"],
+            ["Coeficiente ks₁ (placa 0,30 m)", _formatar_numero(fund.get("ks1_kN_m3", 0)), "kN/m³"],
+            ["ks ajustado pela sapata", _formatar_numero(fund.get("ks_kN_m3", 0)), "kN/m³"],
+            [
+                "Sapata (B × L)",
+                f"{_formatar_numero(fund.get('footing_b_m', 0))} × {_formatar_numero(fund.get('footing_l_m', 0))}",
+                "m",
+            ],
+            ["Inércia I_x", _formatar_numero(fund.get("I_x_m4", 0), 6), "m⁴"],
+            ["Inércia I_z", _formatar_numero(fund.get("I_z_m4", 0), 6), "m⁴"],
+            ["Mola vertical K_y", _formatar_numero(fund.get("K_y_N_m", 0)), "N/m"],
+            ["Mola rotacional K_θx", _formatar_numero(fund.get("K_theta_x_Nm_rad", 0)), "N·m/rad"],
+            ["Mola rotacional K_θz", _formatar_numero(fund.get("K_theta_z_Nm_rad", 0)), "N·m/rad"],
         ]
         tabela_f = Table(dados_f, colWidths=[6 * cm, 5 * cm, 5 * cm])
         tabela_f.setStyle(
-            TableStyle([
-                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F4F6")]),
-            ])
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.white, colors.HexColor("#F3F4F6")],
+                    ),
+                ]
+            )
         )
         elementos.append(tabela_f)
     else:
         dados_f = [
             ["Parâmetro", "Valor", "Unidade"],
-            ["Tipo de solo", fund.get('solo_tipo', 'N/A') if fund else "—", "—"],
+            ["Tipo de solo", fund.get("solo_tipo", "N/A") if fund else "—", "—"],
             ["ISE aplicada", "Não (solo rígido)", "—"],
             ["Condição dos apoios", "Indeslocáveis verticalmente", "—"],
         ]
         tabela_f = Table(dados_f, colWidths=[6 * cm, 5 * cm, 5 * cm])
         tabela_f.setStyle(
-            TableStyle([
-                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ])
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTSIZE", (0, 0), (-1, -1), 8),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ]
+            )
         )
         elementos.append(tabela_f)
 
     # 9. Metodologia de Otimização (GA).
-    ga_params = getattr(resposta, 'ga_parametros', {}) or {}
+    ga_params = getattr(resposta, "ga_parametros", {}) or {}
     if ga_params:
         elementos.append(Paragraph("9. Metodologia de Otimização (GA)", estilo_h2))
         elementos.append(Spacer(1, 2 * mm))
@@ -490,47 +550,64 @@ def gerar_memorial_pdf(
             ["Mutação (mutpb)", _formatar_numero(ga_params.get("probabilidade_mutacao", 0), 2)],
             ["Seleção (torneio)", str(ga_params.get("indice_torneio", "—"))],
             ["Refinamento local", "Sim" if ga_params.get("usar_refinamento_local") else "Não"],
-            ["Penalidade diversidade", "Sim" if ga_params.get("usar_penalidade_diversidade") else "Não"],
-            ["Perfis distintos máx.", str(ga_params.get("max_perfis_distintos_sem_penalidade", "—"))],
+            [
+                "Penalidade diversidade",
+                "Sim" if ga_params.get("usar_penalidade_diversidade") else "Não",
+            ],
+            [
+                "Perfis distintos máx.",
+                str(ga_params.get("max_perfis_distintos_sem_penalidade", "—")),
+            ],
             ["Paralelismo interno", "Sim" if ga_params.get("paralelismo_interno") else "Não"],
             ["Semente", str(ga_params.get("semente", "—"))],
         ]
         tabela_ga = Table(dados_ga, colWidths=[6 * cm, 10 * cm])
         tabela_ga.setStyle(
-            TableStyle([
-                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F4F6")]),
-            ])
-        )
-        elementos.append(tabela_ga)
-        # Tabela de convergência (logbook)
-        logbook = getattr(resposta, 'ga_logbook', []) or []
-        if logbook:
-            elementos.append(Spacer(1, 3 * mm))
-            elementos.append(Paragraph("<b>Histórico de convergência:</b>", estilo_normal))
-            dados_conv = [["Geração", "Avaliações", "Fitness min (R$)", "Fitness avg (R$)"]]
-            for rec in logbook[:15]:  # Limita às primeiras 15 gerações no PDF
-                dados_conv.append([
-                    str(rec.get("gen", "—")),
-                    str(rec.get("nevals", "—")),
-                    _formatar_numero(rec.get("min", 0), 2) if rec.get("min") else "—",
-                    _formatar_numero(rec.get("avg", 0), 2) if rec.get("avg") else "—",
-                ])
-            tabela_conv = Table(dados_conv, colWidths=[2.5 * cm, 3 * cm, 5 * cm, 5.5 * cm])
-            tabela_conv.setStyle(
-                TableStyle([
+            TableStyle(
+                [
                     ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                     ("FONTSIZE", (0, 0), (-1, -1), 8),
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ])
+                    (
+                        "ROWBACKGROUNDS",
+                        (0, 1),
+                        (-1, -1),
+                        [colors.white, colors.HexColor("#F3F4F6")],
+                    ),
+                ]
+            )
+        )
+        elementos.append(tabela_ga)
+        # Tabela de convergência (logbook)
+        logbook = getattr(resposta, "ga_logbook", []) or []
+        if logbook:
+            elementos.append(Spacer(1, 3 * mm))
+            elementos.append(Paragraph("<b>Histórico de convergência:</b>", estilo_normal))
+            dados_conv = [["Geração", "Avaliações", "Fitness min (R$)", "Fitness avg (R$)"]]
+            for rec in logbook[:15]:  # Limita às primeiras 15 gerações no PDF
+                dados_conv.append(
+                    [
+                        str(rec.get("gen", "—")),
+                        str(rec.get("nevals", "—")),
+                        _formatar_numero(rec.get("min", 0), 2) if rec.get("min") else "—",
+                        _formatar_numero(rec.get("avg", 0), 2) if rec.get("avg") else "—",
+                    ]
+                )
+            tabela_conv = Table(dados_conv, colWidths=[2.5 * cm, 3 * cm, 5 * cm, 5.5 * cm])
+            tabela_conv.setStyle(
+                TableStyle(
+                    [
+                        ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                        ("FONTSIZE", (0, 0), (-1, -1), 8),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ]
+                )
             )
             elementos.append(tabela_conv)
     else:
@@ -552,7 +629,7 @@ def gerar_memorial_pdf(
     peso_por_grupo: dict[str, float] = {}
     for b in resposta.members:
         grp = b.group or "Padrão"
-        peso_por_grupo[grp] = peso_por_grupo.get(grp, 0.0) + getattr(b, 'peso_kg', 0.0)
+        peso_por_grupo[grp] = peso_por_grupo.get(grp, 0.0) + getattr(b, "peso_kg", 0.0)
     peso_grupo_str = "\n".join(
         f"{g}: {_formatar_numero(p, 1)} kg" for g, p in sorted(peso_por_grupo.items())
     )
@@ -564,7 +641,10 @@ def gerar_memorial_pdf(
         ["Métrica", "Valor"],
         ["Número de barras", str(num_barras)],
         ["Número de nós", str(num_nos)],
-        ["Relação altura/vão (H/L)", _formatar_numero(requisicao.height / max(requisicao.length, 0.01), 3)],
+        [
+            "Relação altura/vão (H/L)",
+            _formatar_numero(requisicao.height / max(requisicao.length, 0.01), 3),
+        ],
         ["Peso total", f"{_formatar_numero(resposta.total_weight)} kg"],
         ["Custo estimado", f"R$ {_formatar_numero(resposta.total_cost)}"],
         ["Peso por grupo", peso_grupo_str],
@@ -574,8 +654,11 @@ def gerar_memorial_pdf(
         ["Utilização média", f"{_formatar_numero(uso_avg * 100, 1)}%"],
         ["Barras com U > 80%", str(quase_criticas)],
         ["Barras violadas (U > 1,0)", str(violadas)],
-        ["Flecha máxima", f"{_formatar_numero(resposta.max_deflection * 1000, 2)} mm "
-         f"(limite L/250 = {_formatar_numero(flecha_limite_mm, 2)} mm)"],
+        [
+            "Flecha máxima",
+            f"{_formatar_numero(resposta.max_deflection * 1000, 2)} mm "
+            f"(limite L/250 = {_formatar_numero(flecha_limite_mm, 2)} mm)",
+        ],
         ["ELS Flecha — atendido", "SIM" if flecha_atende else "NÃO"],
         ["Contra-flecha recomendada", f"{_formatar_numero(resposta.precamber * 1000, 2)} mm"],
         ["Perfis distintos", str(resposta.num_perfis_distintos)],
@@ -585,15 +668,17 @@ def gerar_memorial_pdf(
     ]
     tabela_res = Table(dados_res, colWidths=[6 * cm, 10 * cm])
     tabela_res.setStyle(
-        TableStyle([
-            ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F4F6")]),
-        ])
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F4F6")]),
+            ]
+        )
     )
     elementos.append(tabela_res)
 
@@ -601,37 +686,71 @@ def gerar_memorial_pdf(
     barras_criticas = sorted(resposta.members, key=lambda b: -b.utilization)[:5]
     if barras_criticas:
         elementos.append(Paragraph("11. Barras Mais Solicitadas", estilo_h2))
-        dados_bc = [["ID", "Grupo", "Perfil", "N_sd (kN)", "N_rd (kN)",
-                      "M_sd (kN·m)", "M_rd (kN·m)", "U", "χ", "Q", "λ₀", "λ", "Status"]]
+        dados_bc = [
+            [
+                "ID",
+                "Grupo",
+                "Perfil",
+                "N_sd (kN)",
+                "N_rd (kN)",
+                "M_sd (kN·m)",
+                "M_rd (kN·m)",
+                "U",
+                "χ",
+                "Q",
+                "λ₀",
+                "λ",
+                "Status",
+            ]
+        ]
         for b in barras_criticas:
             status = "OK" if b.utilization <= 1.0 else "VIOLADO"
-            dados_bc.append([
-                str(b.id),
-                b.group[:16],
-                b.profile[:16],
-                _formatar_numero(b.axial_force / 1000, 1),
-                _formatar_numero(b.n_rd / 1000, 1) if b.n_rd else "—",
-                _formatar_numero((abs(b.my) + abs(b.mz)) / 1000, 2),
-                _formatar_numero(b.m_rd / 1000, 2) if b.m_rd else "—",
-                _formatar_numero(b.utilization, 3),
-                _formatar_numero(b.fator_chi, 3),
-                _formatar_numero(b.fator_q, 3),
-                _formatar_numero(b.lambda_0, 2) if b.lambda_0 else "—",
-                _formatar_numero(b.esbeltez, 0),
-                status,
-            ])
-        tabela_bc = Table(dados_bc, colWidths=[1 * cm, 2 * cm, 2 * cm, 1.5 * cm, 1.5 * cm,
-                                               1.5 * cm, 1.5 * cm, 1 * cm, 1 * cm, 1 * cm,
-                                               1 * cm, 1 * cm, 1.2 * cm])
+            dados_bc.append(
+                [
+                    str(b.id),
+                    b.group[:16],
+                    b.profile[:16],
+                    _formatar_numero(b.axial_force / 1000, 1),
+                    _formatar_numero(b.n_rd / 1000, 1) if b.n_rd else "—",
+                    _formatar_numero((abs(b.my) + abs(b.mz)) / 1000, 2),
+                    _formatar_numero(b.m_rd / 1000, 2) if b.m_rd else "—",
+                    _formatar_numero(b.utilization, 3),
+                    _formatar_numero(b.fator_chi, 3),
+                    _formatar_numero(b.fator_q, 3),
+                    _formatar_numero(b.lambda_0, 2) if b.lambda_0 else "—",
+                    _formatar_numero(b.esbeltez, 0),
+                    status,
+                ]
+            )
+        tabela_bc = Table(
+            dados_bc,
+            colWidths=[
+                1 * cm,
+                2 * cm,
+                2 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                1 * cm,
+                1 * cm,
+                1 * cm,
+                1 * cm,
+                1 * cm,
+                1.2 * cm,
+            ],
+        )
         tabela_bc.setStyle(
-            TableStyle([
-                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTSIZE", (0, 0), (-1, -1), 7),
-                ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ])
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTSIZE", (0, 0), (-1, -1), 7),
+                    ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ]
+            )
         )
         elementos.append(tabela_bc)
         # Nota de verificação para a barra mais crítica
@@ -645,37 +764,63 @@ def gerar_memorial_pdf(
             )
 
     # 12. Perfis utilizados (Bill of Materials).
-    perfis_bom = getattr(resposta, 'perfis_usados', {}) or {}
+    perfis_bom = getattr(resposta, "perfis_usados", {}) or {}
     if perfis_bom:
         elementos.append(Paragraph("12. Perfis Utilizados (BOM)", estilo_h2))
         elementos.append(Spacer(1, 2 * mm))
-        dados_bom = [["Perfil", "Família", "h (mm)", "bf (mm)", "t (mm)", "Área (cm²)", "Ix (cm⁴)", "Uso recomendado"]]
+        dados_bom = [
+            [
+                "Perfil",
+                "Família",
+                "h (mm)",
+                "bf (mm)",
+                "t (mm)",
+                "Área (cm²)",
+                "Ix (cm⁴)",
+                "Uso recomendado",
+            ]
+        ]
         for nome, p in sorted(perfis_bom.items()):
-            dados_bom.append([
-                nome[:24],
-                p.get("familia", "")[:8],
-                _formatar_numero(p.get("h_mm", 0), 1),
-                _formatar_numero(p.get("bf_mm", 0), 1),
-                _formatar_numero(p.get("t_mm", 0), 1),
-                _formatar_numero(p.get("area_m2", 0) * 10000, 2),
-                _formatar_numero(p.get("ix_m4", 0) * 1e8, 1),
-                p.get("uso_recomendado", "")[:24],
-            ])
-        tabela_bom = Table(dados_bom, colWidths=[2.5 * cm, 1.5 * cm, 1.5 * cm, 1.5 * cm,
-                                                  1.2 * cm, 1.8 * cm, 1.8 * cm, 3.2 * cm])
+            dados_bom.append(
+                [
+                    nome[:24],
+                    p.get("familia", "")[:8],
+                    _formatar_numero(p.get("h_mm", 0), 1),
+                    _formatar_numero(p.get("bf_mm", 0), 1),
+                    _formatar_numero(p.get("t_mm", 0), 1),
+                    _formatar_numero(p.get("area_m2", 0) * 10000, 2),
+                    _formatar_numero(p.get("ix_m4", 0) * 1e8, 1),
+                    p.get("uso_recomendado", "")[:24],
+                ]
+            )
+        tabela_bom = Table(
+            dados_bom,
+            colWidths=[
+                2.5 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                1.2 * cm,
+                1.8 * cm,
+                1.8 * cm,
+                3.2 * cm,
+            ],
+        )
         tabela_bom.setStyle(
-            TableStyle([
-                ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTSIZE", (0, 0), (-1, -1), 7),
-                ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ])
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, -1), "DejaVuSans"),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTSIZE", (0, 0), (-1, -1), 7),
+                    ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ]
+            )
         )
         elementos.append(tabela_bom)
         # Material vencedor
-        mat_venc = getattr(resposta, 'material_vencedor', {}) or {}
+        mat_venc = getattr(resposta, "material_vencedor", {}) or {}
         if mat_venc.get("nome"):
             elementos.append(Spacer(1, 2 * mm))
             elementos.append(
@@ -781,8 +926,22 @@ def gerar_memorial_docx(
     tabela = doc.add_table(rows=1, cols=12)
     tabela.style = "Light Grid Accent 1"
     hdr = tabela.rows[0].cells
-    for i, titulo_col in enumerate(["ID", "Grupo", "Perfil", "N (kN)", "M (kN·m)",
-                                     "N_rd (kN)", "M_rd (kN·m)", "U", "χ", "Q", "λ", "Status"]):
+    for i, titulo_col in enumerate(
+        [
+            "ID",
+            "Grupo",
+            "Perfil",
+            "N (kN)",
+            "M (kN·m)",
+            "N_rd (kN)",
+            "M_rd (kN·m)",
+            "U",
+            "χ",
+            "Q",
+            "λ",
+            "Status",
+        ]
+    ):
         hdr[i].text = titulo_col
     for b in resposta.members:
         linha = tabela.add_row().cells
@@ -810,8 +969,9 @@ def gerar_memorial_docx(
         tabela = doc.add_table(rows=1, cols=8)
         tabela.style = "Light Grid Accent 1"
         hdr = tabela.rows[0].cells
-        for i, col in enumerate(["Nó", "x (m)", "y (m)", "z (m)", "Apoio",
-                                  "dx (mm)", "dy (mm)", "dz (mm)"]):
+        for i, col in enumerate(
+            ["Nó", "x (m)", "y (m)", "z (m)", "Apoio", "dx (mm)", "dy (mm)", "dz (mm)"]
+        ):
             hdr[i].text = col
         for n in nos_ordenados:
             linha = tabela.add_row().cells
@@ -836,7 +996,10 @@ def gerar_memorial_docx(
         ("5.3.3.2 — λ₀ (esbeltez reduzido)", "λ₀ = √(A·Q·fy / Ne)"),
         ("5.3.4.1 — Esbeltez (compressão)", "λ ≤ 200"),
         ("5.2.8.1 — Esbeltez (tração)", "λ ≤ 300"),
-        ("5.5.1.2 — Interação N+M", "N/N_rd ≥ 0,2: N/N_rd + 8/9·(M_sd/M_rd) ≤ 1,0; N/N_rd < 0,2: N/(2·N_rd) + M_sd/M_rd ≤ 1,0"),
+        (
+            "5.5.1.2 — Interação N+M",
+            "N/N_rd ≥ 0,2: N/N_rd + 8/9·(M_sd/M_rd) ≤ 1,0; N/N_rd < 0,2: N/(2·N_rd) + M_sd/M_rd ≤ 1,0",
+        ),
         ("Anexo F — Fator Q", "Largura efetiva para b/t > λ_r"),
         ("Tabela 4 — γₐ₁", "γₐ₁ = 1,10"),
     ]:
@@ -849,11 +1012,11 @@ def gerar_memorial_docx(
         doc.add_heading("7. Cargas de Vento (NBR 6123:1988)", level=1)
         pv = requisicao.parametros_vento
         vk = pv.v0_mps * pv.s1 * pv.s2 * pv.s3
-        q = 0.613 * vk ** 2
-        dados_vento = getattr(resposta, 'vento', {}) or {}
-        ca_arrasto = dados_vento.get('ca_arrasto', 1.3)
-        area_frontal = dados_vento.get('area_frontal_m2', 0.0)
-        forca_arrasto = dados_vento.get('forca_arrasto_total_N', 0)
+        q = 0.613 * vk**2
+        dados_vento = getattr(resposta, "vento", {}) or {}
+        ca_arrasto = dados_vento.get("ca_arrasto", 1.3)
+        area_frontal = dados_vento.get("area_frontal_m2", 0.0)
+        forca_arrasto = dados_vento.get("forca_arrasto_total_N", 0)
         tabela = doc.add_table(rows=1, cols=3)
         tabela.style = "Light Grid Accent 1"
         hdr = tabela.rows[0].cells
@@ -883,7 +1046,7 @@ def gerar_memorial_docx(
             linha[2].text = "N"
 
     # 8. Fundação e ISE.
-    fund = getattr(resposta, 'fundacao', {}) or {}
+    fund = getattr(resposta, "fundacao", {}) or {}
     doc.add_heading("8. Fundação e Interação Solo-Estrutura (NBR 6122)", level=1)
     tabela = doc.add_table(rows=1, cols=3)
     tabela.style = "Light Grid Accent 1"
@@ -891,12 +1054,16 @@ def gerar_memorial_docx(
     hdr[0].text = "Parâmetro"
     hdr[1].text = "Valor"
     hdr[2].text = "Unidade"
-    if fund and fund.get('usar_ise'):
+    if fund and fund.get("usar_ise"):
         for param, val, unid in [
-            ("Tipo de solo", fund.get('solo_tipo', 'N/A'), "—"),
+            ("Tipo de solo", fund.get("solo_tipo", "N/A"), "—"),
             ("ks₁ (placa 0,30 m)", f"{fund.get('ks1_kN_m3', 0):.0f}", "kN/m³"),
             ("ks ajustado", f"{fund.get('ks_kN_m3', 0):.0f}", "kN/m³"),
-            ("Sapata (B × L)", f"{fund.get('footing_b_m', 0):.2f} × {fund.get('footing_l_m', 0):.2f}", "m"),
+            (
+                "Sapata (B × L)",
+                f"{fund.get('footing_b_m', 0):.2f} × {fund.get('footing_l_m', 0):.2f}",
+                "m",
+            ),
             ("Ix", f"{fund.get('I_x_m4', 0):.6f}", "m⁴"),
             ("Iz", f"{fund.get('I_z_m4', 0):.6f}", "m⁴"),
             ("Mola vertical Ky", f"{fund.get('K_y_N_m', 0):.0f}", "N/m"),
@@ -909,7 +1076,7 @@ def gerar_memorial_docx(
             linha[2].text = unid
     else:
         for param, val, unid in [
-            ("Tipo de solo", fund.get('solo_tipo', 'N/A'), "—"),
+            ("Tipo de solo", fund.get("solo_tipo", "N/A"), "—"),
             ("ISE aplicada", "Não (solo rígido)", "—"),
             ("Condição dos apoios", "Indeslocáveis verticalmente", "—"),
         ]:
@@ -919,7 +1086,7 @@ def gerar_memorial_docx(
             linha[2].text = unid
 
     # 9. Metodologia de Otimização (GA).
-    ga_params = getattr(resposta, 'ga_parametros', {}) or {}
+    ga_params = getattr(resposta, "ga_parametros", {}) or {}
     doc.add_heading("9. Metodologia de Otimização (GA)", level=1)
     if ga_params:
         tabela = doc.add_table(rows=1, cols=2)
@@ -942,11 +1109,9 @@ def gerar_memorial_docx(
             linha = tabela.add_row().cells
             linha[0].text = param
             linha[1].text = val
-        logbook = getattr(resposta, 'ga_logbook', []) or []
+        logbook = getattr(resposta, "ga_logbook", []) or []
         if logbook:
-            doc.add_paragraph(
-                "\nHistórico de convergência (geração, avaliações, fitness min/avg):"
-            )
+            doc.add_paragraph("\nHistórico de convergência (geração, avaliações, fitness min/avg):")
             tabela = doc.add_table(rows=1, cols=4)
             tabela.style = "Light Grid Accent 1"
             hdr = tabela.rows[0].cells
@@ -956,8 +1121,8 @@ def gerar_memorial_docx(
                 linha = tabela.add_row().cells
                 linha[0].text = str(rec.get("gen", "—"))
                 linha[1].text = str(rec.get("nevals", "—"))
-                linha[2].text = f"{rec.get('min', 0):.2f}" if rec.get('min') else "—"
-                linha[3].text = f"{rec.get('avg', 0):.2f}" if rec.get('avg') else "—"
+                linha[2].text = f"{rec.get('min', 0):.2f}" if rec.get("min") else "—"
+                linha[3].text = f"{rec.get('avg', 0):.2f}" if rec.get("avg") else "—"
     else:
         doc.add_paragraph("Parâmetros do GA não disponíveis.")
 
@@ -975,7 +1140,7 @@ def gerar_memorial_docx(
     peso_por_grupo: dict[str, float] = {}
     for b in resposta.members:
         grp = b.group or "Padrão"
-        peso_por_grupo[grp] = peso_por_grupo.get(grp, 0.0) + getattr(b, 'peso_kg', 0.0)
+        peso_por_grupo[grp] = peso_por_grupo.get(grp, 0.0) + getattr(b, "peso_kg", 0.0)
     peso_grupo_str = "\n".join(f"{g}: {p:.1f} kg" for g, p in sorted(peso_por_grupo.items()))
 
     flecha_limite_mm = resposta.real_span / 250 * 1000
@@ -999,7 +1164,10 @@ def gerar_memorial_docx(
         ("Utilização média", f"{uso_avg * 100:.1f}%"),
         ("Barras com U > 80%", str(quase_criticas)),
         ("Barras violadas (U > 1,0)", str(violadas)),
-        ("Flecha máxima", f"{resposta.max_deflection * 1000:.2f} mm (limite L/250 = {flecha_limite_mm:.2f} mm)"),
+        (
+            "Flecha máxima",
+            f"{resposta.max_deflection * 1000:.2f} mm (limite L/250 = {flecha_limite_mm:.2f} mm)",
+        ),
         ("ELS Flecha — atendido", "SIM" if flecha_atende else "NÃO"),
         ("Contra-flecha", f"{resposta.precamber * 1000:.2f} mm"),
         ("Perfis distintos", str(resposta.num_perfis_distintos)),
@@ -1018,8 +1186,23 @@ def gerar_memorial_docx(
         tabela = doc.add_table(rows=1, cols=13)
         tabela.style = "Light Grid Accent 1"
         hdr = tabela.rows[0].cells
-        for i, col in enumerate(["ID", "Grupo", "Perfil", "N_sd (kN)", "N_rd (kN)",
-                                 "M_sd (kN·m)", "M_rd (kN·m)", "U", "χ", "Q", "λ₀", "λ", "Status"]):
+        for i, col in enumerate(
+            [
+                "ID",
+                "Grupo",
+                "Perfil",
+                "N_sd (kN)",
+                "N_rd (kN)",
+                "M_sd (kN·m)",
+                "M_rd (kN·m)",
+                "U",
+                "χ",
+                "Q",
+                "λ₀",
+                "λ",
+                "Status",
+            ]
+        ):
             hdr[i].text = col
         for b in barras_criticas:
             linha = tabela.add_row().cells
@@ -1039,18 +1222,18 @@ def gerar_memorial_docx(
         # Nota de verificação para a barra mais crítica
         pior = barras_criticas[0]
         if pior.detalhes:
-            doc.add_paragraph(
-                f"Detalhes da verificação da barra {pior.id}: {pior.detalhes}"
-            )
+            doc.add_paragraph(f"Detalhes da verificação da barra {pior.id}: {pior.detalhes}")
 
     # 12. Perfis Utilizados (BOM).
-    perfis_bom = getattr(resposta, 'perfis_usados', {}) or {}
+    perfis_bom = getattr(resposta, "perfis_usados", {}) or {}
     if perfis_bom:
         doc.add_heading("12. Perfis Utilizados (BOM)", level=1)
         tabela = doc.add_table(rows=1, cols=7)
         tabela.style = "Light Grid Accent 1"
         hdr = tabela.rows[0].cells
-        for i, col in enumerate(["Perfil", "Família", "h (mm)", "bf (mm)", "t (mm)", "Área (cm²)", "Ix (cm⁴)"]):
+        for i, col in enumerate(
+            ["Perfil", "Família", "h (mm)", "bf (mm)", "t (mm)", "Área (cm²)", "Ix (cm⁴)"]
+        ):
             hdr[i].text = col
         for nome, p in sorted(perfis_bom.items()):
             linha = tabela.add_row().cells
@@ -1061,9 +1244,11 @@ def gerar_memorial_docx(
             linha[4].text = f"{p.get('t_mm', 0):.1f}"
             linha[5].text = f"{p.get('area_m2', 0) * 10000:.2f}"
             linha[6].text = f"{p.get('ix_m4', 0) * 1e8:.1f}"
-        mat_venc = getattr(resposta, 'material_vencedor', {}) or {}
+        mat_venc = getattr(resposta, "material_vencedor", {}) or {}
         if mat_venc.get("nome"):
-            doc.add_paragraph(f"Material vencedor: {mat_venc.get('nome')} — custo: R$ {mat_venc.get('custo_kg', 0):.2f}/kg.")
+            doc.add_paragraph(
+                f"Material vencedor: {mat_venc.get('nome')} — custo: R$ {mat_venc.get('custo_kg', 0):.2f}/kg."
+            )
 
     # Serializa para bytes.
     buffer = io.BytesIO()

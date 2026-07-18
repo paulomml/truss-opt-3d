@@ -71,7 +71,9 @@ const baixarMemorial = (formato: 'pdf' | 'docx') => {
       v-if="trussResult && !(isMobile && store.showMobileMenu)"
       class="fixed bottom-0 right-0 z-40 w-full lg:left-80 lg:w-auto"
     >
-      <div class="relative bg-gray-800/95 backdrop-blur-md border-t border-gray-700 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.3)]">
+      <div
+        class="relative bg-gray-800/95 backdrop-blur-md border-t border-gray-700 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.3)]"
+      >
         <!-- Legenda de cores (acima do footer, move junto com ele) -->
         <div
           v-if="trussResult"
@@ -97,7 +99,9 @@ const baixarMemorial = (formato: 'pdf' | 'docx') => {
         >
           <div class="text-xs text-gray-400 font-bold uppercase tracking-wider">
             Resumo da Análise
-            <span v-if="trussResult.is_structurally_stable" class="ml-2 text-green-400">✓ Estável</span>
+            <span v-if="trussResult.is_structurally_stable" class="ml-2 text-green-400"
+              >✓ Estável</span
+            >
             <span v-else class="ml-2 text-red-400">✗ Instável</span>
           </div>
           <div class="flex items-center gap-2">
@@ -112,9 +116,7 @@ const baixarMemorial = (formato: 'pdf' | 'docx') => {
         </div>
 
         <!-- Conteúdo colapsável com toggle via CSS puro -->
-        <div
-          :class="['summary-cards', isExpanded ? 'expanded' : 'collapsed']"
-        >
+        <div :class="['summary-cards', isExpanded ? 'expanded' : 'collapsed']">
           <div class="px-4 pb-2 space-y-3">
             <!-- Primeira fileira: principais indicadores -->
             <div class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
