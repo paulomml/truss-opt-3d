@@ -78,12 +78,6 @@ export interface RequisicaoOtimizacao {
   ag_indice_torneio?: number | null;
   // Máximo de perfis distintos sem penalidade.
   ag_max_perfis_distintos?: number | null;
-  // Paralelismo entre materiais (legado, não usado mais).
-  n_parallel?: number | null;
-  // Modo rápido: pula combos de manutenção (1 kN/nó) durante o GA.
-  modo_rapido?: boolean | null;
-  // Paralelismo interno: avalia indivíduos em paralelo via multiprocessing.
-  usar_paralelismo?: boolean | null;
   // Semente aleatória para reprodutibilidade (0 = aleatório, fixo = resultados idênticos).
   ag_semente?: number | null;
   // Tipo de estrutura/topologia (pratt_roof, howe_roof, etc.).

@@ -133,14 +133,11 @@ def otimizar_trelice(self, tarefa_id: int, payload: dict) -> dict:
         nos_banzo_superior = [nid for nid, n in nos.items() if abs(n.y - y_max) < 0.05]
         nos_fachada = [nid for nid, n in nos.items() if abs(n.y - 0.0) < 0.05]
 
-        # Paralelismo: min(len(materiais), cpu_count, n_parallel do payload).
-        n_parallel_solicitado = int(payload.get("n_parallel") or 1)
-        n_parallel_solicitado = max(1, n_parallel_solicitado)
-        cpu_count = os.cpu_count() or 1
-        n_parallel = max(1, min(n_parallel_solicitado, len(materiais_fisicos), cpu_count))
+        # Processamento sequencial de materiais (um por vez).
+        n_parallel = 1
         _logger.info(
-            f"Tarefa {tarefa_id}: n_parallel solicitado={n_parallel_solicitado}, "
-            f"efetivo={n_parallel} (materiais={len(materiais_fisicos)}, cpu={cpu_count})."
+            f"Tarefa {tarefa_id}: processamento sequencial "
+            f"(materiais={len(materiais_fisicos)})."
         )
 
         # Envia metadados dos materiais para o frontend sair do estado
@@ -612,8 +609,8 @@ def _executar_ga_material_inprocess(
         probabilidade_mutacao=payload.get("ag_probabilidade_mutacao"),
         indice_torneio=payload.get("ag_indice_torneio"),
         max_perfis_distintos=payload.get("ag_max_perfis_distintos"),
-        modo_rapido=payload.get("modo_rapido", True),
-        usar_paralelismo=payload.get("usar_paralelismo", True),
+        modo_rapido=True,
+        usar_paralelismo=True,
         semente=payload.get("ag_semente"),
     )
 
@@ -727,8 +724,8 @@ def _executar_ga_material_subprocesso(args: tuple) -> dict:
         probabilidade_mutacao=payload.get("ag_probabilidade_mutacao"),
         indice_torneio=payload.get("ag_indice_torneio"),
         max_perfis_distintos=payload.get("ag_max_perfis_distintos"),
-        modo_rapido=payload.get("modo_rapido", True),
-        usar_paralelismo=payload.get("usar_paralelismo", True),
+        modo_rapido=True,
+        usar_paralelismo=True,
         semente=payload.get("ag_semente"),
     )
 

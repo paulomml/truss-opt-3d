@@ -74,10 +74,6 @@ export const useTrussStore = defineStore('truss', () => {
     max_perfis_distintos: null as number | null,
   });
 
-  // Otimizações de performance (enviadas no payload ao backend).
-  const modoRapido = ref<boolean>(true);
-  const usarParalelismo = ref<boolean>(true);
-
   // Modo de desempenho do GA (frontend-only, não enviado ao backend).
   const modoDesempenho = ref<'rapido' | 'normal' | 'preciso' | 'customizado'>('normal');
 
@@ -111,6 +107,8 @@ export const useTrussStore = defineStore('truss', () => {
   const mainProgress = ref(0);
   const taskId = ref<string | null>(null);
   const showTimeoutWarning = ref(false);
+  const ultimoProgressoEm = ref(0);
+  let timeoutWatcher: ReturnType<typeof setInterval> | null = null;
 
   // Logs acumulados em texto (bruto, multi-linha, com prefixos [Material]).
   const logsTexto = ref('');
@@ -153,6 +151,12 @@ export const useTrussStore = defineStore('truss', () => {
     logsTexto.value = '';
     dadosProgresso.value = {};
     tempoInicio.value = 0;
+    ultimoProgressoEm.value = 0;
+    if (timeoutWatcher) {
+      clearInterval(timeoutWatcher);
+      timeoutWatcher = null;
+    }
+    showTimeoutWarning.value = false;
   };
 
   const handleCancel = async () => {
@@ -244,9 +248,6 @@ export const useTrussStore = defineStore('truss', () => {
         ag_probabilidade_mutacao: agAvancado.probabilidade_mutacao,
         ag_indice_torneio: agAvancado.indice_torneio,
         ag_max_perfis_distintos: agAvancado.max_perfis_distintos,
-        // Otimizações de performance.
-        modo_rapido: modoRapido.value,
-        usar_paralelismo: usarParalelismo.value,
         ag_semente: form.ag_semente || null,
       };
 
@@ -256,6 +257,13 @@ export const useTrussStore = defineStore('truss', () => {
       const wsUrl = `${protocol}//${host}/api/ws/otimizar`;
 
       ws.value = new WebSocket(wsUrl);
+
+      ultimoProgressoEm.value = Date.now();
+      timeoutWatcher = setInterval(() => {
+        if (ultimoProgressoEm.value > 0 && Date.now() - ultimoProgressoEm.value > 90000) {
+          showTimeoutWarning.value = true;
+        }
+      }, 5000);
 
       ws.value.onopen = () => {
         ws.value?.send(JSON.stringify(payload));
@@ -273,6 +281,7 @@ export const useTrussStore = defineStore('truss', () => {
           // o frontend exiba status e progresso mesmo antes de material_atual.
           dadosProgresso.value = { ...dadosProgresso.value, ...p };
           tempoInicio.value = tempoInicio.value || Date.now();
+          ultimoProgressoEm.value = Date.now();
         } else if (data.type === 'result') {
           const r = data.data;
           const validated: RespostaOtimizacao = {
@@ -477,8 +486,6 @@ export const useTrussStore = defineStore('truss', () => {
     parametrosVento,
     restricoes,
     agAvancado,
-    modoRapido,
-    usarParalelismo,
     result,
     rawTruss,
     loading,

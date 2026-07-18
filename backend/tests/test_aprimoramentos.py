@@ -7,7 +7,6 @@ Cobre:
 - /api/normas (referência de constantes NBR)
 - /api/tarefas (listagem de histórico)
 - /api/tarefas/{id}/cancelar via REST
-- Campo n_parallel no schema RequisicaoOtimizacao
 - Parâmetros avançados do GA no schema
 """
 
@@ -219,32 +218,7 @@ def test_cancelar_tarefa_inexistente_404(cliente, monkeypatch):
     assert r.status_code == 404
 
 
-# Campo n_parallel e parâmetros avançados do GA no schema
-
-
-def test_schema_aceita_n_parallel(cliente):
-    """POST /api/otimizar deve aceitar n_parallel no payload."""
-    payload = {
-        "length": 10.0,
-        "height": 2.0,
-        "width": 0.0,
-        "divisions": 4,
-        "n_parallel": 2,
-        "raw_truss": {
-            "nodes": {
-                "L0": {"id": "L0", "x": 0, "y": 0, "z": 0, "support": "Pinned"},
-                "L1": {"id": "L1", "x": 10, "y": 0, "z": 0, "support": "Roller"},
-                "U0": {"id": "U0", "x": 5, "y": 2, "z": 0, "support": "None"},
-            },
-            "members": [
-                {"id": 1, "node_start": "L0", "node_end": "U0", "group": "Diagonal"},
-                {"id": 2, "node_start": "L1", "node_end": "U0", "group": "Diagonal"},
-                {"id": 3, "node_start": "L0", "node_end": "L1", "group": "Banzo Inferior"},
-            ],
-        },
-    }
-    r = cliente.post("/api/otimizar", json=payload)
-    assert r.status_code == 202
+# Parâmetros avançados do GA no schema
 
 
 def test_schema_aceita_parametros_avancados_ga(cliente):
@@ -276,29 +250,6 @@ def test_schema_aceita_parametros_avancados_ga(cliente):
     }
     r = cliente.post("/api/otimizar", json=payload)
     assert r.status_code == 202
-
-
-def test_schema_rejeita_n_parallel_invalido(cliente):
-    """n_parallel=0 deve ser rejeitado pela validação Pydantic."""
-    payload = {
-        "length": 10.0,
-        "height": 2.0,
-        "width": 0.0,
-        "divisions": 4,
-        "n_parallel": 0,  # inválido: deve ser >= 1
-        "raw_truss": {
-            "nodes": {
-                "L0": {"id": "L0", "x": 0, "y": 0, "z": 0, "support": "Pinned"},
-                "L1": {"id": "L1", "x": 10, "y": 0, "z": 0, "support": "Roller"},
-                "U0": {"id": "U0", "x": 5, "y": 2, "z": 0, "support": "None"},
-            },
-            "members": [
-                {"id": 1, "node_start": "L0", "node_end": "U0", "group": "Diagonal"},
-            ],
-        },
-    }
-    r = cliente.post("/api/otimizar", json=payload)
-    assert r.status_code == 422  # Unprocessable Entity (validação falhou).
 
 
 # Rota Celery: padrão corrigido (não-glob)

@@ -242,13 +242,13 @@ function getStatusDotClass(name: string): string {
         </div>
       </div>
 
-      <!-- Aviso de timeout client-side (sem progresso por > 45s) -->
+      <!-- Aviso de timeout client-side (sem progresso por > 90s) -->
       <div
         v-if="store.showTimeoutWarning"
         class="w-full max-w-3xl bg-orange-900/30 border border-orange-700/50 rounded-lg px-4 py-2 mb-4 text-center text-xs"
       >
         <Icon name="lucide:alert-triangle" class="w-4 h-4 inline mr-1 text-orange-400" />
-        <span class="text-orange-300 font-bold">Sem progresso há algum tempo.</span>
+        <span class="text-orange-300 font-bold">Sem progresso há mais de 90 segundos.</span>
         <span class="text-orange-200 ml-1">
           Se o problema persistir, cancele e verifique o worker Celery.
         </span>

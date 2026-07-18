@@ -153,29 +153,6 @@ class RequisicaoOtimizacao(BaseModel):
         default=None, ge=1, le=50, description="Máximo de perfis distintos sem penalidade."
     )
 
-    # Paralelismo: quantas execuções do GA (uma por material) rodar em paralelo.
-    # Limite natural: min(len(materiais_disponiveis), cpu_count). Default = 1.
-    n_parallel: int | None = Field(
-        default=None,
-        ge=1,
-        le=64,
-        description="Número de materiais processados em paralelo (ProcessPoolExecutor).",
-    )
-
-    # Modo rápido: pula combos de manutenção (1 kN/nó) durante o GA.
-    # As verificações construtivas só são relevantes no resultado final.
-    modo_rapido: bool = Field(
-        default=True,
-        description="Ignorar combos de manutenção durante o GA (mais rápido, sem perda de precisão no resultado).",
-    )
-
-    # Paralelismo interno do GA: avalia indivíduos da população em paralelo
-    # via multiprocessing.Pool, aproveitando múltiplos núcleos da CPU.
-    usar_paralelismo: bool = Field(
-        default=True,
-        description="Paralelizar avaliação dos indivíduos do GA (multiprocessing). Acelera cada geração proporcionalmente ao número de núcleos.",
-    )
-
     # Semente aleatória para reprodutibilidade dos resultados.
     ag_semente: int | None = Field(
         default=None,
