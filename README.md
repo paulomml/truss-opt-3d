@@ -6,10 +6,7 @@
 >
 > **Disciplina:** Métodos Numéricos
 >
-> **Autores:** Paulo Raí Lopes de Melo
-> Manoel Valberto
-> Pedro Muniz
-> Mara Costa
+> **Autores:** Paulo Raí Lopes de Melo, Manoel Valberto, Pedro Muniz e Mara Costa
 >
 > **Professor:** Prof. Audelis Marcelo
 >
@@ -75,7 +72,7 @@ Os nós são submetidos a restrições que simulam os apoios físicos, permitind
 
 #### 2.1.1 Otimizações do Solver
 
-O solver MEF é implementado sobre o motor PyNiteFEA v3, com três otimizações principais para garantir desempenho em centenas de avaliações durante o GA:
+O solver MEF é implementado sobre o motor PyNiteFEA, com três otimizações principais para garantir desempenho em centenas de avaliações durante o GA:
 
 **Reuso do modelo MEF (ModeloBaseFEA):** A geometria da treliça (nós, conectividade, materiais, cargas externas e combinações) não muda entre avaliações de diferentes candidatos; apenas as seções transversais atribuídas a cada grupo de barras variam. O modelo PyNite é construído uma única vez no início do GA para cada material, e as avaliações subsequentes reutilizam a mesma instância, atualizando apenas as seções das barras e o peso próprio antes de re-analisar. Isso elimina a sobrecarga de recriação do modelo a cada chamada do solver.
 
@@ -211,7 +208,7 @@ Onde $W(\mathbf{x})$ é o peso total da estrutura em kg, $c_{kg}$ é o custo uni
 
 1. Violação normativa NBR 8800 (ELU): R$ 1.000.000 $\cdot (U - 1{,}0)$ para cada barra com $U > 1{,}0$.
 2. Violação de flecha (ELS): R$ 1.000.000 $\cdot$ (excesso) se flecha $> L/250$.
-3. Penalidade de padronização: R$ 5.000 $\cdot$ (excesso) se o número de perfis distintos exceder o limite configurado ($AG\_MAX\_PERFIS\_DISTINTOS$).
+3. Penalidade de padronização: R$ 5.000 $\cdot$ (excesso) se o número de perfis distintos exceder o limite configurado ($AG_{\text{MAX PERFIS DISTINTOS}}$).
 
 ```mermaid
 flowchart TD
@@ -294,6 +291,8 @@ flowchart TD
     style Fim fill:#efe,stroke:#0a0,color:#090
 ```
 
+#### 2.4.5 Fluxo Completo
+
 ```mermaid
 flowchart TD
     Start([Início]) --> Init[Gerar população inicial aleatória]
@@ -320,7 +319,7 @@ flowchart TD
 O `CanceladorOtimizacao` permite abortar a otimização via API entre gerações. O verificador de memória lança `LimiteMemoriaExcedido` se a RAM do container exceder o percentual configurado (padrão 85%).
 
 > [!WARNING]
-> Quando o GA é interrompido por limite de memória, todo o progresso daquela execução é perdido — não há checkpoint parcial. Ajuste `LIMITE_MEMORIA_PERCENTUAL` ou reduza o tamanho da população (`AG_POPULACAO_TAMANHO`) se encontrar travamentos frequentes.
+> Quando o GA é interrompido por limite de memória, todo o progresso daquela execução é perdido devido à ausência de um checkpoint parcial. Ajuste `LIMITE_MEMORIA_PERCENTUAL` ou reduza o tamanho da população (`AG_POPULACAO_TAMANHO`) se encontrar travamentos frequentes.
 
 #### 2.4.6 Avaliação Inicial e Elitismo Efetivo
 
