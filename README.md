@@ -1,39 +1,45 @@
 # TRUSS-OPT 3D: Sistema Computacional para Dimensionamento e Otimização Paramétrica de Treliças Espaciais
 
 > **Instituição:** Universidade Estadual Vale do Acaraú (UVA)
+>
 > **Curso:** Bacharelado em Engenharia Civil
+>
 > **Disciplina:** Métodos Numéricos
-> **Autor:** Paulo Raí Lopes de Melo
+>
+> **Autores:** Paulo Raí Lopes de Melo, Manoel Valberto, Pedro Muniz e Mara Costa
+>
 > **Professor:** Prof. Audelis Marcelo
+>
 > **Semestre:** 2026/01
 
 O TRUSS-OPT 3D (Truss Optimizer 3D, Otimizador de Treliças 3D) é um sistema computacional voltado à engenharia civil, focado no dimensionamento e na otimização paramétrica de treliças espaciais via Algoritmo Genético Memético, com verificação automática das normas brasileiras NBR 8800:2008 (estruturas de aço), NBR 6120:2019 (cargas em edificações) e NBR 6123:1988 (vento em edificações). O sistema foi desenvolvido para resolver um problema clássico de engenharia: encontrar o equilíbrio ideal entre a segurança estrutural e a viabilidade econômica, minimizando o custo total de fabricação por meio da seleção automatizada da seção transversal mais leve e mais barata que consiga resistir às cargas solicitantes, sem violar os limites normativos de resistência e estabilidade.
 
-> **Aviso legal:** Esta ferramenta é destinada a fins educacionais e de pré-dimensionamento. Projetos reais devem ser validados por engenheiro civil habilitado e seguem os textos originais das normas ABNT.
+> [!IMPORTANT]
+> Esta ferramenta é destinada a fins educacionais e de pré-dimensionamento. Projetos reais devem ser validados por engenheiro civil habilitado e seguem os textos originais das normas ABNT.
 
 ## Sumário
 
-- [1. Descrição Geral](#1-descricao-geral)
-- [2. Fundamentação Teórica e Modelagem Estrutural](#2-fundamentacao-teorica-e-modelagem-estrutural)
-  - [2.1 Método dos Elementos Finitos (MEF)](#21-metodo-dos-elementos-finitos-mef)
-    - [2.1.1 Otimizações do Solver](#211-otimizacoes-do-solver)
-  - [2.2 Verificações Normativas](#22-verificacoes-normativas)
-    - [2.2.1 NBR 8800:2008](#221-nbr-88002008-estruturas-de-aco)
-    - [2.2.2 NBR 6120:2019](#222-nbr-61202019-acoes-em-edificacoes)
-    - [2.2.3 NBR 6123:1988](#223-nbr-61231988-vento-em-edificacoes)
-  - [2.3 Interação Solo-Estrutura (ISE)](#23-interacao-solo-estrutura-ise)
-  - [2.4 Algoritmo Genético Memético](#24-algoritmo-genetico-memetico)
-- [3. Arquitetura do Sistema e Stack Tecnológico](#3-arquitetura-do-sistema-e-stack-tecnologico)
-- [4. Catálogo de Materiais e Perfis](#4-catalogo-de-materiais-e-perfis)
+- [1. Descrição Geral](#1-descrição-geral)
+- [2. Fundamentação Teórica e Modelagem Estrutural](#2-fundamentação-teórica-e-modelagem-estrutural)
+  - [2.1 Método dos Elementos Finitos (MEF)](#21-método-dos-elementos-finitos-mef)
+    - [2.1.1 Otimizações do Solver](#211-otimizações-do-solver)
+  - [2.2 Verificações Normativas](#22-verificações-normativas)
+    - [2.2.1 NBR 8800:2008 (Estruturas de Aço)](#221-nbr-88002008-estruturas-de-aço)
+    - [2.2.2 NBR 6120:2019 (Ações em Edificações)](#222-nbr-61202019-ações-em-edificações)
+    - [2.2.3 NBR 6123:1988 (Vento em Edificações)](#223-nbr-61231988-vento-em-edificações)
+  - [2.3 Interação Solo-Estrutura (ISE)](#23-interação-solo-estrutura-ise)
+  - [2.4 Algoritmo Genético Memético](#24-algoritmo-genético-memético)
+- [3. Arquitetura do Sistema e Stack Tecnológico](#3-arquitetura-do-sistema-e-stack-tecnológico)
+- [4. Catálogo de Materiais e Perfis](#4-catálogo-de-materiais-e-perfis)
 - [5. API REST](#5-api-rest)
 - [6. Frontend](#6-frontend)
-- [7. Memorial de Cálculo](#7-memorial-de-calculo)
-- [8. Cenários de Simulação e Validação](#8-cenarios-de-simulacao-e-validacao)
-- [9. Instalação e Execução](#9-instalacao-e-execucao)
-- [10. Variáveis de Ambiente](#10-variaveis-de-ambiente)
+- [7. Memorial de Cálculo](#7-memorial-de-cálculo)
+- [8. Cenários de Simulação e Validação](#8-cenários-de-simulação-e-validação)
+- [9. Instalação e Execução](#9-instalação-e-execução)
+- [10. Variáveis de Ambiente](#10-variáveis-de-ambiente)
 - [11. Testes](#11-testes)
-- [12. Licença](#12-licenca)
-- [13. Referências](#13-referencias)
+- [12. Licença](#12-licença)
+- [13. Referências](#13-referências)
 
 ## 1. Descrição Geral
 
@@ -66,15 +72,27 @@ Os nós são submetidos a restrições que simulam os apoios físicos, permitind
 
 #### 2.1.1 Otimizações do Solver
 
-O solver MEF é implementado sobre o motor PyNiteFEA v3, com três otimizações principais para garantir desempenho em centenas de avaliações durante o GA:
+O solver MEF é implementado sobre o motor PyNiteFEA, com três otimizações principais para garantir desempenho em centenas de avaliações durante o GA:
 
-**Reuso do modelo MEF (ModeloBaseFEA):** A geometria da treliça (nós, conectividade, materiais, cargas externas e combinações) não muda entre avaliações de diferentes candidatos — apenas as seções transversais atribuídas a cada grupo de barras variam. O modelo PyNite é construído uma única vez no início do GA para cada material, e as avaliações subsequentes reutilizam a mesma instância, atualizando apenas as seções das barras e o peso próprio antes de re-analisar. Isso elimina a sobrecarga de recriação do modelo a cada chamada do solver.
+**Reuso do modelo MEF (ModeloBaseFEA):** A geometria da treliça (nós, conectividade, materiais, cargas externas e combinações) não muda entre avaliações de diferentes candidatos; apenas as seções transversais atribuídas a cada grupo de barras variam. O modelo PyNite é construído uma única vez no início do GA para cada material, e as avaliações subsequentes reutilizam a mesma instância, atualizando apenas as seções das barras e o peso próprio antes de re-analisar. Isso elimina a sobrecarga de recriação do modelo a cada chamada do solver.
 
 **Montagem única da matriz de rigidez:** O PyNite oferece dois métodos de análise linear: `analyze()`, que remonta a matriz de rigidez global K para cada combinação de carga, e `analyze_linear()`, que a monta uma única vez e a reutiliza para todas as combinações. Como o modelo não utiliza elementos tension-only/compression-only nem análise P-Delta, os dois métodos são algebricamente equivalentes. O sistema emprega `analyze_linear()`, reduzindo o tempo de solução proporcionalmente ao número de combinações (8 combos no modo padrão, contra 28+ com verificações de manutenção).
 
 **Extração de esforços agrupada por combinação:** A extração de esforços axiais e momentos fletores é feita em um único loop por combinação de carga (em vez de três loops separados por direção), reduzindo o número de segmentações internas do PyNite por um fator de ~2,7×.
 
 **Paralelismo na avaliação da população:** O GA avalia os indivíduos de cada geração concorrentemente via `ThreadPoolExecutor`. Cada thread worker constrói sua própria instância do modelo MEF reutilizável (lazy init) e processa um indivíduo independentemente. O número de workers é limitado a `min(cpu_count(), tamanho_populacao, 4)` para evitar saturação de memória. O hill climbing (refinamento local) permanece sequencial por natureza iterativa.
+
+```mermaid
+flowchart TD
+    Inicio(["Avaliar indivíduo"]) --> Base[Reusar ModeloBaseFEA<br/>geometria + nós + cargas invariantes]
+    Base --> Atualizar[Atualizar seções das barras<br/>por grupo estrutural]
+    Atualizar --> Peso[Recalcular peso próprio<br/>comprimento × área × densidade]
+    Peso --> Analisar["analyze_linear()<br/>monta matriz K uma única vez<br/>para todas as combinações"]
+    Analisar --> Desloc[Extrair deslocamentos nodais<br/>flecha máxima ELS_Flecha_Total]
+    Desloc --> Esforcos[Extrair esforços agrupados<br/>axial + my + mz em único loop<br/>por combinação ELU]
+    Esforcos --> NBR[Verificar NBR 8800<br/>esbeltez → Q → χ → N_Rd → N+M<br/>por barra]
+    NBR --> Resultado["ResultadoAnalise<br/>(peso, flecha, utilização)"]
+```
 
 ### 2.2 Verificações Normativas
 
@@ -119,6 +137,26 @@ $$\frac{N_{Sd}}{N_{Rd}} + \frac{8}{9} \cdot \frac{M_{Sd}}{M_{Rd}} \leq 1{,}0 \qu
 $$\frac{N_{Sd}}{2 N_{Rd}} + \frac{M_{Sd}}{M_{Rd}} \leq 1{,}0 \quad \text{se } \frac{N_{Sd}}{N_{Rd}} < 0{,}2$$
 
 **Estado Limite de Serviço (ELS):** A flecha máxima é verificada em relação ao limite L/250 para combinações frequentes, conforme NBR 8800 Item 5.5.3.
+
+```mermaid
+flowchart TD
+    Barra["Barra + Perfil + Material"] --> Esbeltez{"Esbeltez λ"}
+    Esbeltez -->|"Compressão > 200"| FalhaEsbC["U = 999<br/>NBR 8800 5.3.4.1"]
+    Esbeltez -->|"Tração > 300"| FalhaEsbT["U = 999<br/>NBR 8800 5.2.8.1"]
+    Esbeltez -->|OK| Q["Calcular fator Q<br/>Flambagem local<br/>Anexo F"]
+    Q --> Chi["Calcular fator χ<br/>λ₀ = √(Q·A·fy/Ne)<br/>Flambagem global 5.3.3"]
+    Chi --> NRd["N_Rd axial<br/>Comp.: χ·Q·A·fy/γa1<br/>Tração: A·fy/γa1"]
+    NRd --> MRd["M_Rd flexão<br/>W·fy/γa1<br/>regime elástico"]
+    MRd --> NM{"Interação N+M<br/>5.5.1.2"}
+    NM -->|"N/N_Rd ≥ 0,2"| EqA["U = N/N_Rd + 8/9 · M/M_Rd"]
+    NM -->|"N/N_Rd < 0,2"| EqB["U = N/(2·N_Rd) + M/M_Rd"]
+    EqA --> U["Taxa U"]
+    EqB --> U
+
+    style FalhaEsbC fill:#f66,stroke:#c00,color:#fff
+    style FalhaEsbT fill:#f66,stroke:#c00,color:#fff
+    style U fill:#efe,stroke:#0a0
+```
 
 #### 2.2.2 NBR 6120:2019 (Ações em Edificações)
 
@@ -170,7 +208,26 @@ Onde $W(\mathbf{x})$ é o peso total da estrutura em kg, $c_{kg}$ é o custo uni
 
 1. Violação normativa NBR 8800 (ELU): R$ 1.000.000 $\cdot (U - 1{,}0)$ para cada barra com $U > 1{,}0$.
 2. Violação de flecha (ELS): R$ 1.000.000 $\cdot$ (excesso) se flecha $> L/250$.
-3. Penalidade de padronização: R$ 5.000 $\cdot$ (excesso) se o número de perfis distintos exceder o limite configurado ($AG\_MAX\_PERFIS\_DISTINTOS$).
+3. Penalidade de padronização: R$ 5.000 $\cdot$ (excesso) se o número de perfis distintos exceder o limite configurado ($AG_{\text{MAX PERFIS DISTINTOS}}$).
+
+```mermaid
+flowchart TD
+    Peso["Peso total (kg) × Custo (R$/kg)"] --> Pen1{"Alguma barra<br/>com U > 1,0?"}
+    Pen1 -->|Sim| P1["+ R$ 1.000.000 × (U − 1,0)<br/>por barra violada<br/>(NBR 8800 ELU)"]
+    Pen1 -->|Não| Pen2{"Flecha máxima<br/>> L/250?"}
+    P1 --> Pen2
+    Pen2 -->|Sim| P2["+ R$ 1.000.000 × excesso<br/>(NBR 8800 ELS)"]
+    Pen2 -->|Não| Pen3{"Perfis distintos<br/>> AG_MAX_PERFIS?"}
+    P2 --> Pen3
+    Pen3 -->|Sim| P3["+ R$ 5.000 × (distintos − limite)<br/>(padronização)"]
+    Pen3 -->|Não| Fit["f(x) = Peso × Custo + Σ penalidades"]
+    P3 --> Fit
+
+    style P1 fill:#fee,stroke:#c00,color:#a00
+    style P2 fill:#fee,stroke:#c00,color:#a00
+    style P3 fill:#fee,stroke:#c00,color:#a00
+    style Fit fill:#efe,stroke:#0a0,color:#0a0
+```
 
 #### 2.4.3 Fase Genética (Exploração Global)
 
@@ -180,6 +237,19 @@ Onde $W(\mathbf{x})$ é o peso total da estrutura em kg, $c_{kg}$ é o custo uni
 | Crossover | 2 pontos (cxTwoPoint)                       | AG_PROBABILIDADE_CRUZAMENTO (0,7) |
 | Mutação   | Uniforme inteira (mutUniformInt, indpb=1/N) | AG_PROBABILIDADE_MUTACAO (0,2)    |
 | Elitismo  | Hall of Fame (top 1)                        | Sempre preserva o melhor          |
+
+```mermaid
+flowchart LR
+    Pop["População<br/>atual"] --> Sel["Seleção<br/>Torneio (k=3)"]
+    Sel --> Cross["Crossover<br/>2 pontos<br/>cxTwoPoint"]
+    Cross --> Mut["Mutação<br/>Uniforme inteira<br/>indpb = 1/N"]
+    Mut --> Eval["Avaliação<br/>FEA + NBR 8800<br/>+ penalidades"]
+    Eval --> Elite["Elitismo<br/>HoF + injeção<br/>do melhor"]
+    Elite --> Prox["Próxima<br/>geração"]
+
+    style Pop fill:#ddf,stroke:#44f,color:#009
+    style Prox fill:#ddf,stroke:#44f,color:#009
+```
 
 #### 2.4.4 Fase Memética (Refinamento Local)
 
@@ -201,6 +271,27 @@ Características do algoritmo memético:
 - Cache de avaliação: combinações de perfis já avaliadas na mesma execução são reutilizadas, evitando análises MEF redundantes.
 - Direção bidirecional: diferente do algoritmo guloso original (que só subia perfis), o hill climbing pode subir ou descer, escapando de superdimensionamentos.
 - Controlável via AG_USAR_REFINAMENTO_LOCAL (padrão true). Desative para usar GA puro.
+
+```mermaid
+flowchart TD
+    Inicio(["Indivíduo após<br/>fase genética"]) --> Loop{Para cada<br/>grupo}
+    Loop --> Leve{"Perfil mais leve<br/>índice −1?"}
+    Leve -->|"Melhorou"| Atualiza1["Atualiza gene<br/>(Lamarckiano)"]
+    Atualiza1 --> Reinicia1["Reinicia scan<br/>do primeiro grupo"]
+    Reinicia1 --> Loop
+    Leve -->|"Não"| Pesado{"Perfil mais pesado<br/>índice +1?"}
+    Pesado -->|"Melhorou"| Atualiza2["Atualiza gene<br/>(Lamarckiano)"]
+    Atualiza2 --> Reinicia2["Reinicia scan<br/>do primeiro grupo"]
+    Reinicia2 --> Loop
+    Pesado -->|"Não"| Prox[Próximo grupo]
+    Prox --> Loop
+    Loop -->|"Nenhuma troca<br/>melhorou"| Fim(["Ótimo local"])
+
+    style Inicio fill:#eef,stroke:#44f,color:#009
+    style Fim fill:#efe,stroke:#0a0,color:#090
+```
+
+#### 2.4.5 Fluxo Completo
 
 ```mermaid
 flowchart TD
@@ -227,6 +318,9 @@ flowchart TD
 
 O `CanceladorOtimizacao` permite abortar a otimização via API entre gerações. O verificador de memória lança `LimiteMemoriaExcedido` se a RAM do container exceder o percentual configurado (padrão 85%).
 
+> [!WARNING]
+> Quando o GA é interrompido por limite de memória, todo o progresso daquela execução é perdido devido à ausência de um checkpoint parcial. Ajuste `LIMITE_MEMORIA_PERCENTUAL` ou reduza o tamanho da população (`AG_POPULACAO_TAMANHO`) se encontrar travamentos frequentes.
+
 #### 2.4.6 Avaliação Inicial e Elitismo Efetivo
 
 A implementação observa dois cuidados fundamentais frequentemente negligenciados em algoritmos genéticos artesanais:
@@ -234,6 +328,24 @@ A implementação observa dois cuidados fundamentais frequentemente negligenciad
 1. **Avaliação explícita da população inicial (geração 0):** A função `algorithms.varAnd()` da DEAP apenas produz filhos via crossover/mutação: ela não avalia a população de origem. Por isso, antes do loop evolutivo, todos os indivíduos da população inicial são avaliados e os melhores ~30% passam pelo refinamento local (hill climbing), dando ao GA um ponto de partida já polido. As estatísticas da geração 0 são registradas no `Logbook` e reportadas via callback de progresso.
 
 2. **Elitismo efetivo via injeção do Hall of Fame:** O `tools.HallOfFame(1)` da DEAP é apenas um arquivo passivo (rastreador do melhor indivíduo já visto); ele **não** injeta o elite de volta na população. Sem uma injeção explícita, a seleção (μ, λ) pode descartar o melhor indivíduo entre gerações se todos os seus filhos forem piores. A cada geração, após a seleção, o pior indivíduo da população é substituído por uma cópia do elite (apenas se o elite for estritamente melhor), garantindo que o melhor fitness seja monotonicamente não-crescente entre gerações. Esta é a abordagem canônica recomendada pela comunidade DEAP (cf. mantenedor F.-M. De Rainville, lista oficial `deap-users`).
+
+```mermaid
+flowchart TD
+    subgraph DEAP["DEAP (comportamento padrão)"]
+        Hof1["HallOfFame(1)<br/>rastreador passivo"] -.->|"não injeta<br/>na população"| Pop1["População<br/>selecionada"]
+    end
+
+    subgraph TRUSS["TRUSS-OPT (implementação)"]
+        Hof2["HallOfFame(1)<br/>melhor indivíduo<br/>já visto"] --> Compara{"elite.fitness<br/>< pior.fitness?"}
+        Compara -->|"Sim"| Injeta["Substitui o pior<br/>indivíduo da população<br/>por cópia do elite"]
+        Compara -->|"Não"| Mantem["Mantém população<br/>inalterada"]
+        Injeta --> Pop2["População com<br/>elite garantido<br/>(fitness monotônico)"]
+        Mantem --> Pop2
+    end
+
+    style DEAP fill:#fee,stroke:#c00,color:#a00
+    style TRUSS fill:#efe,stroke:#0a0,color:#0a0
+```
 
 ## 3. Arquitetura do Sistema e Stack Tecnológico
 
@@ -334,7 +446,7 @@ truss-opt-3d/
     tests/                        (70 testes pytest)
   frontend/                       (Node 24 Nuxt 4 + Three.js)
     components/                   (TrussViewer, TrussSidebar, LoadingOverlay, etc)
-    stores/                       (Pinia: form, WebSocket, catálogos)
+    stores/                       (Pinia: useTrussStore, estado unificado de formulário, WebSocket e catálogos)
     composables/                  (useToast)
     types/                        (interfaces TypeScript)
     utils/                        (truss3d, trussGenerators)
@@ -426,7 +538,41 @@ O botão "Cancelar Análise" envia `POST /api/tarefas/{id}/cancelar`, que revoga
 
 O campo `ag_semente` (opcional, default 42) define a semente do gerador aleatório utilizado pelo GA. Com o mesmo valor de semente, a mesma configuração de entrada produz resultados idênticos em execuções diferentes. O valor 0 (zero) desativa a semente fixa, fazendo com que cada execução explore uma sequência aleatória diferente.
 
+> [!TIP]
+> Durante a fase de validação e ajuste de parâmetros, utilize sempre o mesmo valor de `ag_semente` para garantir que as diferenças observadas decorram exclusivamente das alterações de configuração, e não da aleatoriedade do GA.
+
 ## 6. Frontend
+
+```mermaid
+flowchart TD
+    subgraph Store["Pinia: useTrussStore (estado unificado)"]
+        Form["Formulário reativo<br/>geometria + cargas + GA"]
+        WS["WebSocket<br/>progresso em tempo real"]
+        Cat["Catálogos<br/>materiais, perfis, normas"]
+        Mem["Memorial<br/>download PDF/DOCX"]
+        Hist["Histórico<br/>de tarefas"]
+    end
+
+    subgraph Componentes["Componentes Vue"]
+        Sidebar["TrussSidebar<br/>4 painéis: Geometria,<br/>Carregamento, Fundação,<br/>Otimizador"]
+        Viewer["TrussViewer<br/>@tresjs/core + Three.js<br/>heatmap 3D + deformada"]
+        Detail["MemberDetailCard<br/>força axial, U, χ, Q, λ"]
+        Loading["LoadingOverlay<br/>progresso global<br/>+ logs por material"]
+        Modals["Modais<br/>Catálogos | Histórico |<br/>Normas | Perfis"]
+    end
+
+    Backend["FastAPI<br/>REST + WebSocket"] <--> Store
+    Store --> Sidebar
+    Store --> Viewer
+    Store --> Detail
+    Store --> Loading
+    Store --> Modals
+    Sidebar -->|"POST /api/otimizar"| Backend
+    Viewer -->|"clique em barra"| Detail
+
+    style Backend fill:#ddf,stroke:#44f,color:#009
+    style Store fill:#fde,stroke:#f0a,color:#a00
+```
 
 ### 6.1 Visualização 3D
 
@@ -437,6 +583,9 @@ O componente TrussViewer usa @tresjs/core (wrapper Vue para Three.js) e oferece:
 - Controles orbitais para rotação, zoom e pan.
 - Seleção de barras: clique em qualquer barra para inspecionar detalhes no MemberDetailCard.
 - Apoios simbólicos: cones (Pinned), bases (Roller), blocos (Fixed).
+
+> [!TIP]
+> Utilize os botões de alternância no canto superior direito do visualizador para alternar entre o modo real e a deformada amplificada (fator 50×). A deformada ajuda a identificar visualmente os padrões de deslocamento da estrutura.
 
 ### 6.2 Painel de Controles
 
@@ -472,6 +621,25 @@ O memorial é gerado sob demanda em /api/tarefas/{id}/memorial/{formato} e cont�
 11. Barras mais solicitadas (top 5 por taxa de utilização).
 12. Perfis utilizados (Bill of Materials).
 
+```mermaid
+flowchart TD
+    Req(["GET /tarefas/{id}/memorial/{formato}"]) --> Valida{"formato válido?<br/>(pdf ou docx)"}
+    Valida -->|"Não"| Erro400["HTTP 400<br/>formato inválido"]
+    Valida -->|"Sim"| CheckCache{"Memorial em cache<br/>no PostgreSQL?"}
+    CheckCache -->|"Sim"| Decode["Decodificar base64<br/>Retornar FileResponse"]
+    CheckCache -->|"Não"| LoadTarefa["Carregar tarefa<br/>+ resultado do DB"]
+    LoadTarefa --> Gera{"formato"}
+    Gera -->|"pdf"| PDF["ReportLab<br/>DejaVu Sans Unicode<br/>12 seções com equações NBR<br/>+ tabelas formatadas"]
+    Gera -->|"docx"| DOCX["python-docx<br/>12 seções<br/>com referências normativas<br/>alinhamento justificado"]
+    PDF --> Cache["Codificar base64<br/>Persistir no PostgreSQL<br/>para reuso futuro"]
+    DOCX --> Cache
+    Cache --> Ret["Retornar FileResponse<br/>Content-Disposition: attachment"]
+    Decode --> Ret
+
+    style Erro400 fill:#f66,stroke:#c00,color:#fff
+    style Ret fill:#efe,stroke:#0a0,color:#090
+```
+
 Formatos suportados: PDF (ReportLab) e DOCX (python-docx). O memorial é persistido em PostgreSQL (base64) para reuso.
 
 ## 8. Cenários de Simulação e Validação
@@ -483,6 +651,9 @@ Durante a elaboração da modelagem, foram conduzidas baterias de testes com pre
 - **Diferentes tipos de solo:** Apoios em rocha fornecem matrizes de deslocamento restritas, enquanto solos moles propagam recalques nodais pelas molas de Winkler, induzindo perfis mais robustos.
 - **Comparação entre aços:** A validação confirma que aços de maior resistência (MR350, A572 Gr50) podem resultar em estruturas mais leves, mas o custo unitário mais elevado (R$ 10,50 a R$ 12,95/kg) faz com que o GA frequentemente prefira aços de resistência média com menor custo (MR250 a R$ 8,80/kg ou A36 a R$ 8,45/kg).
 
+> [!CAUTION]
+> Os cenários de simulação foram conduzidos em ambiente acadêmico para validação da modelagem numérica. Os resultados de otimização não substituem a verificação detalhada de um projeto executivo por engenheiro civil responsável, nem dispensam a consulta aos textos originais das normas ABNT.
+
 ## 9. Instalação e Execução
 
 ### 9.1 Pré-requisitos
@@ -490,6 +661,9 @@ Durante a elaboração da modelagem, foram conduzidas baterias de testes com pre
 - Docker 24+ com Docker Compose v2+
 - 4 GB de RAM disponível (recomendado)
 - Git para clonar o repositório
+
+> [!WARNING]
+> A otimização com populações grandes (> 50 indivíduos) e múltiplos materiais pode consumir temporariamente até 4 GB de RAM. Ambientes com menos de 4 GB podem travar o worker durante o pico de avaliação da primeira geração. Reduza `AG_POPULACAO_TAMANHO` se necessário.
 
 ### 9.2 Execução com Docker Compose (recomendado)
 
@@ -618,6 +792,9 @@ Cobertura atual: 70 testes distribuídos em:
 - test_ise.py (24 testes): correção de Terzaghi em solos granulares e coesivos, molas Winkler, ISE com diferentes tipos de solo, combinações ELS.
 
 Os testes usam SQLite em memória (via `conftest.py`) para não depender de PostgreSQL. O mock de `otimizar_trelice.delay` agora gera UUIDs únicos por chamada, evitando violação da restrição UNIQUE em `celery_task_id` quando múltiplas tarefas são criadas no mesmo teste.
+
+> [!NOTE]
+> Todos os testes são autocontidos: não exigem PostgreSQL, Redis ou worker Celery em execução. O `conftest.py` substitui o banco por SQLite em memória e o cache Redis por `fakeredis`, permitindo execução isolada com `pytest -v` sem configuração adicional.
 
 ## 12. Licença
 
