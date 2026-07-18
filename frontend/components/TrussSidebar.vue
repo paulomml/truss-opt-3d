@@ -264,7 +264,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               <label class="block text-sm font-semibold text-gray-200 mb-2">
                 Tipo de Estrutura
                 <InfoTooltip
-                  text="Define a topologia da treliça. Pratt, Howe e Fink distribuem as diagonais de formas diferentes, afetando a rigidez e a eficiência sob carga. Veja o diagrama 3D ao lado."
+                  text="Define a topologia da treliça.\nPratt, Howe e Fink distribuem as diagonais de formas diferentes.\nA escolha afeta a rigidez, o peso final e a eficiência sob carga.\nVeja o diagrama 3D ao lado para visualizar cada tipo."
                 />
               </label>
               <select
@@ -284,7 +284,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Vão (m)
                 <InfoTooltip
-                  text="Distância entre os apoios, em metros. Quanto maior o vão, maiores os esforços internos. Típico: 10–30 m para coberturas."
+                  text="Distância entre os apoios, em metros.\nQuanto maior o vão, maiores os esforços internos e o peso final.\nTípico: 10–30 m para coberturas, 15–40 m para pontes."
                 />
               </label>
               <input
@@ -301,7 +301,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Altura (m)
                 <InfoTooltip
-                  text="Altura total da treliça. Uma altura maior reduz as forças nas barras mas aumenta o custo. Relação vão/altura ideal: 4 a 8."
+                  text="Altura total da treliça.\nUma altura maior reduz as forças nas barras mas aumenta o custo.\nRelação vão/altura ideal: 4 a 8."
                 />
               </label>
               <input
@@ -319,7 +319,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 Largura (m)
                 <span class="text-xs text-blue-400">(0 = 2D)</span>
                 <InfoTooltip
-                  text="Largura transversal da treliça. Use 0 para análise 2D (plana). Para treliças espaciais 3D, informe a largura real em metros."
+                  text="Largura transversal da treliça.\nUse 0 para análise 2D (plana).\nPara treliças espaciais 3D, informe a largura real em metros."
                 />
               </label>
               <input
@@ -336,7 +336,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Largura do Topo (m)
                 <InfoTooltip
-                  text="Largura do topo da torre (só para torres). Uma base mais larga que o topo melhora a estabilidade lateral."
+                  text="Largura do topo da torre (só para torres).\nUma base mais larga que o topo melhora a estabilidade lateral.\nValor típico: 30–60% da largura da base."
                 />
               </label>
               <input
@@ -353,7 +353,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Painéis
                 <InfoTooltip
-                  text="Subdivisões do vão. Mais painéis = distribuição de cargas mais refinada, porém mais barras e juntas. Típico: 4–12."
+                  text="Subdivisões do vão da treliça.\nMais painéis = distribuição de cargas mais refinada, porém mais barras e juntas.\nTípico: 4–12 painéis."
                 />
               </label>
               <input
@@ -371,7 +371,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Andares (Torres)
                 <InfoTooltip
-                  text="Módulos verticais da torre (só para torres). Cada andar representa uma seção repetitiva da estrutura."
+                  text="Módulos verticais da torre (só para torres).\nCada andar representa uma seção repetitiva da estrutura.\nMais andares = torre mais alta, maior custo de material."
                 />
               </label>
               <input
@@ -396,7 +396,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Carga Permanente G (kgf)
               <InfoTooltip
-                text="Peso próprio dos elementos construtivos sobre a treliça: telhas, terças, forro, instalações. Valor típico: 1.000–3.000 kgf por nó do banzo superior."
+                  text="Peso próprio dos elementos construtivos sobre a treliça: telhas, terças, forro, instalações.\nValor típico: 1.000–3.000 kgf por nó do banzo superior.\nQuanto maior G, mais robustos precisam ser os perfis selecionados."
               />
             </label>
             <input
@@ -413,7 +413,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Sobrecarga Q (kgf)
               <InfoTooltip
-                text="Carga variável por uso (NBR 6120): pessoas, móveis, equipamentos. Para coberturas sem acesso, a norma recomenda mínimo de 25 kgf/m² de projeção horizontal."
+                  text="Carga variável por uso (NBR 6120): pessoas, móveis, equipamentos.\nPara coberturas sem acesso: mínimo 25 kgf/m² de projeção horizontal.\nPara áreas de acesso público: 200–500 kgf/m²."
               />
             </label>
             <input
@@ -430,7 +430,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Lâmina d'Água (mm)
               <InfoTooltip
-                text="Altura da lâmina de água acumulada na cobertura, simulando chuva intensa. Consulte a NBR 6120 item 6.3 para valores mínimos de projeto."
+                  text="Altura da lâmina de água acumulada na cobertura, simulando chuva intensa.\nValores típicos: 50–150 mm para coberturas comuns.\nConsulte a NBR 6120 item 6.3 para valores mínimos normativos."
               />
             </label>
             <input
@@ -461,7 +461,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 <label class="block text-xs text-gray-300 mb-1">
                   V₀ (m/s)
                   <InfoTooltip
-                    text="Velocidade básica do vento na região, conforme mapa eólico da NBR 6123. No Brasil, varia de 30 a 50 m/s dependendo da localidade."
+                    text="Velocidade básica do vento na região (NBR 6123).\nNo Brasil, varia de 30 a 50 m/s dependendo da localidade.\nConsulte o mapa de isopletas da NBR 6123 para o valor exato na sua região."
                   />
                 </label>
                 <input
@@ -476,7 +476,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                   <label class="block text-xs text-gray-300 mb-1">
                     S₁
                     <InfoTooltip
-                      text="Fator topográfico da NBR 6123. Considera se a edificação está em topo de morro, vale ou terreno plano. Varia de 0,85 a 1,15."
+                      text="Fator topográfico (NBR 6123).\nConsidera se a edificação está em topo de morro, vale ou terreno plano.\nVaria de 0,85 (vale protegido) a 1,15 (topo de morro)."
                     />
                   </label>
                   <input
@@ -490,7 +490,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                   <label class="block text-xs text-gray-300 mb-1">
                     S₂
                     <InfoTooltip
-                      text="Fator de rugosidade do terreno da NBR 6123. Considera obstáculos (prédios, árvores) e altura da edificação. Varia conforme a categoria do terreno."
+                      text="Fator de rugosidade (NBR 6123).\nConsidera obstáculos (prédios, árvores) e altura da edificação.\nCategoria I (mar/lagos) a V (grandes centros), valores entre 0,65 e 1,10."
                     />
                   </label>
                   <input
@@ -504,7 +504,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                   <label class="block text-xs text-gray-300 mb-1">
                     S₃
                     <InfoTooltip
-                      text="Fator estatístico da NBR 6123. Baseado na vida útil e probabilidade de ocorrência do vento máximo. Edificações comuns usam S₃ = 1,00."
+                      text="Fator estatístico (NBR 6123).\nBaseado na vida útil e probabilidade de ocorrência do vento máximo.\nEdificações comuns: S₃ = 1,00. Edificações temporárias: S₃ = 0,83."
                     />
                   </label>
                   <input
@@ -531,7 +531,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                   <label class="block text-xs text-gray-300 mb-1">
                     Ce (externo)
                     <InfoTooltip
-                      text="Coeficiente de pressão externa da NBR 6123. Determina a sucção ou pressão do vento nas faces externas da edificação."
+                      text="Coeficiente de pressão externa (NBR 6123).\nDetermina a sucção (negativo) ou pressão (positivo) do vento nas faces externas.\nValores típicos: pressão 0,7 a 1,2; sucção -1,0 a -2,0."
                     />
                   </label>
                   <input
@@ -545,7 +545,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                   <label class="block text-xs text-gray-300 mb-1">
                     Ci (interno)
                     <InfoTooltip
-                      text="Coeficiente de pressão interna da NBR 6123. Depende da permeabilidade das vedações (paredes, janelas). Edificações fechadas usam Ci próximo de 0."
+                      text="Coeficiente de pressão interna (NBR 6123).\nDepende da permeabilidade das vedações (paredes, janelas).\nEdificações fechadas: Ci ≈ 0. Edificações abertas: Ci = ±0,2 a ±0,5."
                     />
                   </label>
                   <input
@@ -592,7 +592,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Tipo de Solo
               <InfoTooltip
-                text="Classificação do solo de apoio. Determina o coeficiente de reação do subleito (ks) usado nos apoios elásticos (Modelo de Winkler). Solos moles geram maiores recalques."
+                  text="Classificação do solo de apoio.\nDetermina o coeficiente de reação do subleito (ks) nos apoios elásticos (Modelo de Winkler).\nSolos moles geram maiores recalques.\nEscolha 'Customizado' para definir ks manualmente."
               />
             </label>
             <select
@@ -616,7 +616,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               ks (kN/m³)
               <InfoTooltip
-                text="Coeficiente de reação do subleito. Só usado quando Tipo de Solo = Customizado. Valores típicos: areia fofa ~8.000, rocha ~100.000 kN/m³."
+                  text="Coeficiente de reação do subleito (kN/m³).\nSó usado quando Tipo de Solo = Customizado.\nValores típicos: areia fofa ≈ 8.000, argila rija ≈ 40.000, rocha ≈ 100.000."
               />
             </label>
             <input
@@ -631,7 +631,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Sapata B (m)
                 <InfoTooltip
-                  text="Dimensão da base da sapata no eixo X. Usada no cálculo da rigidez rotacional dos apoios. Sapatas maiores reduzem recalques."
+                  text="Dimensão da base da sapata no eixo X (m).\nUsada no cálculo da rigidez rotacional dos apoios.\nSapatas maiores reduzem recalques. Mínimo recomendado: 0,30 m."
                 />
               </label>
               <input
@@ -648,7 +648,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Sapata L (m)
                 <InfoTooltip
-                  text="Dimensão da base da sapata no eixo Z. Junto com B, define a rigidez rotacional dos apoios. Sapatas maiores reduzem recalques."
+                  text="Dimensão da base da sapata no eixo Z (m).\nJunto com B, define a rigidez rotacional dos apoios.\nSapatas maiores reduzem recalques. Mínimo recomendado: 0,30 m."
                 />
               </label>
               <input
@@ -672,7 +672,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <label class="block text-sm font-semibold text-gray-200 mb-1">
               Modo de Desempenho
               <InfoTooltip
-                text="Controla a velocidade × qualidade da otimização. Rápido: 5 gerações (testes rápidos). Normal: 25 gerações (padrão). Preciso: 50 gerações (máxima qualidade). Customizado: você define gerações e população manualmente."
+                  text="Controla a velocidade × qualidade da otimização.\n• Rápido: 5 gerações (testes rápidos)\n• Normal: 25 gerações (padrão)\n• Preciso: 50 gerações (máxima qualidade)\n• Customizado: você define os parâmetros manualmente"
               />
             </label>
             <select
@@ -693,7 +693,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 Gerações: {{ form.ag_geracoes }}
                 <InfoTooltip
-                  text="Número de iterações do Algoritmo Genético. Mais gerações = solução mais otimizada, porém maior tempo de processamento. Típico: 5–100."
+                  text="Número de iterações do Algoritmo Genético.\nCada geração avalia toda a população e gera uma nova através de cruzamento e mutação.\nMais gerações = solução mais refinada, porém maior tempo de processamento.\nTípico: 5–100."
                 />
               </label>
               <input
@@ -712,7 +712,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               <label class="block text-sm font-semibold text-gray-200 mb-1">
                 População: {{ form.ag_populacao }}
                 <InfoTooltip
-                  text="Número de soluções candidatas por geração. Populações maiores exploram melhor o espaço de busca, mas cada geração demora mais. Típico: 10–100."
+                  text="Número de soluções candidatas por geração.\nPopulações maiores exploram melhor o espaço de busca, mas cada geração demora mais.\nTípico: 10–100 indivíduos."
                 />
               </label>
               <input
@@ -749,7 +749,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 <span>
                   Refinamento local (memético)
                   <InfoTooltip
-                    text="Ativa hill climbing first-improvement nos melhores indivíduos a cada geração. Algoritmo memético: combina exploração global (GA) com refinamento local (Lamarckiano). Recomendado: ligado."
+                    text="Ativa hill climbing first-improvement nos melhores indivíduos a cada geração.\nCombina exploração global (GA) com refinamento local.\nRecomendado: ligado para melhores resultados de otimização."
                   />
                 </span>
               </label>
@@ -764,7 +764,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                       : agAvancado.probabilidade_cruzamento.toFixed(2)
                   }}
                   <InfoTooltip
-                    text="Probabilidade de crossover entre dois indivíduos (0 a 1). Padrão do backend: 0,7. Valores menores preservam diversidade, valores maiores aceleram convergência."
+                    text="Probabilidade de crossover entre dois indivíduos (0 a 1).\nPadrão do backend: 0,7.\nValores menores preservam diversidade; valores maiores aceleram convergência."
                   />
                 </label>
                 <input
@@ -794,7 +794,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                       : agAvancado.probabilidade_mutacao.toFixed(2)
                   }}
                   <InfoTooltip
-                    text="Probabilidade de mutação de cada gene (0 a 1). Padrão do backend: 0,2. Valores maiores aumentam diversidade, valores menores aceleram convergência."
+                    text="Probabilidade de mutação de cada gene (0 a 1).\nPadrão do backend: 0,2.\nValores maiores aumentam diversidade; valores menores aceleram convergência."
                   />
                 </label>
                 <input
@@ -820,7 +820,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                   Tamanho do Torneio:
                   {{ agAvancado.indice_torneio === null ? 'padrão' : agAvancado.indice_torneio }}
                   <InfoTooltip
-                    text="Número de indivíduos que competem na seleção por torneio. Padrão do backend: 3. Valores maiores aumentam a pressão seletiva (convergência mais rápida, menos diversidade)."
+                    text="Número de indivíduos que competem na seleção por torneio.\nPadrão do backend: 3.\nValores maiores = convergência mais rápida, porém menos diversidade genética."
                   />
                 </label>
                 <input
@@ -850,7 +850,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                       : agAvancado.max_perfis_distintos
                   }}
                   <InfoTooltip
-                    text="Número máximo de perfis distintos sem aplicar penalidade de padronização. Padrão do backend: 4. Valores menores forçam padronização (menos custo de fabricação), valores maiores permitem mais diversidade estrutural."
+                    text="Número máximo de perfis distintos sem penalidade de padronização.\nPadrão do backend: 4.\nValores menores = mais padronização (menor custo de fabricação);\nvalores maiores = mais diversidade estrutural."
                   />
                 </label>
                 <input
@@ -876,7 +876,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 <label class="block text-xs text-gray-300 mb-1">
                   Seed Aleatória: {{ store.form.ag_semente ?? 'aleatório' }}
                   <InfoTooltip
-                    text="Seed do gerador aleatório. 42 = resultados idênticos a cada execução. 0 ou vazio = aleatório (diferente a cada vez)."
+                    text="Seed do gerador aleatório.\n42 = resultados idênticos a cada execução (reprodutível).\n0 ou vazio = aleatório (resultado diferente a cada execução).\nUse 42 para testes e comparações entre diferentes parâmetros."
                   />
                 </label>
                 <input
@@ -917,7 +917,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 <label class="block text-xs text-gray-300 mb-1">
                   Materiais Permitidos
                   <InfoTooltip
-                    text="Seleciona quais aços estruturais o GA pode usar (A36, MR250, SAC300…). Cada um tem resistência (fy) e custo diferentes. O otimizador escolhe o de melhor custo-benefício. Vazio = todos disponíveis."
+                    text="Seleciona quais aços estruturais o GA pode usar (A36, MR250, SAC300…).\nCada material tem resistência (fy) e custo diferentes.\nO otimizador escolhe o de melhor custo-benefício.\nVazio = todos os materiais disponíveis."
                   />
                 </label>
                 <div class="space-y-1 max-h-32 overflow-y-auto">
@@ -953,7 +953,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 <label class="block text-xs text-gray-300 mb-1">
                   Famílias de Perfis
                   <InfoTooltip
-                    text="Restringe as famílias de perfis disponíveis: L (cantoneiras), RHS (tubos retangulares), Ue (U enrijecido). Menos famílias = busca mais rápida. Vazio = todas disponíveis."
+                    text="Restringe as famílias de perfis disponíveis:\nL (cantoneiras), RHS (tubos retangulares), Ue (U enrijecido).\nMenos famílias = busca mais rápida.\nVazio = todas as famílias disponíveis."
                   />
                 </label>
                 <div class="flex flex-wrap gap-2">
@@ -984,7 +984,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 <span>
                   Penalizar muitos perfis distintos
                   <InfoTooltip
-                    text="Ativa penalidade no GA para soluções com muitos tipos de perfis diferentes. Incentiva a padronização, reduzindo complexidade e custo de fabricação."
+                    text="Ativa penalidade no GA para soluções com muitos tipos de perfis.\nIncentiva a padronização, reduzindo complexidade e custo de fabricação.\nRecomendado: ligado para projetos reais (reduz variedade de perfis)."
                   />
                 </span>
               </label>
