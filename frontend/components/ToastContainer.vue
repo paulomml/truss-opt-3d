@@ -5,7 +5,7 @@ const { toasts, removeToast } = useToast();
 <template>
   <!-- Sistema de notificações para alertas de projeto e status da otimização. -->
   <!-- O usuário recebe feedback imediato sobre a estabilidade ou falha do modelo. -->
-  <div class="fixed top-4 right-4 z-[100] space-y-3 w-80 xs:w-72">
+  <div class="fixed top-4 right-4 z-[110] space-y-3 w-80 xs:w-72">
     <TransitionGroup name="toast">
       <div
         v-for="toast in toasts"

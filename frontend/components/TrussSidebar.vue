@@ -187,13 +187,21 @@ const toggleFamiliaPermitida = (familia: string) => {
 <template>
   <aside
     :class="[
-      'fixed inset-y-0 left-0 z-50 w-full md:w-80 bg-gray-800 border-r border-gray-700 shadow-2xl transition-transform duration-300 ease-in-out md:translate-x-0 md:static overflow-y-auto',
+      'fixed inset-y-0 left-0 z-50 w-full max-w-md lg:max-w-none lg:w-80 bg-gray-800 border-r border-gray-700 shadow-2xl transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static',
       showMobileMenu ? 'translate-x-0' : '-translate-x-full',
     ]"
   >
-    <div class="h-full flex flex-col">
+    <div class="h-full flex flex-col overflow-y-auto">
       <!-- Cabeçalho -->
       <div class="relative p-4 border-b border-gray-700 bg-gray-900/50 text-center">
+        <!-- Botão fechar (mobile) -->
+        <button
+          @click="showMobileMenu = false"
+          class="absolute top-2 right-2 lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+          aria-label="Fechar menu"
+        >
+          <Icon name="lucide:x" class="w-5 h-5" />
+        </button>
         <h1 class="text-xl font-bold text-white">TRUSS-OPT 3D</h1>
         <p class="text-xs text-blue-400/80 mt-1 font-medium uppercase tracking-wider">
           Dimensionamento e Otimização Paramétrica de Treliças Espaciais
@@ -219,25 +227,25 @@ const toggleFamiliaPermitida = (familia: string) => {
         <div class="grid grid-cols-2 gap-1.5 mt-2">
           <button
             @click="showCatalogoMateriais = true"
-            class="py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[9px] font-bold text-gray-400 uppercase"
+            class="py-1.5 lg:py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[11px] lg:text-[9px] font-bold text-gray-400 uppercase"
           >
             Materiais
           </button>
           <button
             @click="showCatalogoPerfis = true"
-            class="py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[9px] font-bold text-gray-400 uppercase"
+            class="py-1.5 lg:py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[11px] lg:text-[9px] font-bold text-gray-400 uppercase"
           >
             Perfis
           </button>
           <button
             @click="showNormas = true"
-            class="py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[9px] font-bold text-gray-400 uppercase"
+            class="py-1.5 lg:py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[11px] lg:text-[9px] font-bold text-gray-400 uppercase"
           >
             Normas NBR
           </button>
           <button
             @click="showHistorico = true"
-            class="py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[9px] font-bold text-gray-400 uppercase"
+            class="py-1.5 lg:py-1 px-2 bg-gray-800/60 hover:bg-gray-700 border border-gray-700/50 rounded text-[11px] lg:text-[9px] font-bold text-gray-400 uppercase"
           >
             Histórico
           </button>
@@ -262,7 +270,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               <select
                 v-model="(form as any).selectedTemplate"
                 :disabled="loading"
-                class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-base lg:text-sm text-white"
               >
                 <optgroup v-for="cat in templateCategories" :key="cat.label" :label="cat.label">
                   <option v-for="opt in cat.options" :key="opt.value" :value="opt.value">
@@ -285,7 +293,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 :disabled="!isSpanActive || loading"
                 type="number"
                 step="0.5"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
               />
             </div>
 
@@ -302,7 +310,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 :disabled="loading"
                 type="number"
                 step="0.1"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
               />
             </div>
 
@@ -320,7 +328,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 :disabled="loading"
                 type="number"
                 step="0.1"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
               />
             </div>
 
@@ -337,7 +345,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 :disabled="!isTopWidthActive || loading"
                 type="number"
                 step="0.1"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
               />
             </div>
 
@@ -355,7 +363,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 type="number"
                 min="2"
                 max="20"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
               />
             </div>
 
@@ -373,7 +381,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 type="number"
                 min="1"
                 max="20"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
               />
             </div>
           </div>
@@ -397,7 +405,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               :disabled="loading"
               type="number"
               step="100"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
             />
           </div>
 
@@ -414,7 +422,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               :disabled="loading"
               type="number"
               step="100"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
             />
           </div>
 
@@ -431,7 +439,7 @@ const toggleFamiliaPermitida = (familia: string) => {
               :disabled="loading"
               type="number"
               step="10"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
             />
           </div>
 
@@ -460,7 +468,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                   v-model.number="parametrosVento.v0_mps"
                   type="number"
                   step="1"
-                  class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                  class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm lg:text-xs text-white"
                 />
               </div>
               <div class="grid grid-cols-3 gap-2">
@@ -475,7 +483,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                     v-model.number="parametrosVento.s1"
                     type="number"
                     step="0.05"
-                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm lg:text-xs text-white"
                   />
                 </div>
                 <div>
@@ -489,7 +497,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                     v-model.number="parametrosVento.s2"
                     type="number"
                     step="0.05"
-                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm lg:text-xs text-white"
                   />
                 </div>
                 <div>
@@ -503,7 +511,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                     v-model.number="parametrosVento.s3"
                     type="number"
                     step="0.05"
-                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm lg:text-xs text-white"
                   />
                 </div>
               </div>
@@ -515,7 +523,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                   step="15"
                   min="0"
                   max="345"
-                  class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                  class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm lg:text-xs text-white"
                 />
               </div>
               <div class="grid grid-cols-2 gap-2">
@@ -530,7 +538,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                     v-model.number="parametrosVento.ce_externo"
                     type="number"
                     step="0.1"
-                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm lg:text-xs text-white"
                   />
                 </div>
                 <div>
@@ -544,7 +552,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                     v-model.number="parametrosVento.ci_interno"
                     type="number"
                     step="0.1"
-                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-white"
+                    class="w-full px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm lg:text-xs text-white"
                   />
                 </div>
               </div>
@@ -590,7 +598,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <select
               v-model="form.soil_type"
               :disabled="loading"
-              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-base lg:text-sm text-white"
             >
               <option>Areia Fofa</option>
               <option>Areia Compacta</option>
@@ -614,7 +622,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <input
               v-model.number="form.custom_ks"
               type="number"
-              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+              class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
             />
           </div>
 
@@ -633,7 +641,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 type="number"
                 step="0.1"
                 min="0.3"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
               />
             </div>
             <div :class="{ 'opacity-50 pointer-events-none': loading }">
@@ -650,7 +658,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 type="number"
                 step="0.1"
                 min="0.3"
-                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white"
+                class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-base lg:text-sm text-white"
               />
             </div>
           </div>
@@ -670,7 +678,7 @@ const toggleFamiliaPermitida = (familia: string) => {
             <select
               v-model="store.modoDesempenho"
               :disabled="loading"
-              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-base lg:text-sm text-white"
             >
               <option value="rapido">Rápido (teste)</option>
               <option value="normal">Normal (padrão)</option>
@@ -770,7 +778,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 />
                 <button
                   @click="agAvancado.probabilidade_cruzamento = null"
-                  class="text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5"
+                  class="text-xs lg:text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5 py-1"
                 >
                   usar padrão
                 </button>
@@ -800,7 +808,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 />
                 <button
                   @click="agAvancado.probabilidade_mutacao = null"
-                  class="text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5"
+                  class="text-xs lg:text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5 py-1"
                 >
                   usar padrão
                 </button>
@@ -826,7 +834,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 />
                 <button
                   @click="agAvancado.indice_torneio = null"
-                  class="text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5"
+                  class="text-xs lg:text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5 py-1"
                 >
                   usar padrão
                 </button>
@@ -856,7 +864,7 @@ const toggleFamiliaPermitida = (familia: string) => {
                 />
                 <button
                   @click="agAvancado.max_perfis_distintos = null"
-                  class="text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5"
+                  class="text-xs lg:text-[9px] text-gray-500 hover:text-gray-400 underline mt-0.5 py-1"
                 >
                   usar padrão
                 </button>
@@ -1039,7 +1047,7 @@ const toggleFamiliaPermitida = (familia: string) => {
   <div
     v-if="showMobileMenu"
     @click="showMobileMenu = false"
-    class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+    class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
   ></div>
 
   <HelpModal :show="showHelpModal" @close="showHelpModal = false" />

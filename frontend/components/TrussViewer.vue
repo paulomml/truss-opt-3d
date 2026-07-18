@@ -9,9 +9,6 @@ const store = useTrussStore();
 const cameraRef = ref();
 const controlsRef = ref();
 
-// Modo de visualização: 'tensao' (utilização) | 'deformada' (deslocamentos).
-const modoVisualizacao = ref<'tensao' | 'deformada'>('tensao');
-
 // Fator de escala para visualização da deformada (ampliação visual).
 const fatorDeformada = ref(50);
 
@@ -40,7 +37,7 @@ const membersWithData = computed(() => {
       let valorHeatmap = m.utilization;
 
       // Modo deformada: usa deslocamentos nodais relativos.
-      if (modoVisualizacao.value === 'deformada' && store.result?.nodes) {
+      if (store.modoVisualizacao === 'deformada' && store.result?.nodes) {
         const noStart = store.result.nodes[m.node_start];
         const noEnd = store.result.nodes[m.node_end];
         if (noStart && noEnd) {
@@ -79,7 +76,7 @@ const rawMembersWithData = computed(() => {
 
 // Nós com deslocamento ampliado (para visualização da deformada).
 const nodesDeformed = computed(() => {
-  if (!store.result?.nodes || modoVisualizacao.value !== 'deformada') return null;
+  if (!store.result?.nodes || store.modoVisualizacao !== 'deformada') return null;
   const resultado: Record<string, NoResultado> = {};
   for (const [id, n] of Object.entries(store.result.nodes)) {
     resultado[id] = {
@@ -110,13 +107,13 @@ function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
     <!-- Controles de modo de visualização -->
     <div
       v-if="store.result"
-      class="absolute top-4 left-4 z-10 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg p-2 flex gap-2"
+      class="absolute top-4 left-16 lg:left-4 z-10 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg p-2 flex gap-2"
     >
       <button
-        @click="modoVisualizacao = 'tensao'"
+        @click="store.modoVisualizacao = 'tensao'"
         :class="[
           'px-3 py-1.5 rounded text-xs font-bold transition',
-          modoVisualizacao === 'tensao'
+          store.modoVisualizacao === 'tensao'
             ? 'bg-blue-600 text-white'
             : 'bg-gray-700 text-gray-300 hover:bg-gray-600',
         ]"
@@ -125,10 +122,10 @@ function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
         Tensões
       </button>
       <button
-        @click="modoVisualizacao = 'deformada'"
+        @click="store.modoVisualizacao = 'deformada'"
         :class="[
           'px-3 py-1.5 rounded text-xs font-bold transition',
-          modoVisualizacao === 'deformada'
+          store.modoVisualizacao === 'deformada'
             ? 'bg-blue-600 text-white'
             : 'bg-gray-700 text-gray-300 hover:bg-gray-600',
         ]"
@@ -136,25 +133,6 @@ function onPointerClick(ev: any, member: BarraResultado | BarraBruta) {
       >
         Deformada ×{{ fatorDeformada }}
       </button>
-    </div>
-
-    <!-- Legenda de cores -->
-    <div
-      v-if="store.result"
-      class="absolute bottom-4 left-4 z-10 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg p-3"
-    >
-      <div class="text-[10px] text-gray-300 font-bold mb-2 uppercase">
-        {{ modoVisualizacao === 'tensao' ? 'Utilização' : 'Deslocamento' }}
-      </div>
-      <div
-        class="w-40 h-3 rounded-full mb-1 bg-gradient-to-r from-blue-500 via-green-500 via-yellow-500 to-red-500"
-      />
-      <div class="flex justify-between text-[9px] text-gray-400">
-        <span>0%</span>
-        <span>50%</span>
-        <span>80%</span>
-        <span>100%</span>
-      </div>
     </div>
 
     <TresCanvas

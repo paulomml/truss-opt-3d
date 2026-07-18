@@ -81,6 +81,9 @@ export const useTrussStore = defineStore('truss', () => {
   // Modo de desempenho do GA (frontend-only, não enviado ao backend).
   const modoDesempenho = ref<'rapido' | 'normal' | 'preciso' | 'customizado'>('normal');
 
+  // Modo de visualização 3D (compartilhado entre viewer e footer).
+  const modoVisualizacao = ref<'tensao' | 'deformada'>('tensao');
+
   // Sincroniza presets com os campos do formulário.
   watch(modoDesempenho, (modo) => {
     switch (modo) {
@@ -487,6 +490,7 @@ export const useTrussStore = defineStore('truss', () => {
     dadosProgresso,
     tempoInicio,
     modoDesempenho,
+    modoVisualizacao,
     materiais,
     perfis,
     serverHealth,

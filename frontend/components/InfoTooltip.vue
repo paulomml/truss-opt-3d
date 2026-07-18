@@ -48,7 +48,7 @@ function atualizarPosicao() {
   <span class="relative inline-flex items-center">
     <button
       type="button"
-      class="inline-flex items-center justify-center w-4 h-4 rounded-full text-gray-500 hover:text-blue-400 hover:bg-gray-700/50 transition-colors text-[10px] font-bold leading-none cursor-pointer select-none shrink-0 ml-1"
+      class="inline-flex items-center justify-center w-6 h-6 lg:w-4 lg:h-4 rounded-full text-gray-500 hover:text-blue-400 hover:bg-gray-700/50 transition-colors text-sm lg:text-[10px] font-bold leading-none cursor-pointer select-none shrink-0 ml-1"
       @click="toggle"
       @mouseenter="show"
       @mouseleave="hide"
