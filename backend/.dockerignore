@@ -1,0 +1,16 @@
+# .dockerignore: backend
+**/__pycache__/
+**/*.py[cod]
+**/__pycache__/*
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+*.egg-info/
+.tox/
+.idea/
+.vscode/
+*.log
+.env.local

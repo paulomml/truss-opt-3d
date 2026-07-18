@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useTrussStore } from "@/stores/useTrussStore";
-import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import { useTrussStore } from '@/stores/useTrussStore';
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 
 const store = useTrussStore();
 const isMobile = ref(false);
@@ -9,53 +9,53 @@ const showContent = ref(false);
 const corrosionInfo = computed(() => {
   const soil = store.form.soil_type;
   switch (soil) {
-    case "Argila Mole":
+    case 'Argila Mole':
       return {
-        level: "Crítico",
-        time: "5 a 10 anos",
-        color: "text-red-400",
-        icon: "lucide:alert-triangle",
-        tip: "Como o solo é agressivo, esta peça precisa de uma pintura especial super resistente para não enferrujar rápido.",
+        level: 'Crítico',
+        time: '5 a 10 anos',
+        color: 'text-red-400',
+        icon: 'lucide:alert-triangle',
+        tip: 'Como o solo é agressivo, esta peça precisa de uma pintura especial super resistente para não enferrujar rápido.',
       };
-    case "Argila Rija":
+    case 'Argila Rija':
       return {
-        level: "Moderado",
-        time: "15 a 20 anos",
-        color: "text-yellow-400",
-        icon: "lucide:alert-circle",
-        tip: "O solo pode causar ferrugem com o tempo. Recomenda-se usar metal com banho de zinco (galvanizado).",
+        level: 'Moderado',
+        time: '15 a 20 anos',
+        color: 'text-yellow-400',
+        icon: 'lucide:alert-circle',
+        tip: 'O solo pode causar ferrugem com o tempo. Recomenda-se usar metal com banho de zinco (galvanizado).',
       };
-    case "Areia Fofa":
+    case 'Areia Fofa':
       return {
-        level: "Baixo",
-        time: "> 50 anos",
-        color: "text-green-400",
-        icon: "lucide:shield-check",
-        tip: "O solo é amigável. Uma pintura comum de proteção já é suficiente para durar muitos anos.",
+        level: 'Baixo',
+        time: '> 50 anos',
+        color: 'text-green-400',
+        icon: 'lucide:shield-check',
+        tip: 'O solo é amigável. Uma pintura comum de proteção já é suficiente para durar muitos anos.',
       };
-    case "Areia Compacta":
+    case 'Areia Compacta':
       return {
-        level: "Mínimo",
-        time: "> 100 anos",
-        color: "text-blue-400",
-        icon: "lucide:check-circle",
-        tip: "Solo excelente. A estrutura estará muito bem protegida contra a corrosão natural da terra.",
+        level: 'Mínimo',
+        time: '> 100 anos',
+        color: 'text-blue-400',
+        icon: 'lucide:check-circle',
+        tip: 'Solo excelente. A estrutura estará muito bem protegida contra a corrosão natural da terra.',
       };
-    case "Rocha":
+    case 'Rocha':
       return {
-        level: "Imune",
-        time: "> 500 anos",
-        color: "text-blue-500",
-        icon: "lucide:shield-check",
-        tip: "A rocha é o melhor lugar para construir. Quase não existe umidade no solo que possa estragar o metal.",
+        level: 'Imune',
+        time: '> 500 anos',
+        color: 'text-blue-500',
+        icon: 'lucide:shield-check',
+        tip: 'A rocha é o melhor lugar para construir. Quase não existe umidade no solo que possa estragar o metal.',
       };
     default:
       return {
-        level: "Normal",
-        time: "30 a 50 anos",
-        color: "text-gray-400",
-        icon: "lucide:info",
-        tip: "Siga o plano de manutenção padrão para garantir a durabilidade da estrutura.",
+        level: 'Normal',
+        time: '30 a 50 anos',
+        color: 'text-gray-400',
+        icon: 'lucide:info',
+        tip: 'Siga o plano de manutenção padrão para garantir a durabilidade da estrutura.',
       };
   }
 });
@@ -79,8 +79,8 @@ onMounted(() => {
     isMobile.value = window.innerWidth < 1024;
   };
   checkMobile();
-  window.addEventListener("resize", checkMobile);
-  onUnmounted(() => window.removeEventListener("resize", checkMobile));
+  window.addEventListener('resize', checkMobile);
+  onUnmounted(() => window.removeEventListener('resize', checkMobile));
 });
 
 const close = () => {
@@ -90,10 +90,7 @@ const close = () => {
 
 <template>
   <div>
-    <div
-      v-if="isMobile && store.selectedMember"
-      class="fixed inset-0 z-[1050] flex items-end"
-    >
+    <div v-if="isMobile && store.selectedMember" class="fixed inset-0 z-[9999] flex items-end">
       <Transition
         enter-active-class="transition-opacity duration-500 ease-out"
         enter-from-class="opacity-0"
@@ -116,57 +113,38 @@ const close = () => {
         >
           <div class="flex justify-between items-start mb-2">
             <h3 class="font-bold text-white text-xl">Detalhes do Elemento</h3>
-            <button
-              @click="close"
-              class="text-gray-400 hover:text-white p-1 transition-colors"
-            >
+            <button @click="close" class="text-gray-400 hover:text-white p-1 transition-colors">
               <Icon name="lucide:x" class="w-6 h-6" />
             </button>
           </div>
 
           <div class="space-y-4">
             <div class="flex justify-between border-b border-gray-700 pb-3">
-              <span class="text-gray-400 text-sm font-medium"
-                >ID da Barra:</span
-              >
+              <span class="text-gray-400 text-sm font-medium">ID da Barra:</span>
               <span class="font-mono font-bold text-lg text-white">{{
                 store.selectedMember.id
               }}</span>
             </div>
             <div class="flex justify-between border-b border-gray-700 pb-3">
-              <span class="text-gray-400 text-sm font-medium"
-                >Grupo Estrutural:</span
-              >
+              <span class="text-gray-400 text-sm font-medium">Grupo Estrutural:</span>
               <span class="font-semibold text-blue-400 text-sm">{{
                 store.selectedMember.group
               }}</span>
             </div>
             <div class="flex justify-between border-b border-gray-700 pb-3">
-              <span class="text-gray-400 text-sm font-medium"
-                >Perfil Selecionado:</span
-              >
-              <span class="font-bold text-white text-sm">{{
-                store.selectedMember.profile
-              }}</span>
+              <span class="text-gray-400 text-sm font-medium">Perfil Selecionado:</span>
+              <span class="font-bold text-white text-sm">{{ store.selectedMember.profile }}</span>
             </div>
             <div class="flex justify-between border-b border-gray-700 pb-3">
-              <span class="text-gray-400 text-sm font-medium"
-                >Força Axial:</span
-              >
+              <span class="text-gray-400 text-sm font-medium">Força Axial:</span>
               <div class="text-right">
                 <span
                   :class="[
                     'font-bold font-mono block text-sm',
-                    store.selectedMember.axial_force > 0
-                      ? 'text-blue-400'
-                      : 'text-red-400',
+                    store.selectedMember.axial_force > 0 ? 'text-blue-400' : 'text-red-400',
                   ]"
                 >
-                  {{
-                    (Math.abs(store.selectedMember.axial_force) / 1000).toFixed(
-                      2,
-                    )
-                  }}
+                  {{ (Math.abs(store.selectedMember.axial_force) / 1000).toFixed(2) }}
                   kN
                 </span>
                 <span class="text-xs uppercase text-gray-400">{{
@@ -176,29 +154,19 @@ const close = () => {
             </div>
             <div class="pt-2">
               <div class="flex justify-between mb-2">
-                <span class="text-gray-400 text-sm font-medium"
-                  >Taxa de Utilização:</span
-                >
+                <span class="text-gray-400 text-sm font-medium">Taxa de Utilização:</span>
                 <span
                   :class="[
                     'font-bold text-lg',
-                    store.selectedMember.utilization > 0.9
-                      ? 'text-red-400'
-                      : 'text-green-400',
+                    store.selectedMember.utilization > 0.9 ? 'text-red-400' : 'text-green-400',
                   ]"
-                  >{{
-                    (store.selectedMember.utilization * 100).toFixed(1)
-                  }}%</span
+                  >{{ (store.selectedMember.utilization * 100).toFixed(1) }}%</span
                 >
               </div>
               <div class="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
                 <div
                   class="h-full transition-all duration-500"
-                  :class="
-                    store.selectedMember.utilization > 0.9
-                      ? 'bg-red-500'
-                      : 'bg-green-500'
-                  "
+                  :class="store.selectedMember.utilization > 0.9 ? 'bg-red-500' : 'bg-green-500'"
                   :style="{
                     width: `${Math.min(100, store.selectedMember.utilization * 100)}%`,
                   }"
@@ -208,12 +176,8 @@ const close = () => {
 
             <div class="pt-4 border-t border-gray-700 mt-2">
               <div class="flex items-center gap-2 mb-1">
-                <Icon
-                  :name="corrosionInfo.icon"
-                  :class="['w-5 h-5', corrosionInfo.color]"
-                />
-                <span
-                  class="text-sm font-bold uppercase tracking-wider text-gray-400"
+                <Icon :name="corrosionInfo.icon" :class="['w-5 h-5', corrosionInfo.color]" />
+                <span class="text-sm font-bold uppercase tracking-wider text-gray-400"
                   >Análise de Durabilidade</span
                 >
               </div>
@@ -239,7 +203,7 @@ const close = () => {
     <Transition name="fade">
       <div
         v-if="store.selectedMember && !isMobile"
-        class="fixed top-8 right-8 w-80 bg-gray-800/90 backdrop-blur shadow-2xl rounded-lg border border-gray-700 p-6 z-[1050] hidden lg:block"
+        class="fixed top-8 right-8 w-80 bg-gray-800/90 backdrop-blur shadow-2xl rounded-lg border border-gray-700 p-6 z-[9999] hidden lg:block"
       >
         <div class="flex justify-between items-start mb-4">
           <h3 class="font-bold text-white text-lg">Detalhes do Elemento</h3>
@@ -253,9 +217,7 @@ const close = () => {
         <div class="space-y-3">
           <div class="flex justify-between border-b border-gray-700 pb-2">
             <span class="text-gray-400 text-sm">ID da Barra:</span>
-            <span class="font-mono font-bold text-white">{{
-              store.selectedMember.id
-            }}</span>
+            <span class="font-mono font-bold text-white">{{ store.selectedMember.id }}</span>
           </div>
           <div class="flex justify-between border-b border-gray-700 pb-2">
             <span class="text-gray-400 text-sm">Grupo:</span>
@@ -265,9 +227,7 @@ const close = () => {
           </div>
           <div class="flex justify-between border-b border-gray-700 pb-2">
             <span class="text-gray-400 text-sm">Perfil:</span>
-            <span class="font-bold text-white text-sm">{{
-              store.selectedMember.profile
-            }}</span>
+            <span class="font-bold text-white text-sm">{{ store.selectedMember.profile }}</span>
           </div>
           <div class="flex justify-between border-b border-gray-700 pb-2">
             <span class="text-gray-400 text-sm">Força Axial:</span>
@@ -275,14 +235,10 @@ const close = () => {
               <span
                 :class="[
                   'font-bold font-mono text-sm block',
-                  store.selectedMember.axial_force > 0
-                    ? 'text-blue-400'
-                    : 'text-red-400',
+                  store.selectedMember.axial_force > 0 ? 'text-blue-400' : 'text-red-400',
                 ]"
               >
-                {{
-                  (Math.abs(store.selectedMember.axial_force) / 1000).toFixed(2)
-                }}
+                {{ (Math.abs(store.selectedMember.axial_force) / 1000).toFixed(2) }}
                 kN
               </span>
               <span class="text-xs uppercase text-gray-400">{{
@@ -296,23 +252,15 @@ const close = () => {
               <span
                 :class="[
                   'font-bold text-sm',
-                  store.selectedMember.utilization > 0.9
-                    ? 'text-red-400'
-                    : 'text-green-400',
+                  store.selectedMember.utilization > 0.9 ? 'text-red-400' : 'text-green-400',
                 ]"
-                >{{
-                  (store.selectedMember.utilization * 100).toFixed(1)
-                }}%</span
+                >{{ (store.selectedMember.utilization * 100).toFixed(1) }}%</span
               >
             </div>
             <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
               <div
                 class="h-full transition-all duration-500"
-                :class="
-                  store.selectedMember.utilization > 0.9
-                    ? 'bg-red-500'
-                    : 'bg-green-500'
-                "
+                :class="store.selectedMember.utilization > 0.9 ? 'bg-red-500' : 'bg-green-500'"
                 :style="{
                   width: `${Math.min(100, store.selectedMember.utilization * 100)}%`,
                 }"
@@ -322,12 +270,8 @@ const close = () => {
 
           <div class="pt-4 border-t border-gray-700 mt-2">
             <div class="flex items-center gap-2 mb-1">
-              <Icon
-                :name="corrosionInfo.icon"
-                :class="['w-5 h-5', corrosionInfo.color]"
-              />
-              <span
-                class="text-xs font-bold uppercase tracking-wider text-gray-400"
+              <Icon :name="corrosionInfo.icon" :class="['w-5 h-5', corrosionInfo.color]" />
+              <span class="text-xs font-bold uppercase tracking-wider text-gray-400"
                 >Análise de Durabilidade</span
               >
             </div>
@@ -336,9 +280,7 @@ const close = () => {
                 <span :class="['text-sm font-bold', corrosionInfo.color]">{{
                   corrosionInfo.level
                 }}</span>
-                <span class="text-xs text-gray-400"
-                  >Estimativa: {{ corrosionInfo.time }}</span
-                >
+                <span class="text-xs text-gray-400">Estimativa: {{ corrosionInfo.time }}</span>
               </div>
               <p class="text-md text-gray-500 mt-1 leading-tight">
                 {{ corrosionInfo.tip }}

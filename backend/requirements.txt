@@ -1,7 +1,40 @@
+# Dependências do Backend (Python 3.12)
+# API e servidor ASGI
 fastapi
 uvicorn[standard]
-PyniteFEA
-pandas
+python-multipart
 pydantic
+pydantic-settings
+
+# Banco de dados (PostgreSQL + SQLAlchemy)
+SQLAlchemy
+psycopg2-binary
+alembic
+
+# Processamento assíncrono (Celery + Redis)
+celery
+redis
+
+# Análise estrutural (MEF)
+PyniteFEA
 numpy
+scipy
+
+# Otimização por Algoritmo Genético
+deap
+
+# Manipulação de dados e caching
+pandas
 psutil
+
+# Geração de memorial de cálculo (PDF/Word)
+reportlab
+python-docx
+
+# Cliente HTTP para testes
+httpx
+
+# Testes e formatação
+pytest
+pytest-asyncio
+ruff

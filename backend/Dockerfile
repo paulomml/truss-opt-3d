@@ -1,19 +1,49 @@
-FROM python:3.11-slim
+# Backend Dockerfile: Python 3.12 + FastAPI + Celery + PyNite + DEAP
+FROM python:3.12-slim
 
+# Metadados.
+LABEL org.opencontainers.image.title="truss-opt-3d backend"
+LABEL org.opencontainers.image.description="API FastAPI para otimização de treliças 3D"
+LABEL org.opencontainers.image.version="2.0.0"
+
+# Diretório de trabalho.
 WORKDIR /app
 
-# Configuração das dependências do sistema operacional para suporte aos cálculos matriciais do backend.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
+# Variáveis de ambiente Python: sem bufferização para logs em tempo real.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Dependências do sistema (build-essential para compilar numpy/scipy se necessário).
+RUN     apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        libpq-dev \
+        curl \
+        fontconfig fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
-# Instalação das bibliotecas de análise estrutural e processamento de dados via gerenciador de pacotes pip.
+# Instala dependências Python primeiro (camada cacheável).
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Implantação da lógica de domínio, modelos e infraestrutura no ambiente isolado.
+# Copia o código da aplicação.
 COPY . .
 
+# Cria diretório para logs.
+RUN mkdir -p /var/log/truss
+
+# Exposição da porta.
 EXPOSE 8000
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips='*'"]
+# Healthcheck via curl no endpoint /api/health.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
+
+# Comando padrão: uvicorn com proxy-headers para nginx.
+CMD ["uvicorn", "api.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--proxy-headers", \
+     "--forwarded-allow-ips", "*", \
+     "--workers", "1"]

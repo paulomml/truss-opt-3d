@@ -1,27 +1,33 @@
 <script setup lang="ts">
-import { useTrussStore } from "~/stores/useTrussStore";
+import { useTrussStore } from '@/stores/useTrussStore';
+
 const store = useTrussStore();
+const { showMobileMenu } = storeToRefs(store);
 </script>
 
 <template>
-  <div class="flex flex-col md:flex-row h-full w-full font-sans relative">
+  <div class="flex flex-col lg:flex-row h-screen w-full relative overflow-hidden bg-gray-900">
+    <!-- Sidebar -->
     <TrussSidebar />
 
-    <!-- Interface de navegação para dispositivos móveis: acionamento do menu lateral de parâmetros estruturais. -->
+    <!-- Menu hamburger (mobile) -->
     <button
-      class="md:hidden absolute top-4 left-4 z-40 w-10 h-10 flex items-center justify-center bg-gray-800 text-white rounded-md shadow-md border border-gray-700 hover:bg-gray-700 transition"
-      @click="store.showMobileMenu = true"
+      v-if="!showMobileMenu"
+      @click="showMobileMenu = true"
+      class="lg:hidden absolute top-4 left-4 z-40 bg-gray-800 text-white p-2 rounded-lg shadow-lg"
     >
       <Icon name="lucide:menu" class="w-6 h-6" />
     </button>
 
-    <main
-      class="flex-grow relative bg-gray-900 flex flex-col min-w-0 pb-16 md:pb-0"
-    >
+    <!-- Área principal -->
+    <main class="flex-1 relative flex flex-col min-w-0 pb-16 lg:pb-0">
       <LoadingOverlay />
       <TrussViewer />
-      <MemberDetailCard />
       <TrussSummaryFooter />
+      <MemberDetailCard />
     </main>
+
+    <!-- Toasts -->
+    <ToastContainer />
   </div>
 </template>
