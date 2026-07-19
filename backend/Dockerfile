@@ -4,7 +4,7 @@ FROM python:3.12-slim
 # Metadados.
 LABEL org.opencontainers.image.title="truss-opt-3d backend"
 LABEL org.opencontainers.image.description="API FastAPI para otimização de treliças 3D"
-LABEL org.opencontainers.image.version="2.0.0"
+LABEL org.opencontainers.image.version="1.0.0"
 
 # Diretório de trabalho.
 WORKDIR /app
