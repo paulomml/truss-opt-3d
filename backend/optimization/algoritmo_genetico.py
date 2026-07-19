@@ -1,7 +1,7 @@
 """
-Motor de Otimização: GA Memetico (DEAP + Hill Climbing).
+Motor de Otimização: GA Memético (DEAP + Hill Climbing).
 
-Indivíduo: vetor de indices de perfis (um por grupo).
+Indivíduo: vetor de índices de perfis (um por grupo).
 Fitness: peso x custo_kg + penalidades (violação NBR, flecha ELS, diversidade).
 """
 

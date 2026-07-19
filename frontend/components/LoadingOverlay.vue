@@ -165,8 +165,9 @@ function getMaterialSummary(name: string): string {
   const status = materiaisStatus.value[name];
 
   if (status === 'concluido') {
-    const bestMatch = last.match(/Melhor:\s*([\d.]+)\s*kg/);
-    if (bestMatch) return `${bestMatch[1]} kg`;
+    const costMatch = last.match(/Custo:\s*R\$\s*([\d.]+)/);
+    if (costMatch)
+      return `R$ ${Number(costMatch[1]).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     return 'Concluído';
   }
   if (status === 'erro') {
@@ -176,7 +177,7 @@ function getMaterialSummary(name: string): string {
     const dp = store.dadosProgresso;
     const best = dp.melhor_do_material;
     if (best != null && best !== Infinity) {
-      return `melhor: ${Number(best).toLocaleString('pt-BR', { minimumFractionDigits: 1 })} kg`;
+      return `melhor: R$ ${Number(best).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
     return 'processando...';
   }
