@@ -73,7 +73,7 @@ function formatarChave(chave: string): string {
                 :key="chave"
                 class="bg-gray-800 p-2 rounded"
               >
-                <div class="text-gray-500 uppercase text-[10px]">{{ formatarChave(chave) }}</div>
+                <div class="text-gray-500 uppercase text-[10px] break-words">{{ formatarChave(chave) }}</div>
                 <div class="text-white font-mono font-bold">{{ valor }}</div>
               </div>
             </div>
@@ -121,7 +121,7 @@ function formatarChave(chave: string): string {
                 :key="chave"
                 class="bg-gray-800 p-2 rounded"
               >
-                <div class="text-gray-500 uppercase text-[10px]">{{ formatarChave(chave) }}</div>
+                <div class="text-gray-500 uppercase text-[10px] break-words">{{ formatarChave(chave) }}</div>
                 <div class="text-white font-mono font-bold">{{ valor }}</div>
               </div>
             </div>
@@ -152,7 +152,7 @@ function formatarChave(chave: string): string {
                 :key="chave"
                 class="bg-gray-800 p-2 rounded"
               >
-                <div class="text-gray-500 uppercase text-[10px]">{{ String(chave) }}</div>
+                <div class="text-gray-500 uppercase text-[10px] break-words">{{ String(chave) }}</div>
                 <div class="text-white font-mono font-bold">
                   {{
                     typeof valor === 'boolean'

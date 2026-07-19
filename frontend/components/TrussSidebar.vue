@@ -187,7 +187,7 @@ const toggleFamiliaPermitida = (familia: string) => {
       showMobileMenu ? 'translate-x-0' : '-translate-x-full',
     ]"
   >
-    <div class="h-full flex flex-col overflow-y-auto">
+    <div class="h-full flex flex-col overflow-y-auto pt-[env(safe-area-inset-top)]">
       <!-- Cabeçalho -->
       <div class="relative p-4 border-b border-gray-700 bg-gray-900/50 text-center">
         <!-- Botão fechar (mobile) -->
