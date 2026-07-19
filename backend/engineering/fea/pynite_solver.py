@@ -780,7 +780,7 @@ def construir_e_resolver(
                     case=case_name,
                 )
 
-    # Lamina d'agua (NBR 6120 item 5.6)
+    # Lâmina d'água (NBR 6120 item 5.6)
     if water_lamina_mm > 0 and nos_banzo_superior:
         # Peso = lâmina(mm) * 10 N/m^2 por mm * área tributária.
         carga_agua = water_lamina_mm * 10.0  # N/m^2
