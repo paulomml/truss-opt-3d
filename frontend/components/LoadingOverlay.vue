@@ -166,20 +166,21 @@ function getMaterialSummary(name: string): string {
 
   if (status === 'concluido') {
     const costMatch = last.match(/Custo:\s*R\$\s*([\d.]+)/);
-    if (costMatch) return `R$ ${Number(costMatch[1]).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (costMatch)
+      return `R$ ${Number(costMatch[1]).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     return 'Concluído';
   }
   if (status === 'erro') {
     return 'Falhou';
   }
-    if (status === 'processando') {
-      const dp = store.dadosProgresso;
-      const best = dp.melhor_do_material;
-      if (best != null && best !== Infinity) {
-        return `melhor: R$ ${Number(best).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      }
-      return 'processando...';
+  if (status === 'processando') {
+    const dp = store.dadosProgresso;
+    const best = dp.melhor_do_material;
+    if (best != null && best !== Infinity) {
+      return `melhor: R$ ${Number(best).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
+    return 'processando...';
+  }
   return 'aguardando';
 }
 

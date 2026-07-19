@@ -6,7 +6,9 @@ const { showMobileMenu } = storeToRefs(store);
 </script>
 
 <template>
-  <div class="flex flex-col lg:flex-row h-dvh w-full relative overflow-hidden bg-gray-900 pt-[env(safe-area-inset-top)]">
+  <div
+    class="flex flex-col lg:flex-row h-dvh w-full relative overflow-hidden bg-gray-900 pt-[env(safe-area-inset-top)]"
+  >
     <!-- Sidebar -->
     <TrussSidebar />
 
