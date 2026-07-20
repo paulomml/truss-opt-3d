@@ -370,7 +370,6 @@ export const useTrussStore = defineStore('truss', () => {
     agAvancado.probabilidade_mutacao = null;
     agAvancado.indice_torneio = null;
     agAvancado.max_perfis_distintos = null;
-
     parametrosVento.v0_mps = 40.0;
     parametrosVento.s1 = 1.0;
     parametrosVento.s2 = 1.0;
@@ -378,7 +377,6 @@ export const useTrussStore = defineStore('truss', () => {
     parametrosVento.direcao_vento_graus = 0.0;
     parametrosVento.ce_externo = 0.8;
     parametrosVento.ci_interno = 0.0;
-
     restricoes.materiais_permitidos = null;
     restricoes.familias_permitidas = null;
     restricoes.perfis_permitidos = null;
