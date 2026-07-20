@@ -363,12 +363,27 @@ export const useTrussStore = defineStore('truss', () => {
     form.footing_l = 0.6;
     form.ag_geracoes = 25;
     form.ag_populacao = 30;
+    form.ag_semente = 42;
     modoDesempenho.value = 'normal';
     agAvancado.usar_refinamento_local = true;
     agAvancado.probabilidade_cruzamento = null;
     agAvancado.probabilidade_mutacao = null;
     agAvancado.indice_torneio = null;
     agAvancado.max_perfis_distintos = null;
+
+    parametrosVento.v0_mps = 40.0;
+    parametrosVento.s1 = 1.0;
+    parametrosVento.s2 = 1.0;
+    parametrosVento.s3 = 1.0;
+    parametrosVento.direcao_vento_graus = 0.0;
+    parametrosVento.ce_externo = 0.8;
+    parametrosVento.ci_interno = 0.0;
+
+    restricoes.materiais_permitidos = null;
+    restricoes.familias_permitidas = null;
+    restricoes.perfis_permitidos = null;
+    restricoes.perfis_excluidos = null;
+    restricoes.usar_penalidade_diversidade = true;
   };
 
   // Catálogos
